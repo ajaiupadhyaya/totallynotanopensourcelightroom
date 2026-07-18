@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode / build artifacts
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# The .xcodeproj is generated from project.yml (the source of truth) but is
+# committed for convenience so the project can be opened without XcodeGen.
+# Only user-specific state inside it is ignored (see xcuserdata rules above).

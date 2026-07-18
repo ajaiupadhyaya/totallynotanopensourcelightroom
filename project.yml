@@ -1,0 +1,44 @@
+# XcodeGen project definition — the source of truth for the Xcode project.
+# Regenerate the .xcodeproj after editing this file with:  xcodegen generate
+name: PhotoEditor
+options:
+  bundleIdPrefix: com.photoeditor
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_HARDENED_RUNTIME: NO
+
+targets:
+  PhotoEditor:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_NAME: PhotoEditor
+        PRODUCT_BUNDLE_IDENTIFIER: com.photoeditor.app
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: PhotoEditor
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.photography"
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+
+  PhotoEditorTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: PhotoEditor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.photoeditor.tests
+        GENERATE_INFOPLIST_FILE: YES
