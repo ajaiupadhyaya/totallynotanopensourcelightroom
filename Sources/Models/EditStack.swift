@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// The non-destructive edit description for a single photo.
@@ -6,16 +7,48 @@ import Foundation
 /// original file on disk is never modified. Every preview is produced by
 /// replaying this stack against the untouched original through a Core Image
 /// filter chain (see ``EditRenderer``). Because it is `Codable`, the whole
-/// edit history for a photo is just a small JSON blob to persist later.
+/// edit state for a photo is just a small JSON blob to persist later.
 ///
-/// Fields are added incrementally, one phase at a time. Right now (Phase 1)
-/// only global exposure and contrast exist. Phase 2 adds white balance,
-/// saturation, highlights/shadows, and the tone curve — deliberately *not*
-/// pre-declared here, so the model never carries fields nothing renders yet.
+/// Fields are added incrementally, one phase at a time — the model never
+/// carries fields that nothing renders yet. Phase 1 added exposure/contrast;
+/// Phase 2 adds white balance, saturation, highlights/shadows, and the tone
+/// curve below.
 struct EditStack: Codable, Equatable {
+    // MARK: Light
+
     /// Exposure adjustment in EV stops. `0` leaves the image unchanged.
     var exposure: Double = 0
 
     /// Contrast adjustment on a `-100...100` scale. `0` leaves it unchanged.
     var contrast: Double = 0
+
+    /// Highlight adjustment, `-100...100`. Negative recovers (darkens) bright
+    /// tones; `0` leaves them unchanged.
+    var highlights: Double = 0
+
+    /// Shadow adjustment, `-100...100`. Positive lifts (lightens) dark tones,
+    /// negative deepens them; `0` leaves them unchanged.
+    var shadows: Double = 0
+
+    // MARK: White balance
+
+    /// White-balance temperature in Kelvin. `6500` (D65) is neutral; higher is
+    /// warmer, lower is cooler.
+    var whiteBalanceTemp: Double = 6500
+
+    /// White-balance tint on a green–magenta axis, `-100...100`. `0` is neutral.
+    var whiteBalanceTint: Double = 0
+
+    // MARK: Color
+
+    /// Saturation adjustment, `-100...100`. `-100` is fully desaturated
+    /// (grayscale), `0` is unchanged, `+100` doubles saturation.
+    var saturation: Double = 0
+
+    // MARK: Tone curve
+
+    /// Tone-curve control points in the unit square (x = input, y = output),
+    /// sorted by ascending x. An empty array means the identity curve (no
+    /// change). When set, it holds exactly five points to feed `CIToneCurve`.
+    var toneCurvePoints: [CGPoint] = []
 }

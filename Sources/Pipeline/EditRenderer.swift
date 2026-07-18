@@ -8,8 +8,12 @@ import CoreImage.CIFilterBuiltins
 /// - ``render(source:stack:)`` is pure — it assembles the (lazy) filter chain
 ///   and returns a `CIImage`, doing no pixel work. This is what makes the edit
 ///   logic straightforward to unit test.
-/// - ``renderCGImage(source:stack:)`` rasterizes that chain to a `CGImage` for
-///   on-screen display via a shared, GPU-backed `CIContext`.
+/// - ``makeCGImage(_:)`` rasterizes a chain to a `CGImage` for display.
+/// - ``histogram(of:binCount:)`` computes a per-channel histogram on the GPU.
+///
+/// Filters are applied in a deliberate order: white balance, then exposure,
+/// then highlight/shadow recovery, then contrast/saturation, and finally the
+/// tone curve as the last tonal shaping step.
 struct EditRenderer {
     /// Shared context; GPU-backed (Metal) by default. Reused across renders so
     /// we don't pay context-setup cost on every slider tick.
@@ -20,11 +24,24 @@ struct EditRenderer {
     }
 
     /// Builds the edit filter chain. No rasterization happens here — filters
-    /// that would leave the image unchanged (value of `0`) are skipped so the
-    /// identity edit returns the source untouched.
+    /// that would leave the image unchanged (a value at its neutral point) are
+    /// skipped, so the identity edit returns the source untouched.
     func render(source: CIImage, stack: EditStack) -> CIImage {
         var image = source
 
+        // 1. White balance (temperature / tint).
+        if stack.whiteBalanceTemp != 6500 || stack.whiteBalanceTint != 0 {
+            let wb = CIFilter.temperatureAndTint()
+            wb.inputImage = image
+            // Treat the chosen temp/tint as the image's *current* neutral and
+            // remap it to D65. This gives the intuitive direction: a higher
+            // temperature warms the image (pushes red up, blue down).
+            wb.neutral = CIVector(x: stack.whiteBalanceTemp, y: stack.whiteBalanceTint)
+            wb.targetNeutral = CIVector(x: 6500, y: 0)
+            image = wb.outputImage ?? image
+        }
+
+        // 2. Exposure (EV stops).
         if stack.exposure != 0 {
             let exposure = CIFilter.exposureAdjust()
             exposure.inputImage = image
@@ -32,25 +49,91 @@ struct EditRenderer {
             image = exposure.outputImage ?? image
         }
 
-        if stack.contrast != 0 {
+        // 3. Highlights & shadows. highlightAmount 1.0 == no change (lower
+        //    recovers highlights); shadowAmount 0 == no change (positive lifts).
+        if stack.highlights != 0 || stack.shadows != 0 {
+            let hs = CIFilter.highlightShadowAdjust()
+            hs.inputImage = image
+            hs.highlightAmount = Float(1.0 + stack.highlights / 100.0)
+            hs.shadowAmount = Float(stack.shadows / 100.0)
+            image = hs.outputImage ?? image
+        }
+
+        // 4. Contrast + saturation, both centered on 1.0 (no change).
+        if stack.contrast != 0 || stack.saturation != 0 {
             let controls = CIFilter.colorControls()
             controls.inputImage = image
-            // Map the -100...100 slider onto Core Image's contrast multiplier,
-            // where 1.0 is no change. So -100 -> 0.0, 0 -> 1.0, +100 -> 2.0.
             controls.contrast = Float(1.0 + stack.contrast / 100.0)
+            controls.saturation = Float(1.0 + stack.saturation / 100.0)
             image = controls.outputImage ?? image
+        }
+
+        // 5. Tone curve — five control points, applied last. Empty == identity.
+        if stack.toneCurvePoints.count == 5 {
+            let curve = CIFilter.toneCurve()
+            curve.inputImage = image
+            curve.point0 = stack.toneCurvePoints[0]
+            curve.point1 = stack.toneCurvePoints[1]
+            curve.point2 = stack.toneCurvePoints[2]
+            curve.point3 = stack.toneCurvePoints[3]
+            curve.point4 = stack.toneCurvePoints[4]
+            image = curve.outputImage ?? image
         }
 
         return image
     }
 
-    /// Rasterizes the edited image to a `CGImage` for display.
+    /// Rasterizes an edited image to a `CGImage` for display.
     ///
-    /// - Returns: `nil` if the source has an infinite extent (e.g. a bare
+    /// - Returns: `nil` if the image has an infinite extent (e.g. a bare
     ///   generator image) or Core Image fails to produce a bitmap.
+    func makeCGImage(_ image: CIImage) -> CGImage? {
+        guard !image.extent.isInfinite else { return nil }
+        return context.createCGImage(image, from: image.extent)
+    }
+
+    /// Convenience: build the chain and rasterize in one call.
     func renderCGImage(source: CIImage, stack: EditStack) -> CGImage? {
-        let output = render(source: source, stack: stack)
-        guard !output.extent.isInfinite else { return nil }
-        return context.createCGImage(output, from: output.extent)
+        makeCGImage(render(source: source, stack: stack))
+    }
+
+    /// Computes a per-channel histogram of an image via `CIAreaHistogram`
+    /// (a single GPU pass), read back into plain float arrays.
+    ///
+    /// - Returns: ``Histogram/empty`` if the image has no finite extent.
+    func histogram(of image: CIImage, binCount: Int = 256) -> Histogram {
+        let extent = image.extent
+        guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else {
+            return .empty
+        }
+
+        let filter = CIFilter.areaHistogram()
+        filter.inputImage = image
+        filter.extent = extent
+        filter.count = binCount
+        filter.scale = 20 // amplify counts into a visible range; we normalize by peak on display
+        guard let output = filter.outputImage else { return .empty }
+
+        var buffer = [Float](repeating: 0, count: binCount * 4)
+        // Read the raw bin counts with no color management (colorSpace: nil) —
+        // these are histogram values, not colors. The output is binCount×1.
+        context.render(
+            output,
+            toBitmap: &buffer,
+            rowBytes: binCount * 4 * MemoryLayout<Float>.stride,
+            bounds: CGRect(x: 0, y: 0, width: binCount, height: 1),
+            format: .RGBAf,
+            colorSpace: nil
+        )
+
+        var red = [Float](repeating: 0, count: binCount)
+        var green = red
+        var blue = red
+        for i in 0..<binCount {
+            red[i] = buffer[i * 4]
+            green[i] = buffer[i * 4 + 1]
+            blue[i] = buffer[i * 4 + 2]
+        }
+        return Histogram(red: red, green: green, blue: blue)
     }
 }

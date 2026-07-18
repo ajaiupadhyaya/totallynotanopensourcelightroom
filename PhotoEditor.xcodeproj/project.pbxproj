@@ -8,11 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D5A47B1630002BE67596A1 /* EditRendererTests.swift */; };
+		2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F149C1AC756E023AB4F09DE /* Histogram.swift */; };
 		310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */; };
 		360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFFE0C1B13FBE874BB46905 /* EditView.swift */; };
+		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
 		57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B0E50E4F655388B03702D4 /* EditStack.swift */; };
+		79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */; };
+		80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2F971CBD017A251DD0D590 /* HistogramView.swift */; };
 		B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD40FF611C66AC099F6A793E /* EditorModelTests.swift */; };
+		BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */; };
 		F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798CF687AF441778F974D6E6 /* ImageDecoder.swift */; };
 /* End PBXBuildFile section */
 
@@ -29,13 +34,18 @@
 /* Begin PBXFileReference section */
 		23D5A47B1630002BE67596A1 /* EditRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRendererTests.swift; sourceTree = "<group>"; };
 		2F1415087A748B8EEE199DF5 /* PhotoEditorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoEditorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A2F971CBD017A251DD0D590 /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
 		798CF687AF441778F974D6E6 /* ImageDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDecoder.swift; sourceTree = "<group>"; };
 		85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRenderer.swift; sourceTree = "<group>"; };
 		8BFFE0C1B13FBE874BB46905 /* EditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditView.swift; sourceTree = "<group>"; };
 		8E1A3561D6F755730260526D /* PhotoEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F149C1AC756E023AB4F09DE /* Histogram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Histogram.swift; sourceTree = "<group>"; };
 		94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorApp.swift; sourceTree = "<group>"; };
+		955D38A421CE01C63316D878 /* Phase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase2Tests.swift; sourceTree = "<group>"; };
 		B2B0E50E4F655388B03702D4 /* EditStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditStack.swift; sourceTree = "<group>"; };
 		BD40FF611C66AC099F6A793E /* EditorModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModelTests.swift; sourceTree = "<group>"; };
+		CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurveEditor.swift; sourceTree = "<group>"; };
+		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -63,6 +73,8 @@
 			isa = PBXGroup;
 			children = (
 				8BFFE0C1B13FBE874BB46905 /* EditView.swift */,
+				5A2F971CBD017A251DD0D590 /* HistogramView.swift */,
+				E37EADA26F247A3BA96152BC /* SliderPanel */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -72,6 +84,7 @@
 			children = (
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
 				23D5A47B1630002BE67596A1 /* EditRendererTests.swift */,
+				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -88,9 +101,19 @@
 			isa = PBXGroup;
 			children = (
 				85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */,
+				8F149C1AC756E023AB4F09DE /* Histogram.swift */,
 				798CF687AF441778F974D6E6 /* ImageDecoder.swift */,
 			);
 			path = Pipeline;
+			sourceTree = "<group>";
+		};
+		E37EADA26F247A3BA96152BC /* SliderPanel */ = {
+			isa = PBXGroup;
+			children = (
+				E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */,
+				CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */,
+			);
+			path = SliderPanel;
 			sourceTree = "<group>";
 		};
 		EF1538382E6F728E5A4EFED4 /* App */ = {
@@ -192,6 +215,7 @@
 			files = (
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
+				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,8 +226,12 @@
 				4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */,
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
 				360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */,
+				2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */,
+				80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */,
 				F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */,
 				310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */,
+				BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */,
+				79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,12 +5,12 @@ import UniformTypeIdentifiers
 
 // MARK: - Editor state
 
-/// Holds the currently-open photo, its edit stack, and the rendered preview.
+/// Holds the currently-open photo, its edit stack, the rendered preview, and a
+/// live histogram of that preview.
 ///
 /// Editing is non-destructive: ``source`` is the (preview-scaled) original and
-/// is never mutated. Any change to ``editStack`` re-renders the preview by
-/// replaying the stack through ``EditRenderer``. This one small object *is* the
-/// Phase 1 render loop — proving it works end to end is the point of this phase.
+/// is never mutated. Any change to ``editStack`` re-renders the preview and its
+/// histogram by replaying the stack through ``EditRenderer``.
 @Observable
 final class EditorModel {
     /// The active edits. Mutating any field re-renders the preview.
@@ -20,6 +20,9 @@ final class EditorModel {
 
     /// The rendered preview currently shown on screen.
     private(set) var displayImage: CGImage?
+
+    /// A per-channel histogram of the current preview.
+    private(set) var histogram: Histogram = .empty
 
     /// File name of the open photo, for display in the panel.
     private(set) var fileName: String?
@@ -45,15 +48,18 @@ final class EditorModel {
     private func renderPreview() {
         guard let source else {
             displayImage = nil
+            histogram = .empty
             return
         }
-        displayImage = renderer.renderCGImage(source: source, stack: editStack)
+        let edited = renderer.render(source: source, stack: editStack)
+        displayImage = renderer.makeCGImage(edited)
+        histogram = renderer.histogram(of: edited)
     }
 }
 
 // MARK: - Main editing screen
 
-/// The main editing screen: the photo on the left, adjustment sliders on the
+/// The main editing screen: the photo on the left, adjustment panel on the
 /// right. Shows an empty state with an import prompt until a photo is opened.
 struct EditView: View {
     @State private var model = EditorModel()
@@ -67,7 +73,7 @@ struct EditView: View {
                 emptyState
             }
         }
-        .frame(minWidth: 820, minHeight: 560)
+        .frame(minWidth: 900, minHeight: 620)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -106,7 +112,7 @@ struct EditView: View {
         HSplitView {
             imageCanvas
             SliderPanel(model: model)
-                .frame(minWidth: 260, idealWidth: 288, maxWidth: 360)
+                .frame(minWidth: 288, idealWidth: 300, maxWidth: 380)
         }
     }
 
@@ -135,66 +141,5 @@ struct EditView: View {
         case let .failure(error):
             NSLog("PhotoEditor: import failed — \(error.localizedDescription)")
         }
-    }
-}
-
-// MARK: - Adjustment panel
-
-/// The right-hand adjustment panel. Sliders bind directly to the model's edit
-/// stack, so moving one mutates ``EditStack`` and drives a live re-render.
-private struct SliderPanel: View {
-    @Bindable var model: EditorModel
-
-    var body: some View {
-        Form {
-            Section("Photo") {
-                LabeledContent("File", value: model.fileName ?? "—")
-            }
-
-            Section("Light") {
-                AdjustmentSlider(
-                    title: "Exposure",
-                    value: $model.editStack.exposure,
-                    range: -3...3,
-                    format: "%.2f EV"
-                )
-                AdjustmentSlider(
-                    title: "Contrast",
-                    value: $model.editStack.contrast,
-                    range: -100...100,
-                    format: "%.0f"
-                )
-            }
-
-            Section {
-                Button("Reset Adjustments") {
-                    model.editStack = EditStack()
-                }
-                .disabled(model.editStack == EditStack())
-            }
-        }
-        .formStyle(.grouped)
-    }
-}
-
-/// A labeled slider that shows its current value, formatted.
-private struct AdjustmentSlider: View {
-    let title: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let format: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(String(format: format, value))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Slider(value: $value, in: range)
-        }
-        .padding(.vertical, 2)
     }
 }
