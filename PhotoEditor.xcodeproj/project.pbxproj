@@ -8,16 +8,26 @@
 
 /* Begin PBXBuildFile section */
 		00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D5A47B1630002BE67596A1 /* EditRendererTests.swift */; };
+		1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD897D60EAA5BF2C6D21704E /* EditorModel.swift */; };
 		2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F149C1AC756E023AB4F09DE /* Histogram.swift */; };
 		310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */; };
 		360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFFE0C1B13FBE874BB46905 /* EditView.swift */; };
+		496633E70F9DF564673D5394 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A2742AF560A6380DB26AF7 /* LibraryView.swift */; };
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
+		50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */; };
 		57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B0E50E4F655388B03702D4 /* EditStack.swift */; };
+		78116024A8FFB53FFF097986 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F42D8FE50D31A1366CC7206 /* AppModel.swift */; };
 		79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */; };
 		80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2F971CBD017A251DD0D590 /* HistogramView.swift */; };
+		80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */; };
+		84EEA5528D19459DFF8CBD8C /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C4B3091A6443432FE97A32E /* CatalogStore.swift */; };
+		B19B7753F1618E46FB0C83E9 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3F4EDBF61BFD5A46628D40DB /* GRDB */; };
 		B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD40FF611C66AC099F6A793E /* EditorModelTests.swift */; };
+		BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C5547D7963F84FCD8C69 /* TestSupport.swift */; };
 		BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */; };
+		D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */; };
+		DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */; };
 		F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798CF687AF441778F974D6E6 /* ImageDecoder.swift */; };
 /* End PBXBuildFile section */
 
@@ -34,8 +44,14 @@
 /* Begin PBXFileReference section */
 		23D5A47B1630002BE67596A1 /* EditRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRendererTests.swift; sourceTree = "<group>"; };
 		2F1415087A748B8EEE199DF5 /* PhotoEditorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoEditorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
+		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogEntry.swift; sourceTree = "<group>"; };
 		5A2F971CBD017A251DD0D590 /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
+		67A2742AF560A6380DB26AF7 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		798CF687AF441778F974D6E6 /* ImageDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDecoder.swift; sourceTree = "<group>"; };
+		7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorUndoTests.swift; sourceTree = "<group>"; };
+		7C4B3091A6443432FE97A32E /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
 		85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRenderer.swift; sourceTree = "<group>"; };
 		8BFFE0C1B13FBE874BB46905 /* EditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditView.swift; sourceTree = "<group>"; };
 		8E1A3561D6F755730260526D /* PhotoEditor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoEditor.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,16 +59,31 @@
 		94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorApp.swift; sourceTree = "<group>"; };
 		955D38A421CE01C63316D878 /* Phase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase2Tests.swift; sourceTree = "<group>"; };
 		B2B0E50E4F655388B03702D4 /* EditStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditStack.swift; sourceTree = "<group>"; };
+		BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStoreTests.swift; sourceTree = "<group>"; };
 		BD40FF611C66AC099F6A793E /* EditorModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModelTests.swift; sourceTree = "<group>"; };
+		C971C5547D7963F84FCD8C69 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurveEditor.swift; sourceTree = "<group>"; };
+		CD897D60EAA5BF2C6D21704E /* EditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModel.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3F3159ACCDE7C0928441C4B4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B19B7753F1618E46FB0C83E9 /* GRDB in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		28EA92AFF23D93C826EF8644 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
 				EF1538382E6F728E5A4EFED4 /* App */,
+				567BBBED0FC3839535F173AE /* Catalog */,
 				AC08D28F5F70E0C7286E9FA5 /* Models */,
 				C5FCC8CF70CFE6A964DFE1CD /* Pipeline */,
 				654B59387D615AA1657113CA /* Views */,
@@ -69,11 +100,22 @@
 			);
 			sourceTree = "<group>";
 		};
+		567BBBED0FC3839535F173AE /* Catalog */ = {
+			isa = PBXGroup;
+			children = (
+				7C4B3091A6443432FE97A32E /* CatalogStore.swift */,
+				318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */,
+			);
+			path = Catalog;
+			sourceTree = "<group>";
+		};
 		654B59387D615AA1657113CA /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CD897D60EAA5BF2C6D21704E /* EditorModel.swift */,
 				8BFFE0C1B13FBE874BB46905 /* EditView.swift */,
 				5A2F971CBD017A251DD0D590 /* HistogramView.swift */,
+				67A2742AF560A6380DB26AF7 /* LibraryView.swift */,
 				E37EADA26F247A3BA96152BC /* SliderPanel */,
 			);
 			path = Views;
@@ -82,9 +124,12 @@
 		819E5DD9D0CB05C1E7800252 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */,
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
+				7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */,
 				23D5A47B1630002BE67596A1 /* EditRendererTests.swift */,
 				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
+				C971C5547D7963F84FCD8C69 /* TestSupport.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -92,6 +137,7 @@
 		AC08D28F5F70E0C7286E9FA5 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */,
 				B2B0E50E4F655388B03702D4 /* EditStack.swift */,
 			);
 			path = Models;
@@ -119,6 +165,7 @@
 		EF1538382E6F728E5A4EFED4 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				3F42D8FE50D31A1366CC7206 /* AppModel.swift */,
 				94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */,
 			);
 			path = App;
@@ -159,6 +206,7 @@
 			buildConfigurationList = FA320B698FC050B3607B76E4 /* Build configuration list for PBXNativeTarget "PhotoEditor" */;
 			buildPhases = (
 				C372FD16177E08FFF1722349 /* Sources */,
+				3F3159ACCDE7C0928441C4B4 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -166,6 +214,7 @@
 			);
 			name = PhotoEditor;
 			packageProductDependencies = (
+				3F4EDBF61BFD5A46628D40DB /* GRDB */,
 			);
 			productName = PhotoEditor;
 			productReference = 8E1A3561D6F755730260526D /* PhotoEditor.app */;
@@ -197,6 +246,9 @@
 			);
 			mainGroup = 31AE93292EE52B480745B546;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				310DA6CF71D7F43E388FA48C /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FB95B90DF6EE78A33B569F6B /* Products */;
 			projectDirPath = "";
@@ -213,9 +265,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */,
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
+				80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */,
 				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
+				BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,14 +278,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				78116024A8FFB53FFF097986 /* AppModel.swift in Sources */,
+				50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */,
+				84EEA5528D19459DFF8CBD8C /* CatalogStore.swift in Sources */,
 				4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */,
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
 				360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */,
+				1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */,
 				2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */,
 				80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */,
 				F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */,
+				496633E70F9DF564673D5394 /* LibraryView.swift in Sources */,
 				310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */,
 				BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */,
+				D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */,
 				79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -478,6 +539,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		310DA6CF71D7F43E388FA48C /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3F4EDBF61BFD5A46628D40DB /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 310DA6CF71D7F43E388FA48C /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F4E6721A5EC820DA0BABAEB6 /* Project object */;
 }

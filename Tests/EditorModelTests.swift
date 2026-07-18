@@ -1,112 +1,68 @@
 import CoreImage
-import ImageIO
-import UniformTypeIdentifiers
 import XCTest
 @testable import PhotoEditor
 
-/// Exercises the full Phase 1 loop through ``EditorModel``: import a real image
-/// file from disk, then confirm that mutating the edit stack actually changes
-/// the rendered preview. This is the end-to-end proof that sliders drive Core
-/// Image rendering — the whole point of Phase 1.
+/// Exercises ``EditorModel`` as the single-photo editing loop: loading an
+/// entry's original, live-rendering edits, resetting, and handling a missing
+/// file. A long `commitDelay` keeps the debounce timer from firing mid-test.
 final class EditorModelTests: XCTestCase {
-    /// Writes a solid mid-gray PNG to a temp file and returns its URL.
-    private func makeTestPNG(gray: UInt8 = 128, size: Int = 32) throws -> URL {
-        let bytesPerPixel = 4
-        let rowBytes = size * bytesPerPixel
-        var pixels = [UInt8](repeating: 0, count: size * rowBytes)
-        for i in stride(from: 0, to: pixels.count, by: bytesPerPixel) {
-            pixels[i] = gray       // R
-            pixels[i + 1] = gray   // G
-            pixels[i + 2] = gray   // B
-            pixels[i + 3] = 255    // A
-        }
-
-        let cs = CGColorSpaceCreateDeviceRGB()
-        let ctx = CGContext(
-            data: &pixels,
-            width: size,
-            height: size,
-            bitsPerComponent: 8,
-            bytesPerRow: rowBytes,
-            space: cs,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    private func makeEditor(gray: UInt8 = 128) throws -> (editor: EditorModel, url: URL) {
+        let url = try TestSupport.makeTempPNG(gray: gray)
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(fileURL: url)
+        try catalog.save(entry)
+        let editor = EditorModel(
+            entry: entry, catalog: catalog,
+            thumbnails: TestSupport.tempThumbnails(), commitDelay: 60
         )
-        let cgImage = try XCTUnwrap(ctx?.makeImage())
-
-        let url = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("phototest-\(UUID().uuidString).png")
-        let dest = try XCTUnwrap(
-            CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
-        )
-        CGImageDestinationAddImage(dest, cgImage, nil)
-        XCTAssertTrue(CGImageDestinationFinalize(dest))
-        return url
+        return (editor, url)
     }
 
-    /// Average brightness of a CGImage by box-filtering it down to one pixel.
-    private func averageBrightness(_ cg: CGImage) -> Double {
-        var pixel = [UInt8](repeating: 0, count: 4)
-        let ctx = CGContext(
-            data: &pixel,
-            width: 1,
-            height: 1,
-            bitsPerComponent: 8,
-            bytesPerRow: 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        ctx.interpolationQuality = .high
-        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-        return (Double(pixel[0]) + Double(pixel[1]) + Double(pixel[2])) / (3.0 * 255.0)
-    }
-
-    func testImportProducesPreview() throws {
-        let url = try makeTestPNG()
+    func testLoadsPreviewOnInit() throws {
+        let (editor, url) = try makeEditor()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let model = EditorModel()
-        XCTAssertFalse(model.hasImage)
-
-        model.importImage(from: url)
-
-        XCTAssertTrue(model.hasImage)
-        XCTAssertNotNil(model.displayImage)
-        XCTAssertEqual(model.fileName, url.lastPathComponent)
+        XCTAssertFalse(editor.isMissingFile)
+        XCTAssertNotNil(editor.displayImage)
+        XCTAssertEqual(editor.fileName, url.lastPathComponent)
     }
 
-    func testExposureSliderBrightensPreview() throws {
-        let url = try makeTestPNG()
+    func testExposureBrightensPreview() throws {
+        let (editor, url) = try makeEditor()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let model = EditorModel()
-        model.importImage(from: url)
-        let baseImage = try XCTUnwrap(model.displayImage)
-        let baseBrightness = averageBrightness(baseImage)
+        let base = TestSupport.averageBrightness(try XCTUnwrap(editor.displayImage))
+        editor.editStack.exposure = 2.0
+        let brightened = TestSupport.averageBrightness(try XCTUnwrap(editor.displayImage))
 
-        // Move the exposure "slider".
-        model.editStack.exposure = 2.0
-
-        let brightenedImage = try XCTUnwrap(model.displayImage)
-        let brightenedBrightness = averageBrightness(brightenedImage)
-
-        XCTAssertGreaterThan(brightenedBrightness, baseBrightness,
+        XCTAssertGreaterThan(brightened, base,
                              "Raising exposure should brighten the rendered preview.")
     }
 
-    func testResetRestoresOriginalPreview() throws {
-        let url = try makeTestPNG()
+    func testResetRestoresPreview() throws {
+        let (editor, url) = try makeEditor()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let model = EditorModel()
-        model.importImage(from: url)
-        let originalBrightness = averageBrightness(try XCTUnwrap(model.displayImage))
+        let base = TestSupport.averageBrightness(try XCTUnwrap(editor.displayImage))
+        editor.editStack.exposure = -2.0
+        XCTAssertLessThan(TestSupport.averageBrightness(try XCTUnwrap(editor.displayImage)), base)
 
-        model.editStack.exposure = -2.0
-        let darkenedBrightness = averageBrightness(try XCTUnwrap(model.displayImage))
-        XCTAssertLessThan(darkenedBrightness, originalBrightness)
+        editor.resetAdjustments()
+        XCTAssertEqual(TestSupport.averageBrightness(try XCTUnwrap(editor.displayImage)),
+                       base, accuracy: 0.01)
+    }
 
-        model.editStack = EditStack() // reset
-        let restoredBrightness = averageBrightness(try XCTUnwrap(model.displayImage))
-        XCTAssertEqual(restoredBrightness, originalBrightness, accuracy: 0.01)
+    func testMissingFileIsFlagged() throws {
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(
+            fileURL: URL(fileURLWithPath: "/nonexistent/path/nope.png")
+        )
+        let editor = EditorModel(
+            entry: entry, catalog: catalog,
+            thumbnails: TestSupport.tempThumbnails(), commitDelay: 60
+        )
+
+        XCTAssertTrue(editor.isMissingFile)
+        XCTAssertNil(editor.displayImage)
     }
 }

@@ -12,12 +12,10 @@ struct SliderPanel: View {
             VStack(alignment: .leading, spacing: 20) {
                 HistogramView(histogram: model.histogram)
 
-                if let name = model.fileName {
-                    Text(name)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
+                Text(model.fileName)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
                 section("White Balance") {
                     AdjustmentSlider(title: "Temperature",

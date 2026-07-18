@@ -2,18 +2,34 @@ import SwiftUI
 
 /// Entry point for the editor.
 ///
-/// A single-window app for now. Document management, multiple photos, and the
-/// library grid arrive with the catalog in Phase 3 — until then the window
-/// hosts one photo at a time via `EditView`.
+/// A single window that shows either the library grid or, when a photo is open,
+/// the editor for that photo (see ``RootView``).
 @main
 struct PhotoEditorApp: App {
     var body: some Scene {
         WindowGroup {
-            EditView()
+            RootView()
         }
         .commands {
-            // No document model yet, so drop the default "New" menu item.
+            // No document model, so drop the default "New" menu item.
             CommandGroup(replacing: .newItem) {}
         }
+    }
+}
+
+/// Switches between the library and the single-photo editor based on whether a
+/// photo is currently open.
+struct RootView: View {
+    @State private var app = AppModel()
+
+    var body: some View {
+        Group {
+            if let editor = app.editor {
+                EditView(editor: editor, onClose: { app.closeEditor() })
+            } else {
+                LibraryView(app: app)
+            }
+        }
+        .frame(minWidth: 900, minHeight: 640)
     }
 }

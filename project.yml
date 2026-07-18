@@ -7,6 +7,11 @@ options:
     macOS: "14.0"
   createIntermediateGroups: true
 
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "6.0.0"
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -22,6 +27,9 @@ targets:
     platform: macOS
     sources:
       - path: Sources
+    dependencies:
+      - package: GRDB
+        product: GRDB
     settings:
       base:
         PRODUCT_NAME: PhotoEditor
