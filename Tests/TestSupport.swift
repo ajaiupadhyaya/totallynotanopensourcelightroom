@@ -58,13 +58,26 @@ enum TestSupport {
         CGColorSpace(name: CGColorSpace.sRGB)!
     }
 
-    /// A solid-color image whose sRGB-encoded components are the values given.
+    /// A solid-color image filling `rect`, whose sRGB-encoded components are
+    /// the values given.
+    ///
+    /// Note this crops an *infinite* color image, so `rect` may be anywhere and
+    /// any size. Cropping an already-finite image can only ever shrink it —
+    /// which is a very easy way to write a test that silently measures a 1×1
+    /// image instead of the one it meant to.
+    static func solidImage(
+        red: Double, green: Double, blue: Double, in rect: CGRect
+    ) -> CIImage {
+        let color = CIColor(red: red, green: green, blue: blue, colorSpace: sRGBSpace)!
+        return CIImage(color: color).cropped(to: rect)
+    }
+
+    /// A square solid-color image anchored at the origin.
     static func solidImage(
         red: Double, green: Double, blue: Double, size: CGFloat = 32
     ) -> CIImage {
-        let color = CIColor(red: red, green: green, blue: blue, colorSpace: sRGBSpace)!
-        return CIImage(color: color)
-            .cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
+        solidImage(red: red, green: green, blue: blue,
+                   in: CGRect(x: 0, y: 0, width: size, height: size))
     }
 
     /// Reads the average sRGB-encoded color of an image.

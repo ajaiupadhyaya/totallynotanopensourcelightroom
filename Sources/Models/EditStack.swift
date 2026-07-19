@@ -7,12 +7,12 @@ import Foundation
 /// original file on disk is never modified. Every preview is produced by
 /// replaying this stack against the untouched original through a Core Image
 /// filter chain (see ``EditRenderer``). Because it is `Codable`, the whole
-/// edit state for a photo is just a small JSON blob to persist later.
+/// edit state for a photo is just a small JSON blob in the catalog.
 ///
-/// Fields are added incrementally, one phase at a time — the model never
-/// carries fields that nothing renders yet. Phase 1 added exposure/contrast;
-/// Phase 2 adds white balance, saturation, highlights/shadows, and the tone
-/// curve below.
+/// Every field's default is its neutral value, so a freshly-constructed stack
+/// renders the original image unchanged. Decoding is lenient (see
+/// ``LenientDecoding``), which is what makes adding a field safe for photos
+/// edited by an earlier build.
 struct EditStack: Codable, Equatable {
     // MARK: Light
 
@@ -30,6 +30,14 @@ struct EditStack: Codable, Equatable {
     /// negative deepens them; `0` leaves them unchanged.
     var shadows: Double = 0
 
+    /// White-point adjustment, `-100...100`. Shapes the brightest tones,
+    /// above where ``highlights`` acts.
+    var whites: Double = 0
+
+    /// Black-point adjustment, `-100...100`. Shapes the darkest tones, below
+    /// where ``shadows`` acts.
+    var blacks: Double = 0
+
     // MARK: White balance
 
     /// White-balance temperature in Kelvin. `6500` (D65) is neutral; higher is
@@ -39,11 +47,55 @@ struct EditStack: Codable, Equatable {
     /// White-balance tint on a green–magenta axis, `-100...100`. `0` is neutral.
     var whiteBalanceTint: Double = 0
 
-    // MARK: Color
+    // MARK: Presence
+
+    /// Fine-detail local contrast, `-100...100`. Small-radius; brings out
+    /// surface texture without touching overall tonality.
+    var texture: Double = 0
+
+    /// Midtone local contrast, `-100...100`. Large-radius; adds punch and
+    /// apparent depth.
+    var clarity: Double = 0
+
+    /// Haze reduction, `-100...100`. See ``EditRenderer`` for what this
+    /// actually does — it is an approximation, not a true atmospheric model.
+    var dehaze: Double = 0
+
+    /// Saturation weighted toward already-muted colors, `-100...100`. Protects
+    /// skin tones better than a flat saturation boost.
+    var vibrance: Double = 0
 
     /// Saturation adjustment, `-100...100`. `-100` is fully desaturated
     /// (grayscale), `0` is unchanged, `+100` doubles saturation.
     var saturation: Double = 0
+
+    // MARK: Detail
+
+    /// Sharpening strength, `0...100`.
+    var sharpenAmount: Double = 0
+
+    /// Sharpening radius in pixels, `0.5...5`.
+    var sharpenRadius: Double = 1.5
+
+    /// Luminance noise reduction, `0...100`.
+    var luminanceNoiseReduction: Double = 0
+
+    /// Color (chroma) noise reduction, `0...100`.
+    var colorNoiseReduction: Double = 0
+
+    // MARK: Effects
+
+    /// Post-crop vignette, `-100...100`. Negative darkens the corners.
+    var vignetteAmount: Double = 0
+
+    /// How far the vignette reaches in from the corners, `0...100`.
+    var vignetteMidpoint: Double = 50
+
+    /// Film grain strength, `0...100`.
+    var grainAmount: Double = 0
+
+    /// Grain size, `0...100`; larger is coarser, like a faster stock.
+    var grainSize: Double = 25
 
     // MARK: Tone curve
 
@@ -51,6 +103,11 @@ struct EditStack: Codable, Equatable {
     /// sorted by ascending x. An empty array means the identity curve (no
     /// change). When set, it holds exactly five points to feed `CIToneCurve`.
     var toneCurvePoints: [CGPoint] = []
+
+    // MARK: Geometry
+
+    /// Crop, rotation, straightening, and flips.
+    var geometry = Geometry()
 
     // MARK: Film
 
@@ -64,30 +121,38 @@ struct EditStack: Codable, Equatable {
 // MARK: - Lenient decoding
 
 extension EditStack {
-    /// Decodes an edit stack, treating every missing key as its default.
-    ///
-    /// Edit stacks are persisted as JSON in the catalog, so a stack written by
-    /// an older build will not contain fields added since. The synthesized
-    /// decoder would throw on those missing keys and the photo's edits would be
-    /// silently lost. Decoding leniently instead means adding a field is always
-    /// a backward-compatible change: old rows simply come back with the new
-    /// field at its neutral default.
     init(from decoder: Decoder) throws {
         self.init()
-        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
 
-        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
-            ((try? container.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
-        }
+        exposure = c.lenient(.exposure, 0)
+        contrast = c.lenient(.contrast, 0)
+        highlights = c.lenient(.highlights, 0)
+        shadows = c.lenient(.shadows, 0)
+        whites = c.lenient(.whites, 0)
+        blacks = c.lenient(.blacks, 0)
 
-        exposure = value(.exposure, 0)
-        contrast = value(.contrast, 0)
-        highlights = value(.highlights, 0)
-        shadows = value(.shadows, 0)
-        whiteBalanceTemp = value(.whiteBalanceTemp, 6500)
-        whiteBalanceTint = value(.whiteBalanceTint, 0)
-        saturation = value(.saturation, 0)
-        toneCurvePoints = value(.toneCurvePoints, [])
-        filmNegative = value(.filmNegative, FilmNegativeSettings())
+        whiteBalanceTemp = c.lenient(.whiteBalanceTemp, 6500)
+        whiteBalanceTint = c.lenient(.whiteBalanceTint, 0)
+
+        texture = c.lenient(.texture, 0)
+        clarity = c.lenient(.clarity, 0)
+        dehaze = c.lenient(.dehaze, 0)
+        vibrance = c.lenient(.vibrance, 0)
+        saturation = c.lenient(.saturation, 0)
+
+        sharpenAmount = c.lenient(.sharpenAmount, 0)
+        sharpenRadius = c.lenient(.sharpenRadius, 1.5)
+        luminanceNoiseReduction = c.lenient(.luminanceNoiseReduction, 0)
+        colorNoiseReduction = c.lenient(.colorNoiseReduction, 0)
+
+        vignetteAmount = c.lenient(.vignetteAmount, 0)
+        vignetteMidpoint = c.lenient(.vignetteMidpoint, 50)
+        grainAmount = c.lenient(.grainAmount, 0)
+        grainSize = c.lenient(.grainSize, 25)
+
+        toneCurvePoints = c.lenient(.toneCurvePoints, [])
+        geometry = c.lenient(.geometry, Geometry())
+        filmNegative = c.lenient(.filmNegative, FilmNegativeSettings())
     }
 }

@@ -30,6 +30,10 @@ struct SliderPanel: View {
                                      range: -100...100, format: "%.0f", neutral: 0)
                 }
 
+                section("Crop & Rotate") {
+                    GeometryPanel(model: model)
+                }
+
                 section("Light") {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
@@ -43,12 +47,63 @@ struct SliderPanel: View {
                     AdjustmentSlider(title: "Shadows",
                                      value: $model.editStack.shadows,
                                      range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Whites",
+                                     value: $model.editStack.whites,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Blacks",
+                                     value: $model.editStack.blacks,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                }
+
+                section("Presence") {
+                    AdjustmentSlider(title: "Texture",
+                                     value: $model.editStack.texture,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Clarity",
+                                     value: $model.editStack.clarity,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Dehaze",
+                                     value: $model.editStack.dehaze,
+                                     range: -100...100, format: "%.0f", neutral: 0)
                 }
 
                 section("Color") {
+                    AdjustmentSlider(title: "Vibrance",
+                                     value: $model.editStack.vibrance,
+                                     range: -100...100, format: "%.0f", neutral: 0)
                     AdjustmentSlider(title: "Saturation",
                                      value: $model.editStack.saturation,
                                      range: -100...100, format: "%.0f", neutral: 0)
+                }
+
+                section("Detail") {
+                    AdjustmentSlider(title: "Sharpening",
+                                     value: $model.editStack.sharpenAmount,
+                                     range: 0...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Sharpen Radius",
+                                     value: $model.editStack.sharpenRadius,
+                                     range: 0.5...5, format: "%.1f px", neutral: 1.5)
+                    AdjustmentSlider(title: "Luminance NR",
+                                     value: $model.editStack.luminanceNoiseReduction,
+                                     range: 0...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Color NR",
+                                     value: $model.editStack.colorNoiseReduction,
+                                     range: 0...100, format: "%.0f", neutral: 0)
+                }
+
+                section("Effects") {
+                    AdjustmentSlider(title: "Vignette",
+                                     value: $model.editStack.vignetteAmount,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Vignette Midpoint",
+                                     value: $model.editStack.vignetteMidpoint,
+                                     range: 0...100, format: "%.0f", neutral: 50)
+                    AdjustmentSlider(title: "Grain",
+                                     value: $model.editStack.grainAmount,
+                                     range: 0...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Grain Size",
+                                     value: $model.editStack.grainSize,
+                                     range: 0...100, format: "%.0f", neutral: 25)
                 }
 
                 section("Tone Curve") {

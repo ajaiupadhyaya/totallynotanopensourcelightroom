@@ -76,6 +76,45 @@ final class EditorModel {
         editStack = EditStack()
     }
 
+    // MARK: Geometry
+
+    /// Sets a centered crop with the given aspect ratio (width ÷ height),
+    /// or clears the crop when `ratio` is nil.
+    ///
+    /// The ratio is applied against the frame *after* rotation, so asking for
+    /// 3:2 on a portrait-rotated image gives a 3:2 crop of what's on screen
+    /// rather than of the original orientation.
+    func setCropAspectRatio(_ ratio: Double?) {
+        guard let ratio, ratio > 0 else {
+            editStack.geometry.cropRect = .unitFrame
+            return
+        }
+        guard let source else { return }
+
+        var width = source.extent.width
+        var height = source.extent.height
+        if editStack.geometry.rotation.swapsAxes {
+            swap(&width, &height)
+        }
+        guard width > 0, height > 0 else { return }
+
+        // Work in normalized space: a ratio of 1 on a 3:2 frame is a square
+        // whose normalized width is (height/width) of the frame.
+        let frameRatio = Double(width / height)
+        var cropWidth = 1.0
+        var cropHeight = 1.0
+        if ratio > frameRatio {
+            cropHeight = frameRatio / ratio
+        } else {
+            cropWidth = ratio / frameRatio
+        }
+
+        editStack.geometry.cropRect = CGRect(
+            x: (1 - cropWidth) / 2, y: (1 - cropHeight) / 2,
+            width: cropWidth, height: cropHeight
+        )
+    }
+
     // MARK: Film
 
     /// Every stock available for selection (calibrated first, then built-ins).
