@@ -182,6 +182,35 @@ final class FilmNegativeTests: XCTestCase {
         XCTAssertEqual(fetched.editStack.filmNegative, entry.editStack.filmNegative)
     }
 
+    func testFilmSettingsDecodeLenientlyRatherThanRevertingWholesale() throws {
+        // A film section missing a newer key must keep every key it *does*
+        // have. If it threw, EditStack's fallback would swap in disabled
+        // defaults and the photo would render as an un-inverted negative.
+        let json = """
+        {"isEnabled":true,"type":"colorNegative",
+         "baseColor":{"red":1.0,"green":0.61,"blue":0.36},
+         "channelGains":{"red":1.0,"green":1.0,"blue":1.0},
+         "exposure":0.5,"stockContrast":8,"stockSaturation":3}
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(FilmNegativeSettings.self, from: json)
+        XCTAssertTrue(settings.isEnabled)
+        XCTAssertEqual(settings.exposure, 0.5, accuracy: 1e-9)
+        XCTAssertEqual(settings.stockContrast, 8, accuracy: 1e-9)
+        XCTAssertFalse(settings.isBaseSampled, "A missing flag defaults to false.")
+    }
+
+    func testSampledBaseFlagSurvivesReopening() throws {
+        let store = try TestSupport.inMemoryCatalog()
+        var entry = TestSupport.makeEntry(fileURL: URL(fileURLWithPath: "/tmp/neg.tif"))
+        entry.editStack.filmNegative = settings { $0.isBaseSampled = true }
+        try store.save(entry)
+
+        let fetched = try XCTUnwrap(store.entry(id: entry.id))
+        XCTAssertTrue(fetched.editStack.filmNegative.isBaseSampled,
+                      "A sampled base must not report as assumed after a reload.")
+    }
+
     /// Edit stacks written before the film fields existed must still decode —
     /// otherwise upgrading the app would silently drop everyone's edits.
     func testOlderEditStackJSONStillDecodes() throws {

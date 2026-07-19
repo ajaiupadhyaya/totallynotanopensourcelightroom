@@ -23,6 +23,14 @@ struct FilmNegativeSettings: Codable, Equatable {
     /// Everything is divided by this to remove the orange mask.
     var baseColor: FilmColor = FilmNegativeSettings.defaultColorNegativeBase
 
+    /// Whether ``baseColor`` was measured from this scan rather than assumed.
+    ///
+    /// This is persisted alongside the color itself. Keeping it only in memory
+    /// meant a frame reopened later reported its base as "assumed" when it had
+    /// in fact been sampled — telling the user their scan was uncalibrated when
+    /// it wasn't, and inviting them to redo work already done.
+    var isBaseSampled: Bool = false
+
     /// Per-channel gain applied during inversion to neutralize residual cast.
     var channelGains: FilmColor = .white
 
@@ -40,6 +48,31 @@ struct FilmNegativeSettings: Codable, Equatable {
     /// A representative orange mask, used before the base has been sampled.
     static let defaultColorNegativeBase = FilmColor(red: 1.00, green: 0.61, blue: 0.36)
 
+    init() {}
+
+    /// Decodes leniently, like ``EditStack``.
+    ///
+    /// This matters more here than it looks. `EditStack` decodes this whole
+    /// value with a fallback, so if the synthesized decoder threw on a single
+    /// missing key the *entire* film section would silently revert to disabled
+    /// defaults — a photo would come back looking like an un-inverted negative
+    /// with no indication why. Field-level fallbacks keep the loss to the one
+    /// field that is actually absent.
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = c.lenient(.isEnabled, false)
+        type = c.lenient(.type, FilmType.colorNegative)
+        stockID = c.lenient(.stockID, nil)
+        stockName = c.lenient(.stockName, nil)
+        baseColor = c.lenient(.baseColor, Self.defaultColorNegativeBase)
+        isBaseSampled = c.lenient(.isBaseSampled, false)
+        channelGains = c.lenient(.channelGains, .white)
+        exposure = c.lenient(.exposure, 0)
+        stockContrast = c.lenient(.stockContrast, 0)
+        stockSaturation = c.lenient(.stockSaturation, 0)
+    }
+
     /// Copies a stock profile's numbers into these settings, keeping the
     /// already-sampled base color if the user calibrated one for this scan.
     mutating func apply(_ stock: FilmStock, keepSampledBase: Bool = false) {
@@ -48,6 +81,7 @@ struct FilmNegativeSettings: Codable, Equatable {
         type = stock.type
         if !keepSampledBase {
             baseColor = stock.baseColor
+            isBaseSampled = false
         }
         channelGains = stock.channelGains
         stockContrast = stock.contrast

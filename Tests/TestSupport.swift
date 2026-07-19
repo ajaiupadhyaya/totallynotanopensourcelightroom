@@ -1,4 +1,6 @@
 import CoreGraphics
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -80,16 +82,31 @@ enum TestSupport {
                    in: CGRect(x: 0, y: 0, width: size, height: size))
     }
 
-    /// Reads the average sRGB-encoded color of an image.
+    /// Reads the **average** sRGB-encoded color over an image's whole extent.
+    ///
+    /// Genuinely averaging (rather than sampling the center pixel) matters for
+    /// any region that isn't uniform — an edge, a gradient, a grain overlay.
+    /// Center sampling silently answers a different question than the call site
+    /// is asking.
     static func readColor(
         _ image: CIImage, context: CIContext = CIContext()
     ) -> (red: Double, green: Double, blue: Double) {
+        let extent = image.extent
+        guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else {
+            return (0, 0, 0)
+        }
+
+        let average = CIFilter.areaAverage()
+        average.inputImage = image
+        average.extent = extent
+        guard let output = average.outputImage else { return (0, 0, 0) }
+
         var buffer = [Float](repeating: 0, count: 4)
         context.render(
-            image,
+            output,
             toBitmap: &buffer,
             rowBytes: 4 * MemoryLayout<Float>.stride,
-            bounds: CGRect(x: image.extent.midX, y: image.extent.midY, width: 1, height: 1),
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
             format: .RGBAf,
             colorSpace: sRGBSpace
         )

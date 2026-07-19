@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Observation
 
@@ -14,6 +15,9 @@ final class AppModel {
 
     /// A user-facing message when catalog IO fails.
     private(set) var errorMessage: String?
+
+    /// Frames selected in the library. Batch actions apply to these.
+    var selection: Set<UUID> = []
 
     private let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
@@ -35,6 +39,7 @@ final class AppModel {
         }
         reload()
         reloadPresets()
+        restoreLastSession()
     }
 
     // MARK: Library
@@ -58,6 +63,7 @@ final class AppModel {
             editStack: EditStack(),
             thumbnailPath: nil
         )
+        entry.applyMetadata(PhotoMetadata.read(from: url))
         if let cgImage = ThumbnailGenerator.thumbnailCGImage(for: url),
            let thumbnailURL = thumbnails.write(cgImage, id: entry.id) {
             entry.thumbnailPath = thumbnailURL
@@ -207,8 +213,18 @@ final class AppModel {
 
     // MARK: Batch export
 
+    /// Progress of a running export, or nil when none is in flight.
+    private(set) var exportProgress: (completed: Int, total: Int)?
+
+    var isExporting: Bool { exportProgress != nil }
+
     /// Exports several photos into `directory`, rendering each from its own
     /// full-resolution original.
+    ///
+    /// The rendering runs off the main actor. A full-resolution render is
+    /// hundreds of milliseconds per frame, so exporting a roll on the main
+    /// thread freezes the window for the whole batch — the UI has to stay live
+    /// enough to show progress and let the work be watched.
     ///
     /// - Returns: The URLs written and any per-photo failures, so the caller
     ///   can report partial success honestly rather than claiming everything
@@ -217,21 +233,33 @@ final class AppModel {
         _ targets: [CatalogEntry],
         settings: ExportSettings,
         to directory: URL
-    ) -> (written: [URL], failures: [(entry: CatalogEntry, error: Error)]) {
-        let service = ExportService(renderer: renderer)
+    ) async -> (written: [URL], failures: [(entry: CatalogEntry, error: Error)]) {
+        exportProgress = (0, targets.count)
+        defer { exportProgress = nil }
+
         var written: [URL] = []
         var failures: [(entry: CatalogEntry, error: Error)] = []
 
-        for target in targets {
+        for (index, target) in targets.enumerated() {
             let name = ExportService.suggestedFileName(for: target.fileURL, settings: settings)
             let destination = uniqueURL(in: directory, preferredName: name)
+            let sourceURL = target.fileURL
+            let stack = target.editStack
+
             do {
-                try service.export(sourceURL: target.fileURL, stack: target.editStack,
-                                   settings: settings, to: destination)
+                try await Task.detached(priority: .userInitiated) {
+                    // A fresh context per task: CIContext holds caches sized to
+                    // the images it has seen, and reusing the preview context
+                    // for full-resolution work balloons its memory.
+                    let service = ExportService(renderer: EditRenderer(context: CIContext()))
+                    try service.export(sourceURL: sourceURL, stack: stack,
+                                       settings: settings, to: destination)
+                }.value
                 written.append(destination)
             } catch {
                 failures.append((target, error))
             }
+            exportProgress = (index + 1, targets.count)
         }
         return (written, failures)
     }
@@ -261,11 +289,39 @@ final class AppModel {
             thumbnails: thumbnails,
             onPersist: { [weak self] in self?.refreshEntry(entry.id) }
         )
+        selection = [entry.id]
+        Self.lastOpenedID = entry.id
     }
 
     func closeEditor() {
         editor?.commitEdit() // flush any pending edits before leaving
         editor = nil
+    }
+
+    // MARK: Session restore
+
+    /// The frame that was open when the app last quit.
+    ///
+    /// Editing a roll is a long, interrupted activity — you quit, come back,
+    /// and want to be where you left off rather than hunting for the frame
+    /// again. Only the id is stored; if that photo has since been removed from
+    /// the library, restoring is simply skipped.
+    private static var lastOpenedID: UUID? {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: lastOpenedKey) else { return nil }
+            return UUID(uuidString: raw)
+        }
+        set {
+            UserDefaults.standard.set(newValue?.uuidString, forKey: lastOpenedKey)
+        }
+    }
+
+    private static let lastOpenedKey = "lastOpenedEntryID"
+
+    private func restoreLastSession() {
+        guard let id = Self.lastOpenedID,
+              let entry = entries.first(where: { $0.id == id }) else { return }
+        open(entry)
     }
 
     // MARK: Private

@@ -1,4 +1,5 @@
 import CoreImage
+import CoreImage.CIFilterBuiltins
 import Foundation
 import UniformTypeIdentifiers
 
@@ -68,6 +69,51 @@ struct ExportSettings: Codable, Equatable {
     /// Longest-edge limit in pixels. `nil` exports at full resolution; we never
     /// upscale, so a value larger than the original is a no-op.
     var maxDimension: Double?
+
+    /// Output sharpening matched to how the file will be viewed.
+    var outputSharpening: OutputSharpening = .none
+
+    /// Sharpening applied at the very end of export, sized to the output.
+    ///
+    /// Resampling softens an image, and how much sharpening it needs back
+    /// depends on the medium: a print is viewed at arm's length on diffusing
+    /// paper and takes more, a screen image at 100% takes little, and a heavily
+    /// compressed web file wants a fine radius because a coarse one gives the
+    /// encoder halos to spend bits on. This is applied *after* any resize, so
+    /// it is calibrated to the pixels actually written.
+    enum OutputSharpening: String, Codable, CaseIterable, Identifiable {
+        case none, screen, web, print
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .none: "None"
+            case .screen: "Screen"
+            case .web: "Web (compressed)"
+            case .print: "Print"
+            }
+        }
+
+        /// Unsharp-mask radius in pixels.
+        var radius: Double {
+            switch self {
+            case .none: 0
+            case .screen: 0.8
+            case .web: 0.6
+            case .print: 1.4
+            }
+        }
+
+        var intensity: Double {
+            switch self {
+            case .none: 0
+            case .screen: 0.45
+            case .web: 0.35
+            case .print: 0.85
+            }
+        }
+    }
 }
 
 enum ExportError: Error, LocalizedError {
@@ -122,9 +168,23 @@ struct ExportService {
         if let maxDimension = settings.maxDimension, maxDimension > 0 {
             image = ImageDecoder.downsampled(image, maxDimension: CGFloat(maxDimension))
         }
+        image = applyOutputSharpening(image, settings: settings)
 
         let data = try encode(image, settings: settings)
         try data.write(to: destination, options: .atomic)
+    }
+
+    /// Applies output sharpening after resizing, so its radius is in output
+    /// pixels rather than source pixels.
+    func applyOutputSharpening(_ image: CIImage, settings: ExportSettings) -> CIImage {
+        let sharpening = settings.outputSharpening
+        guard sharpening != .none else { return image }
+
+        let filter = CIFilter.unsharpMask()
+        filter.inputImage = image
+        filter.radius = Float(sharpening.radius)
+        filter.intensity = Float(sharpening.intensity)
+        return filter.outputImage ?? image
     }
 
     /// Encodes a rendered image into the target container, embedding the chosen

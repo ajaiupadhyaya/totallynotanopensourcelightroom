@@ -80,6 +80,14 @@ final class EditorModel {
         editStack = EditStack()
     }
 
+    // MARK: Focus peaking
+
+    /// Tints the in-focus areas of the preview. A viewing aid only — it never
+    /// affects the edit stack or what gets exported.
+    var isFocusPeakingEnabled = false {
+        didSet { renderPreview() }
+    }
+
     // MARK: Before / after
 
     /// When true the canvas shows the unedited original.
@@ -237,11 +245,12 @@ final class EditorModel {
     }
 
     /// True once a base has been read off this scan rather than assumed.
-    private(set) var hasSampledBase = false
+    /// Read from the persisted edit stack, so it survives reopening the photo.
+    var hasSampledBase: Bool { editStack.filmNegative.isBaseSampled }
 
     private func applySampledBase(_ base: FilmColor) {
         editStack.filmNegative.baseColor = base
-        hasSampledBase = true
+        editStack.filmNegative.isBaseSampled = true
         if editStack.filmNegative.stockID == nil {
             editStack.filmNegative.type = FilmBaseSampler.inferType(from: base)
         }
@@ -327,8 +336,15 @@ final class EditorModel {
         }
         let stack = isShowingBefore ? beforeStack : editStack
         let edited = renderer.render(source: source, stack: stack)
-        displayImage = renderer.makeCGImage(edited)
+
+        // The histogram describes the photo, so it is measured before the
+        // peaking overlay — which is chrome, not image data.
         histogram = renderer.histogram(of: edited)
+
+        let shown = isFocusPeakingEnabled
+            ? FocusPeaking.overlay(on: edited)
+            : edited
+        displayImage = renderer.makeCGImage(shown)
     }
 
     private func persist() {

@@ -71,6 +71,18 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
     /// Optional color label.
     var colorLabel: ColorLabel = .none
 
+    // MARK: Denormalized capture metadata
+    //
+    // Copied out of the file's EXIF at import so the library can filter and
+    // search on it. Reading EXIF off disk per row would make scrolling a large
+    // catalog wait on file IO; these columns are indexed instead.
+
+    var cameraMake: String?
+    var cameraModel: String?
+    var lensModel: String?
+    var iso: Int?
+    var captureDate: Date?
+
     var fileName: String { fileURL.lastPathComponent }
 
     init(
@@ -81,7 +93,12 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         thumbnailPath: URL?,
         rating: Int = 0,
         flag: PickFlag = .unflagged,
-        colorLabel: ColorLabel = .none
+        colorLabel: ColorLabel = .none,
+        cameraMake: String? = nil,
+        cameraModel: String? = nil,
+        lensModel: String? = nil,
+        iso: Int? = nil,
+        captureDate: Date? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -91,6 +108,20 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         self.rating = rating
         self.flag = flag
         self.colorLabel = colorLabel
+        self.cameraMake = cameraMake
+        self.cameraModel = cameraModel
+        self.lensModel = lensModel
+        self.iso = iso
+        self.captureDate = captureDate
+    }
+
+    /// Fills the denormalized metadata columns from a file's EXIF.
+    mutating func applyMetadata(_ metadata: PhotoMetadata) {
+        cameraMake = metadata.cameraMake
+        cameraModel = metadata.cameraModel
+        lensModel = metadata.lensModel
+        iso = metadata.iso
+        captureDate = metadata.captureDate
     }
 
     /// Decodes leniently for the same reason ``EditStack`` does: rows written
@@ -105,5 +136,10 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         rating = c.lenient(.rating, 0)
         flag = c.lenient(.flag, PickFlag.unflagged)
         colorLabel = c.lenient(.colorLabel, ColorLabel.none)
+        cameraMake = c.lenient(.cameraMake, nil)
+        cameraModel = c.lenient(.cameraModel, nil)
+        lensModel = c.lenient(.lensModel, nil)
+        iso = c.lenient(.iso, nil)
+        captureDate = c.lenient(.captureDate, nil)
     }
 }

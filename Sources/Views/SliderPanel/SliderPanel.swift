@@ -157,31 +157,4 @@ struct SliderPanel: View {
     }
 }
 
-/// A labeled slider that shows its current value, dims to secondary when at its
-/// neutral point, and resets to neutral on a double-click.
-struct AdjustmentSlider: View {
-    let title: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let format: String
-    var neutral: Double = 0
-
-    private var isNeutral: Bool { value == neutral }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                Spacer()
-                Text(String(format: format, value))
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(isNeutral ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
-            }
-            Slider(value: $value, in: range)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2) { value = neutral }
-    }
-}
+// AdjustmentSlider lives in AdjustmentSlider.swift.

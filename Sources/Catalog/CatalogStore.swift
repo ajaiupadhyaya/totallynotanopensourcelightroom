@@ -65,6 +65,34 @@ final class CatalogStore {
                 table.column("editStack", .text).notNull() // JSON
             }
         }
+        migrator.registerMigration("v5_addCaptureMetadataAndIndexes") { db in
+            try db.alter(table: CatalogEntry.databaseTableName) { table in
+                table.add(column: "cameraMake", .text)
+                table.add(column: "cameraModel", .text)
+                table.add(column: "lensModel", .text)
+                table.add(column: "iso", .integer)
+                table.add(column: "captureDate", .datetime)
+            }
+            // Culling and browsing filter on these constantly, and a catalog
+            // is read far more often than it is written, so the index cost is
+            // worth paying.
+            try db.create(index: "idx_catalogEntry_rating",
+                          on: CatalogEntry.databaseTableName, columns: ["rating"])
+            try db.create(index: "idx_catalogEntry_flag",
+                          on: CatalogEntry.databaseTableName, columns: ["flag"])
+            try db.create(index: "idx_catalogEntry_colorLabel",
+                          on: CatalogEntry.databaseTableName, columns: ["colorLabel"])
+            try db.create(index: "idx_catalogEntry_cameraModel",
+                          on: CatalogEntry.databaseTableName, columns: ["cameraModel"])
+            try db.create(index: "idx_catalogEntry_lensModel",
+                          on: CatalogEntry.databaseTableName, columns: ["lensModel"])
+            try db.create(index: "idx_catalogEntry_iso",
+                          on: CatalogEntry.databaseTableName, columns: ["iso"])
+            try db.create(index: "idx_catalogEntry_captureDate",
+                          on: CatalogEntry.databaseTableName, columns: ["captureDate"])
+            try db.create(index: "idx_catalogEntry_dateImported",
+                          on: CatalogEntry.databaseTableName, columns: ["dateImported"])
+        }
         return migrator
     }
 

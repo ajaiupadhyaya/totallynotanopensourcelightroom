@@ -47,6 +47,12 @@ struct BatchExportSheet: View {
                     }
                 }
 
+                Picker("Output Sharpening", selection: $settings.outputSharpening) {
+                    ForEach(ExportSettings.OutputSharpening.allCases) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+
                 Toggle("Limit long edge", isOn: $limitSize)
                 if limitSize {
                     HStack {
@@ -59,6 +65,17 @@ struct BatchExportSheet: View {
                 }
             }
             .formStyle(.grouped)
+
+            if let progress = app.exportProgress {
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: Double(progress.completed),
+                                 total: Double(max(progress.total, 1)))
+                    Text("Exporting \(progress.completed) of \(progress.total)…")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             if let result {
                 resultSummary(result)
@@ -73,7 +90,7 @@ struct BatchExportSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Choose Folder…") { presentPanel() }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(entries.isEmpty)
+                    .disabled(entries.isEmpty || app.isExporting)
             }
         }
         .padding(20)
@@ -118,7 +135,9 @@ struct BatchExportSheet: View {
 
         guard panel.runModal() == .OK, let directory = panel.url else { return }
 
-        let outcome = app.batchExport(entries, settings: resolved, to: directory)
-        result = BatchResult(written: outcome.written.count, failures: outcome.failures)
+        Task {
+            let outcome = await app.batchExport(entries, settings: resolved, to: directory)
+            result = BatchResult(written: outcome.written.count, failures: outcome.failures)
+        }
     }
 }
