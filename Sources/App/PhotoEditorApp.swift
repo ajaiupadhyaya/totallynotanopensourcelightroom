@@ -25,7 +25,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if let editor = app.editor {
-                EditView(editor: editor, onClose: { app.closeEditor() })
+                EditView(editor: editor, app: app, onClose: { app.closeEditor() })
             } else {
                 LibraryView(app: app)
             }

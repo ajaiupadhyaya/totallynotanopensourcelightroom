@@ -4,6 +4,7 @@ import SwiftUI
 /// adjustment panel on the right, and a toolbar with Library / undo / redo.
 struct EditView: View {
     @Bindable var editor: EditorModel
+    @Bindable var app: AppModel
 
     /// Called to leave the editor and return to the library.
     let onClose: () -> Void
@@ -17,7 +18,7 @@ struct EditView: View {
             } else {
                 HSplitView {
                     imageCanvas
-                    SliderPanel(model: editor)
+                    SliderPanel(model: editor, app: app)
                         .frame(minWidth: 288, idealWidth: 300, maxWidth: 380)
                 }
             }
@@ -47,6 +48,24 @@ struct EditView: View {
                 }
                 .disabled(!editor.canRedo)
                 .keyboardShortcut("z", modifiers: [.command, .shift])
+
+                Button {
+                    editor.isShowingBefore.toggle()
+                } label: {
+                    Label(editor.isShowingBefore ? "Showing Before" : "Before / After",
+                          systemImage: editor.isShowingBefore
+                            ? "rectangle.righthalf.filled" : "rectangle.lefthalf.filled")
+                }
+                .help("Compare against the unedited original")
+                .keyboardShortcut("\\", modifiers: [])
+
+                Button {
+                    app.copySettings(from: editor.entry)
+                } label: {
+                    Label("Copy Settings", systemImage: "doc.on.doc")
+                }
+                .help("Copy this look, to paste onto other frames")
+                .keyboardShortcut("c", modifiers: [.command, .shift])
 
                 Button {
                     isShowingExport = true

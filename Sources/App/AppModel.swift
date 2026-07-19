@@ -17,6 +17,7 @@ final class AppModel {
 
     private let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
+    private let renderer = EditRenderer()
 
     init() {
         if let base = try? AppModel.baseDirectory(),
@@ -33,6 +34,7 @@ final class AppModel {
             errorMessage = "Could not open the on-disk catalog; the library won't persist this session."
         }
         reload()
+        reloadPresets()
     }
 
     // MARK: Library
@@ -77,6 +79,177 @@ final class AppModel {
         try? catalog.delete(id: entry.id)
         thumbnails.remove(id: entry.id)
         entries.removeAll { $0.id == entry.id }
+    }
+
+    // MARK: Culling — rating, flag, label
+
+    func setRating(_ rating: Int, for entry: CatalogEntry) {
+        update(entry) { $0.rating = max(0, min(5, rating)) }
+    }
+
+    func setFlag(_ flag: PickFlag, for entry: CatalogEntry) {
+        update(entry) { $0.flag = flag }
+    }
+
+    func setColorLabel(_ label: ColorLabel, for entry: CatalogEntry) {
+        update(entry) { $0.colorLabel = label }
+    }
+
+    private func update(_ entry: CatalogEntry, _ mutate: (inout CatalogEntry) -> Void) {
+        var updated = entry
+        mutate(&updated)
+        do {
+            try catalog.save(updated)
+            if let index = entries.firstIndex(where: { $0.id == entry.id }) {
+                entries[index] = updated
+            }
+        } catch {
+            errorMessage = "Could not update the photo: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: Copy / paste settings
+
+    /// The edit stack most recently copied, if any.
+    private(set) var copiedStack: EditStack?
+
+    /// The name of the photo the copied settings came from, for the UI.
+    private(set) var copiedFromName: String?
+
+    var canPasteSettings: Bool { copiedStack != nil }
+
+    func copySettings(from entry: CatalogEntry) {
+        copiedStack = entry.editStack
+        copiedFromName = entry.fileName
+    }
+
+    /// Pastes the copied settings onto the given entries.
+    ///
+    /// This is the operation that makes a roll of film tractable: develop one
+    /// frame, then carry that look across the rest. By default it deliberately
+    /// leaves each frame's crop and its own sampled film base alone — see
+    /// ``EditTransferOptions``.
+    @discardableResult
+    func pasteSettings(
+        to targets: [CatalogEntry],
+        options: EditTransferOptions = .init()
+    ) -> Int {
+        guard let copiedStack else { return 0 }
+        return apply(copiedStack, to: targets, options: options)
+    }
+
+    /// Applies a stack to entries, regenerating their thumbnails so the library
+    /// grid reflects the change.
+    @discardableResult
+    func apply(
+        _ stack: EditStack,
+        to targets: [CatalogEntry],
+        options: EditTransferOptions = .init()
+    ) -> Int {
+        var applied = 0
+        for target in targets {
+            var updated = target
+            updated.editStack = target.editStack.applying(stack, options: options)
+            guard updated != target else { continue }
+            do {
+                try catalog.save(updated)
+                regenerateThumbnail(for: updated)
+                if let index = entries.firstIndex(where: { $0.id == target.id }) {
+                    entries[index] = updated
+                }
+                applied += 1
+            } catch {
+                errorMessage = "Could not update \(target.fileName): \(error.localizedDescription)"
+            }
+        }
+        // The open editor would otherwise keep showing its stale stack.
+        if let editor, targets.contains(where: { $0.id == editor.entry.id }) {
+            open(entries.first { $0.id == editor.entry.id } ?? editor.entry)
+        }
+        return applied
+    }
+
+    /// Re-renders an entry's thumbnail from its current edit stack.
+    private func regenerateThumbnail(for entry: CatalogEntry) {
+        guard let source = ImageDecoder.loadPreviewImage(from: entry.fileURL,
+                                                         maxDimension: 640) else { return }
+        let rendered = renderer.render(source: source, stack: entry.editStack)
+        guard let cgImage = renderer.makeCGImage(rendered) else { return }
+        _ = thumbnails.write(cgImage, id: entry.id)
+    }
+
+    // MARK: Presets
+
+    private(set) var presets: [DevelopPreset] = []
+
+    func reloadPresets() {
+        presets = (try? catalog.allPresets()) ?? []
+    }
+
+    @discardableResult
+    func savePreset(named name: String, from stack: EditStack, group: String = "User Presets")
+        -> DevelopPreset? {
+        let preset = DevelopPreset(name: name, group: group, editStack: stack)
+        do {
+            try catalog.savePreset(preset)
+            reloadPresets()
+            return preset
+        } catch {
+            errorMessage = "Could not save the preset: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    func deletePreset(_ preset: DevelopPreset) {
+        try? catalog.deletePreset(id: preset.id)
+        reloadPresets()
+    }
+
+    // MARK: Batch export
+
+    /// Exports several photos into `directory`, rendering each from its own
+    /// full-resolution original.
+    ///
+    /// - Returns: The URLs written and any per-photo failures, so the caller
+    ///   can report partial success honestly rather than claiming everything
+    ///   worked.
+    func batchExport(
+        _ targets: [CatalogEntry],
+        settings: ExportSettings,
+        to directory: URL
+    ) -> (written: [URL], failures: [(entry: CatalogEntry, error: Error)]) {
+        let service = ExportService(renderer: renderer)
+        var written: [URL] = []
+        var failures: [(entry: CatalogEntry, error: Error)] = []
+
+        for target in targets {
+            let name = ExportService.suggestedFileName(for: target.fileURL, settings: settings)
+            let destination = uniqueURL(in: directory, preferredName: name)
+            do {
+                try service.export(sourceURL: target.fileURL, stack: target.editStack,
+                                   settings: settings, to: destination)
+                written.append(destination)
+            } catch {
+                failures.append((target, error))
+            }
+        }
+        return (written, failures)
+    }
+
+    /// Avoids silently overwriting an existing file by appending a counter.
+    private func uniqueURL(in directory: URL, preferredName: String) -> URL {
+        let candidate = directory.appendingPathComponent(preferredName)
+        guard FileManager.default.fileExists(atPath: candidate.path) else { return candidate }
+
+        let base = candidate.deletingPathExtension().lastPathComponent
+        let ext = candidate.pathExtension
+        var counter = 2
+        while counter < 10_000 {
+            let next = directory.appendingPathComponent("\(base)-\(counter).\(ext)")
+            if !FileManager.default.fileExists(atPath: next.path) { return next }
+            counter += 1
+        }
+        return candidate
     }
 
     // MARK: Editor navigation

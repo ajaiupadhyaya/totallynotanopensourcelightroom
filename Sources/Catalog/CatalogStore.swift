@@ -49,7 +49,40 @@ final class CatalogStore {
                 table.column("isCustom", .boolean).notNull()
             }
         }
+        migrator.registerMigration("v3_addRatingFlagAndLabel") { db in
+            try db.alter(table: CatalogEntry.databaseTableName) { table in
+                table.add(column: "rating", .integer).notNull().defaults(to: 0)
+                table.add(column: "flag", .integer).notNull().defaults(to: 0)
+                table.add(column: "colorLabel", .text).notNull().defaults(to: "none")
+            }
+        }
+        migrator.registerMigration("v4_createDevelopPreset") { db in
+            try db.create(table: DevelopPreset.databaseTableName) { table in
+                table.primaryKey("id", .text)
+                table.column("name", .text).notNull()
+                table.column("group", .text).notNull()
+                table.column("dateCreated", .datetime).notNull()
+                table.column("editStack", .text).notNull() // JSON
+            }
+        }
         return migrator
+    }
+
+    // MARK: Develop presets
+
+    /// All presets, grouped name order.
+    func allPresets() throws -> [DevelopPreset] {
+        try dbQueue.read { db in
+            try DevelopPreset.order(Column("group"), Column("name")).fetchAll(db)
+        }
+    }
+
+    func savePreset(_ preset: DevelopPreset) throws {
+        try dbQueue.write { db in try preset.save(db) }
+    }
+
+    func deletePreset(id: String) throws {
+        _ = try dbQueue.write { db in try DevelopPreset.deleteOne(db, key: id) }
     }
 
     // MARK: Film stocks

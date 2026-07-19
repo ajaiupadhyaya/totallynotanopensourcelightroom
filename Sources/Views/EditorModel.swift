@@ -49,6 +49,9 @@ final class EditorModel {
     private let commitDelay: TimeInterval
 
     var fileName: String { entry.fileURL.lastPathComponent }
+
+    /// Read-only capture metadata, read once when the photo opens.
+    let metadata: PhotoMetadata
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
 
@@ -60,6 +63,7 @@ final class EditorModel {
         onPersist: @escaping () -> Void = {}
     ) {
         self.entry = entry
+        self.metadata = PhotoMetadata.read(from: entry.fileURL)
         self.editStack = entry.editStack
         self.lastCommittedStack = entry.editStack
         self.catalog = catalog
@@ -74,6 +78,34 @@ final class EditorModel {
     /// Resets all adjustments to their neutral defaults.
     func resetAdjustments() {
         editStack = EditStack()
+    }
+
+    // MARK: Before / after
+
+    /// When true the canvas shows the unedited original.
+    ///
+    /// Note this still applies geometry — comparing a crop against an uncropped
+    /// frame would just look like a different photo, so "before" means "before
+    /// the *adjustments*," which is what people are actually asking to see.
+    var isShowingBefore = false {
+        didSet { renderPreview() }
+    }
+
+    /// The stack used for the "before" view: geometry and the negative
+    /// conversion kept, every adjustment reset.
+    private var beforeStack: EditStack {
+        var stack = EditStack()
+        stack.geometry = editStack.geometry
+        stack.filmNegative = editStack.filmNegative
+        return stack
+    }
+
+    // MARK: Presets
+
+    /// Applies a preset's look to this photo, leaving the frame's own crop and
+    /// sampled film base intact.
+    func applyPreset(_ preset: DevelopPreset, options: EditTransferOptions = .init()) {
+        editStack = editStack.applying(preset.editStack, options: options)
     }
 
     // MARK: Geometry
@@ -293,7 +325,8 @@ final class EditorModel {
             histogram = .empty
             return
         }
-        let edited = renderer.render(source: source, stack: editStack)
+        let stack = isShowingBefore ? beforeStack : editStack
+        let edited = renderer.render(source: source, stack: stack)
         displayImage = renderer.makeCGImage(edited)
         histogram = renderer.histogram(of: edited)
     }

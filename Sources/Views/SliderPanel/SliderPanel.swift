@@ -6,6 +6,7 @@ import SwiftUI
 /// non-destructive re-render.
 struct SliderPanel: View {
     @Bindable var model: EditorModel
+    @Bindable var app: AppModel
 
     var body: some View {
         ScrollView {
@@ -120,6 +121,14 @@ struct SliderPanel: View {
                     Text("Drag a point vertically to reshape. Double-click to reset.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                section("Presets") {
+                    PresetPanel(app: app, model: model)
+                }
+
+                section("Info") {
+                    MetadataPanel(metadata: model.metadata, fileName: model.fileName)
                 }
 
                 Button("Reset All Adjustments") {
