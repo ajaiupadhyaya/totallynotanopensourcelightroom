@@ -48,6 +48,41 @@ enum TestSupport {
         return (Double(pixel[0]) + Double(pixel[1]) + Double(pixel[2])) / (3.0 * 255.0)
     }
 
+    // MARK: Color helpers
+    //
+    // Film math happens on gamma-encoded sRGB values, so these deliberately
+    // build and read back images in sRGB rather than the linear working space.
+    // Sampling in the wrong space is exactly the bug these tests exist to catch.
+
+    static var sRGBSpace: CGColorSpace {
+        CGColorSpace(name: CGColorSpace.sRGB)!
+    }
+
+    /// A solid-color image whose sRGB-encoded components are the values given.
+    static func solidImage(
+        red: Double, green: Double, blue: Double, size: CGFloat = 32
+    ) -> CIImage {
+        let color = CIColor(red: red, green: green, blue: blue, colorSpace: sRGBSpace)!
+        return CIImage(color: color)
+            .cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
+    }
+
+    /// Reads the average sRGB-encoded color of an image.
+    static func readColor(
+        _ image: CIImage, context: CIContext = CIContext()
+    ) -> (red: Double, green: Double, blue: Double) {
+        var buffer = [Float](repeating: 0, count: 4)
+        context.render(
+            image,
+            toBitmap: &buffer,
+            rowBytes: 4 * MemoryLayout<Float>.stride,
+            bounds: CGRect(x: image.extent.midX, y: image.extent.midY, width: 1, height: 1),
+            format: .RGBAf,
+            colorSpace: sRGBSpace
+        )
+        return (Double(buffer[0]), Double(buffer[1]), Double(buffer[2]))
+    }
+
     static func inMemoryCatalog() throws -> CatalogStore {
         try CatalogStore()
     }

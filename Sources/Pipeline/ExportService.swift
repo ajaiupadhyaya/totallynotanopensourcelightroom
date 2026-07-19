@@ -141,8 +141,8 @@ struct ExportService {
         case .jpeg:
             context.jpegRepresentation(of: image, colorSpace: space, options: options)
         case .heif:
-            try? context.heifRepresentation(of: image, format: .RGBA8,
-                                            colorSpace: space, options: options)
+            context.heifRepresentation(of: image, format: .RGBA8,
+                                       colorSpace: space, options: options)
         case .png:
             context.pngRepresentation(of: image, format: .RGBA8,
                                       colorSpace: space, options: options)

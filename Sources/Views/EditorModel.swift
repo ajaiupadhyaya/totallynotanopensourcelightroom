@@ -68,11 +68,119 @@ final class EditorModel {
         self.onPersist = onPersist
         loadSource()
         renderPreview()
+        reloadFilmStocks()
     }
 
     /// Resets all adjustments to their neutral defaults.
     func resetAdjustments() {
         editStack = EditStack()
+    }
+
+    // MARK: Film
+
+    /// Every stock available for selection (calibrated first, then built-ins).
+    private(set) var filmStocks: [FilmStock] = []
+
+    /// Stocks ranked against the sampled film base, closest first. Empty until
+    /// a base has been sampled.
+    private(set) var stockMatches: [StockMatch] = []
+
+    /// Turns on negative conversion and does the sensible first pass: sample
+    /// the film base off the scan, infer the family from it, and rank stocks.
+    func enableFilmNegative() {
+        editStack.filmNegative.isEnabled = true
+        sampleFilmBase()
+    }
+
+    /// Samples the film base from the **untouched scan** — not the rendered
+    /// preview, which by then has already been inverted.
+    func sampleFilmBase() {
+        guard let source,
+              let base = FilmBaseSampler.sampleBase(from: source, context: renderer.context)
+        else { return }
+        applySampledBase(base)
+    }
+
+    /// Samples the film base from a specific region — the eyedropper path, for
+    /// pointing at a piece of clear film border directly.
+    ///
+    /// - Parameter unitRect: The region in unit coordinates (0–1) of the
+    ///   displayed image, which the caller gets from a drag in the canvas.
+    func sampleFilmBase(inUnitRect unitRect: CGRect) {
+        guard let source else { return }
+        let extent = source.extent
+        let rect = CGRect(
+            x: extent.origin.x + unitRect.origin.x * extent.width,
+            y: extent.origin.y + unitRect.origin.y * extent.height,
+            width: max(1, unitRect.width * extent.width),
+            height: max(1, unitRect.height * extent.height)
+        )
+        guard let base = FilmBaseSampler.sampleAverage(
+            from: source, in: rect, context: renderer.context
+        ) else { return }
+        applySampledBase(base)
+    }
+
+    /// Applies a stock profile, keeping the base color already sampled from
+    /// this scan — the user's own base is more accurate than any profile's.
+    func applyFilmStock(_ stock: FilmStock) {
+        editStack.filmNegative.apply(stock, keepSampledBase: hasSampledBase)
+        editStack.filmNegative.isEnabled = true
+    }
+
+    /// Saves the current film settings as a reusable calibrated profile.
+    ///
+    /// This is the reliable direction: the user names the stock they actually
+    /// shot, and the base sampled from their own scan captures the whole chain
+    /// (stock, development, scanner, light source).
+    @discardableResult
+    func saveCalibratedStock(name: String, manufacturer: String, iso: Int?) -> FilmStock? {
+        let film = editStack.filmNegative
+        let stock = FilmStock(
+            id: "custom-\(UUID().uuidString)",
+            name: name,
+            manufacturer: manufacturer,
+            iso: iso,
+            type: film.type,
+            baseColor: film.baseColor,
+            channelGains: film.channelGains,
+            contrast: film.stockContrast,
+            saturation: film.stockSaturation,
+            isCustom: true
+        )
+        do {
+            try catalog.saveFilmStock(stock)
+            reloadFilmStocks()
+            editStack.filmNegative.stockID = stock.id
+            editStack.filmNegative.stockName = stock.displayName
+            return stock
+        } catch {
+            return nil
+        }
+    }
+
+    func deleteCalibratedStock(_ stock: FilmStock) {
+        guard stock.isCustom else { return }
+        try? catalog.deleteFilmStock(id: stock.id)
+        reloadFilmStocks()
+    }
+
+    /// True once a base has been read off this scan rather than assumed.
+    private(set) var hasSampledBase = false
+
+    private func applySampledBase(_ base: FilmColor) {
+        editStack.filmNegative.baseColor = base
+        hasSampledBase = true
+        if editStack.filmNegative.stockID == nil {
+            editStack.filmNegative.type = FilmBaseSampler.inferType(from: base)
+        }
+        stockMatches = FilmBaseSampler.rankStocks(
+            matching: base, in: filmStocks, type: editStack.filmNegative.type
+        )
+    }
+
+    private func reloadFilmStocks() {
+        filmStocks = (try? catalog.allFilmStocks()) ?? FilmStock.builtIn
     }
 
     // MARK: Export

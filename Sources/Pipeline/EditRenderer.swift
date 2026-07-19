@@ -29,6 +29,11 @@ struct EditRenderer {
     func render(source: CIImage, stack: EditStack) -> CIImage {
         var image = source
 
+        // 0. Film negative conversion, before anything else. Everything
+        //    downstream should be shaping a positive image, not a negative —
+        //    on an un-inverted scan every other slider would work backwards.
+        image = FilmNegativeConverter.convert(image, settings: stack.filmNegative)
+
         // 1. White balance (temperature / tint).
         if stack.whiteBalanceTemp != 6500 || stack.whiteBalanceTint != 0 {
             let wb = CIFilter.temperatureAndTint()

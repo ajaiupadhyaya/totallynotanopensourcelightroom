@@ -32,7 +32,47 @@ final class CatalogStore {
                 table.column("thumbnailPath", .text)
             }
         }
+        migrator.registerMigration("v2_createFilmStock") { db in
+            // Only *custom* (calibrated) stocks live here; the built-in
+            // profiles ship in code so they can be corrected in an update
+            // without migrating anyone's database.
+            try db.create(table: FilmStock.databaseTableName) { table in
+                table.primaryKey("id", .text)
+                table.column("name", .text).notNull()
+                table.column("manufacturer", .text).notNull()
+                table.column("iso", .integer)
+                table.column("type", .text).notNull()
+                table.column("baseColor", .text).notNull()    // JSON
+                table.column("channelGains", .text).notNull() // JSON
+                table.column("contrast", .double).notNull()
+                table.column("saturation", .double).notNull()
+                table.column("isCustom", .boolean).notNull()
+            }
+        }
         return migrator
+    }
+
+    // MARK: Film stocks
+
+    /// Every stock available for selection: the built-ins plus anything the
+    /// user has calibrated, custom profiles first.
+    func allFilmStocks() throws -> [FilmStock] {
+        try customFilmStocks() + FilmStock.builtIn
+    }
+
+    /// Only the user's calibrated profiles.
+    func customFilmStocks() throws -> [FilmStock] {
+        try dbQueue.read { db in
+            try FilmStock.order(Column("name")).fetchAll(db)
+        }
+    }
+
+    func saveFilmStock(_ stock: FilmStock) throws {
+        try dbQueue.write { db in try stock.save(db) }
+    }
+
+    func deleteFilmStock(id: String) throws {
+        _ = try dbQueue.write { db in try FilmStock.deleteOne(db, key: id) }
     }
 
     /// All entries, newest import first.

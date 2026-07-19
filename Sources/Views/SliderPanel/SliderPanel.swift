@@ -17,6 +17,10 @@ struct SliderPanel: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
+                section("Film") {
+                    FilmPanel(model: model)
+                }
+
                 section("White Balance") {
                     AdjustmentSlider(title: "Temperature",
                                      value: $model.editStack.whiteBalanceTemp,
