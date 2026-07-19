@@ -22,16 +22,19 @@
 		496633E70F9DF564673D5394 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A2742AF560A6380DB26AF7 /* LibraryView.swift */; };
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
+		504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267388D14FEE2777E922AC35 /* ColorMixerTests.swift */; };
 		50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */; };
 		56F7C65333037B3472BD75C5 /* ExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B6B1D0A6E07F18B7995903 /* ExportSheet.swift */; };
 		57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B0E50E4F655388B03702D4 /* EditStack.swift */; };
 		57DD920F5D4D11086F682CAF /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B5233289A7A627F06097F5 /* Geometry.swift */; };
+		595C3CD80230ED514032E4E8 /* ColorCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */; };
 		60A35DABA722DA72F962E386 /* FilmStock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C39D72A549DFE7D38FA03F /* FilmStock.swift */; };
 		6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */; };
 		7338731C6C7BD32B8F3190AE /* FilmNegativeConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */; };
 		73D7E31333173A0549FFEBDF /* FilmNegativeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */; };
 		78116024A8FFB53FFF097986 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F42D8FE50D31A1366CC7206 /* AppModel.swift */; };
 		79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */; };
+		7AA4147BAA32E55C1DBD9F04 /* ColorCubeBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D52DB3477D17588D27A6A3 /* ColorCubeBuilder.swift */; };
 		7C57EAFB33A8061A0B57350B /* LenientDecoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C025E535BEBABD61B0AD7CF /* LenientDecoding.swift */; };
 		8029E0360C35F25FE1988C2A /* FilmNegativeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */; };
 		80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2F971CBD017A251DD0D590 /* HistogramView.swift */; };
@@ -44,9 +47,12 @@
 		BB4B230C9FB8D4D3EFF1A34A /* GeometryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */; };
 		BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C5547D7963F84FCD8C69 /* TestSupport.swift */; };
 		BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */; };
+		D3058BEA6B891477F0E22411 /* ColorSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B22E289B6818B14FC289C0C /* ColorSettings.swift */; };
 		D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */; };
 		DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */; };
+		EAE3C8107C52689454F0ECE7 /* ColorScience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */; };
 		F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798CF687AF441778F974D6E6 /* ImageDecoder.swift */; };
+		F89EAA1F8C7835B7D964611B /* ColorMixerPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,20 +71,25 @@
 		1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeTests.swift; sourceTree = "<group>"; };
 		23D5A47B1630002BE67596A1 /* EditRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRendererTests.swift; sourceTree = "<group>"; };
 		25B5233289A7A627F06097F5 /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
+		267388D14FEE2777E922AC35 /* ColorMixerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerTests.swift; sourceTree = "<group>"; };
 		26B6B1D0A6E07F18B7995903 /* ExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportSheet.swift; sourceTree = "<group>"; };
 		2C025E535BEBABD61B0AD7CF /* LenientDecoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LenientDecoding.swift; sourceTree = "<group>"; };
 		2F1415087A748B8EEE199DF5 /* PhotoEditorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoEditorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogEntry.swift; sourceTree = "<group>"; };
+		4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeCache.swift; sourceTree = "<group>"; };
 		5A2F971CBD017A251DD0D590 /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
 		5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentTests.swift; sourceTree = "<group>"; };
 		67A2742AF560A6380DB26AF7 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		6B22E289B6818B14FC289C0C /* ColorSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSettings.swift; sourceTree = "<group>"; };
 		6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeSettings.swift; sourceTree = "<group>"; };
+		732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorScience.swift; sourceTree = "<group>"; };
 		753E17A3CC2C17EB5312E084 /* FilmStockStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmStockStoreTests.swift; sourceTree = "<group>"; };
 		798CF687AF441778F974D6E6 /* ImageDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDecoder.swift; sourceTree = "<group>"; };
 		7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorUndoTests.swift; sourceTree = "<group>"; };
 		7C4B3091A6443432FE97A32E /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
+		85D52DB3477D17588D27A6A3 /* ColorCubeBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeBuilder.swift; sourceTree = "<group>"; };
 		85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRenderer.swift; sourceTree = "<group>"; };
 		8701AFF80F12C07B2E720244 /* FilmColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmColor.swift; sourceTree = "<group>"; };
 		89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeConverter.swift; sourceTree = "<group>"; };
@@ -99,6 +110,7 @@
 		DAA4A8702F7807BAA87F5D7C /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 		EC55460271E2A012E80DEEEC /* FilmPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmPanel.swift; sourceTree = "<group>"; };
+		ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerPanel.swift; sourceTree = "<group>"; };
 		F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmBaseSamplerTests.swift; sourceTree = "<group>"; };
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -164,6 +176,7 @@
 			children = (
 				5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */,
 				BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */,
+				267388D14FEE2777E922AC35 /* ColorMixerTests.swift */,
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
 				7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */,
 				23D5A47B1630002BE67596A1 /* EditRendererTests.swift */,
@@ -194,6 +207,7 @@
 			isa = PBXGroup;
 			children = (
 				4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */,
+				6B22E289B6818B14FC289C0C /* ColorSettings.swift */,
 				B2B0E50E4F655388B03702D4 /* EditStack.swift */,
 				25B5233289A7A627F06097F5 /* Geometry.swift */,
 				2C025E535BEBABD61B0AD7CF /* LenientDecoding.swift */,
@@ -204,6 +218,9 @@
 		C5FCC8CF70CFE6A964DFE1CD /* Pipeline */ = {
 			isa = PBXGroup;
 			children = (
+				85D52DB3477D17588D27A6A3 /* ColorCubeBuilder.swift */,
+				4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */,
+				732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */,
 				85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */,
 				DAA4A8702F7807BAA87F5D7C /* ExportService.swift */,
 				C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */,
@@ -216,6 +233,7 @@
 		E37EADA26F247A3BA96152BC /* SliderPanel */ = {
 			isa = PBXGroup;
 			children = (
+				ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */,
 				EC55460271E2A012E80DEEEC /* FilmPanel.swift */,
 				F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */,
 				E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */,
@@ -329,6 +347,7 @@
 			files = (
 				09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */,
 				DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */,
+				504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */,
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
 				80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */,
@@ -349,6 +368,11 @@
 				78116024A8FFB53FFF097986 /* AppModel.swift in Sources */,
 				50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */,
 				84EEA5528D19459DFF8CBD8C /* CatalogStore.swift in Sources */,
+				7AA4147BAA32E55C1DBD9F04 /* ColorCubeBuilder.swift in Sources */,
+				595C3CD80230ED514032E4E8 /* ColorCubeCache.swift in Sources */,
+				F89EAA1F8C7835B7D964611B /* ColorMixerPanel.swift in Sources */,
+				EAE3C8107C52689454F0ECE7 /* ColorScience.swift in Sources */,
+				D3058BEA6B891477F0E22411 /* ColorSettings.swift in Sources */,
 				4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */,
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
 				360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */,

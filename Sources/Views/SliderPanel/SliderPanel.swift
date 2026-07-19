@@ -76,6 +76,14 @@ struct SliderPanel: View {
                                      range: -100...100, format: "%.0f", neutral: 0)
                 }
 
+                section("Color Mixer") {
+                    ColorMixerPanel(model: model)
+                }
+
+                section("Color Grading") {
+                    ColorGradingPanel(model: model)
+                }
+
                 section("Detail") {
                     AdjustmentSlider(title: "Sharpening",
                                      value: $model.editStack.sharpenAmount,

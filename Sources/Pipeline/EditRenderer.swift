@@ -34,6 +34,10 @@ struct EditRenderer {
     /// we don't pay context-setup cost on every slider tick.
     let context: CIContext
 
+    /// Memoizes the color LUT so it isn't rebuilt on slider ticks that don't
+    /// touch a color setting.
+    private let cubeCache = ColorCubeCache()
+
     init(context: CIContext = CIContext()) {
         self.context = context
     }
@@ -53,6 +57,7 @@ struct EditRenderer {
         image = applyContrast(image, stack: stack)
         image = applyPresence(image, stack: stack)
         image = applyColor(image, stack: stack)
+        image = applyColorLUT(image, stack: stack)
         image = applyToneCurve(image, stack: stack)
         image = applyDetail(image, stack: stack)
         image = applyEffects(image, stack: stack)
@@ -214,6 +219,14 @@ struct EditRenderer {
         }
 
         return result
+    }
+
+    /// Applies the color mixer, black-and-white treatment, three-way grading,
+    /// and per-channel curves — all in one LUT pass. See ``ColorCubeBuilder``.
+    private func applyColorLUT(_ image: CIImage, stack: EditStack) -> CIImage {
+        guard let filter = cubeCache.filter(for: stack.color) else { return image }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        return filter.outputImage ?? image
     }
 
     private func applyToneCurve(_ image: CIImage, stack: EditStack) -> CIImage {
