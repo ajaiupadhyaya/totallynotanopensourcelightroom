@@ -8,6 +8,8 @@ struct EditView: View {
     /// Called to leave the editor and return to the library.
     let onClose: () -> Void
 
+    @State private var isShowingExport = false
+
     var body: some View {
         Group {
             if editor.isMissingFile {
@@ -45,7 +47,18 @@ struct EditView: View {
                 }
                 .disabled(!editor.canRedo)
                 .keyboardShortcut("z", modifiers: [.command, .shift])
+
+                Button {
+                    isShowingExport = true
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .disabled(editor.isMissingFile)
+                .keyboardShortcut("e", modifiers: [.command, .shift])
             }
+        }
+        .sheet(isPresented: $isShowingExport) {
+            ExportSheet(editor: editor)
         }
     }
 

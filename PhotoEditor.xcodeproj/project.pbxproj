@@ -16,7 +16,9 @@
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
 		50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */; };
+		56F7C65333037B3472BD75C5 /* ExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B6B1D0A6E07F18B7995903 /* ExportSheet.swift */; };
 		57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B0E50E4F655388B03702D4 /* EditStack.swift */; };
+		6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */; };
 		78116024A8FFB53FFF097986 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F42D8FE50D31A1366CC7206 /* AppModel.swift */; };
 		79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */; };
 		80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2F971CBD017A251DD0D590 /* HistogramView.swift */; };
@@ -24,6 +26,7 @@
 		84EEA5528D19459DFF8CBD8C /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C4B3091A6443432FE97A32E /* CatalogStore.swift */; };
 		B19B7753F1618E46FB0C83E9 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3F4EDBF61BFD5A46628D40DB /* GRDB */; };
 		B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD40FF611C66AC099F6A793E /* EditorModelTests.swift */; };
+		BB4A129B5DD8EE0A16DF4850 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA4A8702F7807BAA87F5D7C /* ExportService.swift */; };
 		BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C5547D7963F84FCD8C69 /* TestSupport.swift */; };
 		BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */; };
 		D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */; };
@@ -42,7 +45,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportServiceTests.swift; sourceTree = "<group>"; };
 		23D5A47B1630002BE67596A1 /* EditRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRendererTests.swift; sourceTree = "<group>"; };
+		26B6B1D0A6E07F18B7995903 /* ExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportSheet.swift; sourceTree = "<group>"; };
 		2F1415087A748B8EEE199DF5 /* PhotoEditorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoEditorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -64,6 +69,7 @@
 		C971C5547D7963F84FCD8C69 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		CD3C08F82B16D6BDB5FFB874 /* ToneCurveEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurveEditor.swift; sourceTree = "<group>"; };
 		CD897D60EAA5BF2C6D21704E /* EditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModel.swift; sourceTree = "<group>"; };
+		DAA4A8702F7807BAA87F5D7C /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -114,6 +120,7 @@
 			children = (
 				CD897D60EAA5BF2C6D21704E /* EditorModel.swift */,
 				8BFFE0C1B13FBE874BB46905 /* EditView.swift */,
+				26B6B1D0A6E07F18B7995903 /* ExportSheet.swift */,
 				5A2F971CBD017A251DD0D590 /* HistogramView.swift */,
 				67A2742AF560A6380DB26AF7 /* LibraryView.swift */,
 				E37EADA26F247A3BA96152BC /* SliderPanel */,
@@ -128,6 +135,7 @@
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
 				7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */,
 				23D5A47B1630002BE67596A1 /* EditRendererTests.swift */,
+				1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */,
 				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
 				C971C5547D7963F84FCD8C69 /* TestSupport.swift */,
 			);
@@ -147,6 +155,7 @@
 			isa = PBXGroup;
 			children = (
 				85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */,
+				DAA4A8702F7807BAA87F5D7C /* ExportService.swift */,
 				8F149C1AC756E023AB4F09DE /* Histogram.swift */,
 				798CF687AF441778F974D6E6 /* ImageDecoder.swift */,
 			);
@@ -269,6 +278,7 @@
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
 				80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */,
+				6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */,
 				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
 				BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */,
 			);
@@ -285,6 +295,8 @@
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
 				360AAF45549A3BBA9D37F3A3 /* EditView.swift in Sources */,
 				1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */,
+				BB4A129B5DD8EE0A16DF4850 /* ExportService.swift in Sources */,
+				56F7C65333037B3472BD75C5 /* ExportSheet.swift in Sources */,
 				2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */,
 				80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */,
 				F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */,

@@ -75,6 +75,19 @@ final class EditorModel {
         editStack = EditStack()
     }
 
+    // MARK: Export
+
+    /// Renders the current edits against the full-resolution original and
+    /// writes them to `url`. The original file is not touched.
+    func export(settings: ExportSettings, to url: URL) throws {
+        try ExportService(renderer: renderer).export(
+            sourceURL: entry.fileURL,
+            stack: editStack,
+            settings: settings,
+            to: url
+        )
+    }
+
     // MARK: Undo / redo
 
     func undo() {
