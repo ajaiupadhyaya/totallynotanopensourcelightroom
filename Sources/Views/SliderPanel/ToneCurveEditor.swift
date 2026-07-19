@@ -11,6 +11,10 @@ struct ToneCurveEditor: View {
     /// Bound tone-curve points. Empty means identity; otherwise five points.
     @Binding var points: [CGPoint]
 
+    /// The curve's stroke — white for the composite curve, the channel color
+    /// when editing an individual channel.
+    var lineColor: Color = .white
+
     @State private var activeIndex: Int?
 
     /// The five identity control points, evenly spaced along the diagonal.
@@ -45,12 +49,12 @@ struct ToneCurveEditor: View {
                 .stroke(.white.opacity(0.15), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
 
                 curvePath(in: size)
-                    .stroke(.white.opacity(0.9), lineWidth: 1.5)
+                    .stroke(lineColor.opacity(0.9), lineWidth: 1.5)
 
                 ForEach(currentPoints.indices, id: \.self) { index in
                     Circle()
-                        .fill(activeIndex == index ? Color.accentColor : .white)
-                        .frame(width: 10, height: 10)
+                        .fill(activeIndex == index ? Color.accentColor : lineColor)
+                        .frame(width: 9, height: 9)
                         .position(screenPoint(currentPoints[index], in: size))
                 }
             }

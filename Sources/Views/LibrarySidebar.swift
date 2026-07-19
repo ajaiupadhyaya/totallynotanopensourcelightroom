@@ -57,8 +57,8 @@ struct LibrarySidebar: View {
             noMatchesState
         } else {
             ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(visibleEntries) { entry in
+                LazyVStack(spacing: 6) {
+                    ForEach(Array(visibleEntries.enumerated()), id: \.element.id) { index, entry in
                         // A real Button rather than a view with tap gestures
                         // attached. Stacking `.onTapGesture` handlers on a
                         // custom row hit-tests unreliably — whichever handler
@@ -70,6 +70,7 @@ struct LibrarySidebar: View {
                         } label: {
                             FilmstripRow(
                                 entry: entry,
+                                frameNumber: index + 1,
                                 isSelected: app.selection.contains(entry.id),
                                 isOpen: app.editor?.entry.id == entry.id
                             )
@@ -244,60 +245,101 @@ struct LibrarySidebar: View {
     }
 }
 
-/// One frame in the filmstrip.
+/// One frame in the filmstrip, drawn as a frame on a film rebate.
+///
+/// The frame's image sits on a near-black strip, and above it runs the edge
+/// print — frame number, then the stock or camera — in the dim amber of
+/// exposed film-edge legend. The rebate isn't decoration: it encodes what the
+/// library actually is, frames on rolls, and carries the frame's provenance
+/// (what it was shot on) in the place a negative carries it.
 private struct FilmstripRow: View {
     let entry: CatalogEntry
+    let frameNumber: Int
     let isSelected: Bool
     let isOpen: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 0) {
+            // Edge print along the rebate above the frame.
+            HStack {
+                Text(String(format: "%02d", frameNumber))
+                Spacer()
+                Text(edgeLegend)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .font(Theme.filmEdgeFont)
+            .foregroundStyle(Theme.filmEdge.opacity(isOpen || isSelected ? 1 : 0.75))
+            .padding(.horizontal, 10)
+            .padding(.top, 7)
+            .padding(.bottom, 5)
+
             thumbnail
-                .frame(width: 84, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .frame(maxWidth: .infinity)
+                .frame(height: 108)
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+                .padding(.horizontal, 8)
                 // A rejected frame dims rather than disappearing, so the
                 // decision stays visible and reversible mid-pass.
                 .opacity(entry.flag == .rejected ? Theme.rejectedOpacity : 1)
 
-            VStack(alignment: .leading, spacing: 3) {
+            // Culling state along the lower rebate.
+            HStack(spacing: 5) {
+                if entry.rating > 0 {
+                    HStack(spacing: 1.5) {
+                        ForEach(1...entry.rating, id: \.self) { _ in
+                            Image(systemName: "star.fill").font(.system(size: 6.5))
+                        }
+                    }
+                    .foregroundStyle(Theme.text.opacity(0.85))
+                }
+                if entry.flag != .unflagged {
+                    Image(systemName: entry.flag.symbolName)
+                        .font(.system(size: 7.5))
+                        .foregroundStyle(entry.flag == .rejected
+                                         ? AnyShapeStyle(.red.opacity(0.85))
+                                         : AnyShapeStyle(Theme.text.opacity(0.85)))
+                }
+                if entry.colorLabel != .none {
+                    Circle().fill(labelColor).frame(width: 6, height: 6)
+                }
+                Spacer()
                 Text(entry.fileName)
-                    .font(.caption)
+                    .font(Theme.filmEdgeFont)
+                    .foregroundStyle(Theme.tertiaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
-
-                HStack(spacing: 4) {
-                    if entry.rating > 0 {
-                        HStack(spacing: 1) {
-                            ForEach(1...entry.rating, id: \.self) { _ in
-                                Image(systemName: "star.fill").font(.system(size: 7))
-                            }
-                        }
-                        .foregroundStyle(Theme.accent)
-                    }
-                    if entry.flag != .unflagged {
-                        Image(systemName: entry.flag.symbolName)
-                            .font(.system(size: 8))
-                            .foregroundStyle(entry.flag == .rejected
-                                             ? AnyShapeStyle(.red) : AnyShapeStyle(Theme.accent))
-                    }
-                    if entry.colorLabel != .none {
-                        Circle().fill(labelColor).frame(width: 7, height: 7)
-                    }
-                }
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 10)
+            .padding(.top, 5)
+            .padding(.bottom, 7)
         }
-        .padding(6)
         .background {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isOpen ? Theme.accent.opacity(0.22)
-                      : isSelected ? Theme.control : .clear)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Theme.rebate)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(isOpen ? Theme.accent : .clear, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(
+                    isOpen ? Theme.accent
+                    : isSelected ? Theme.separator
+                    : Color.white.opacity(0.04),
+                    lineWidth: isOpen ? 1.5 : 1
+                )
         }
         .contentShape(Rectangle())
+    }
+
+    /// What a rebate legend says: the stock when known, else the camera, else
+    /// the file type — most specific truth available.
+    private var edgeLegend: String {
+        if let stock = entry.editStack.filmNegative.stockName, !stock.isEmpty {
+            return stock.uppercased()
+        }
+        if let camera = entry.cameraModel, !camera.isEmpty {
+            return camera.uppercased()
+        }
+        return entry.fileURL.pathExtension.uppercased()
     }
 
     @ViewBuilder

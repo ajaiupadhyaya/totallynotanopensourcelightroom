@@ -83,7 +83,21 @@ enum FilmBaseSampler {
         in rect: CGRect,
         context: CIContext = CIContext()
     ) -> FilmColor? {
-        let clamped = rect.intersection(image.extent)
+        var clamped = rect.intersection(image.extent)
+        guard !clamped.isNull, clamped.width > 0, clamped.height > 0 else { return nil }
+
+        // CIAreaAverage silently returns zeros for tiny non-integral extents
+        // (verified empirically: a 1.3 px click rect averaged to pure black).
+        // Grow the sample to a minimum integral area — a few pixels averaged
+        // is also simply a better eyedropper, since it rejects grain.
+        let minimumSide: CGFloat = 4
+        if clamped.width < minimumSide || clamped.height < minimumSide {
+            clamped = clamped.insetBy(
+                dx: -max(0, (minimumSide - clamped.width) / 2),
+                dy: -max(0, (minimumSide - clamped.height) / 2)
+            )
+        }
+        clamped = clamped.integral.intersection(image.extent)
         guard !clamped.isNull, clamped.width >= 1, clamped.height >= 1 else { return nil }
 
         let filter = CIFilter.areaAverage()

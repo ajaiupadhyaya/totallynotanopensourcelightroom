@@ -40,14 +40,14 @@ struct AdjustmentSlider: View {
     private var isNeutral: Bool { value == neutral }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(title)
-                    .font(.subheadline)
+                    .font(Theme.controlFont)
+                    .foregroundStyle(Theme.text.opacity(0.92))
                 Spacer()
                 Text(String(format: format, value))
-                    .font(.subheadline)
-                    .monospacedDigit()
+                    .font(Theme.valueFont)
                     .foregroundStyle(isNeutral && !isScrubbing
                                      ? AnyShapeStyle(.secondary)
                                      : AnyShapeStyle(.tint))
@@ -66,6 +66,7 @@ struct AdjustmentSlider: View {
                     .help("Drag to adjust · hold ⌥ for fine control · double-click to reset")
             }
             Slider(value: $value, in: range)
+                .controlSize(.mini)
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { value = neutral }

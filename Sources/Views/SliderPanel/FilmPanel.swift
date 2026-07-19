@@ -78,8 +78,17 @@ struct FilmPanel: View {
 
                 Spacer()
 
-                Button("Sample") { model.sampleFilmBase() }
+                Button("Auto") { model.sampleFilmBase() }
                     .controlSize(.small)
+                    .help("Sample the brightest area automatically")
+
+                Button {
+                    model.canvasPicker = model.canvasPicker == .filmBase ? nil : .filmBase
+                } label: {
+                    Image(systemName: "eyedropper")
+                }
+                .controlSize(.small)
+                .help("Click a clear piece of film border in the photo")
             }
 
             Text("Sampling reads the brightest area, which on a negative is the "

@@ -84,6 +84,60 @@ enum ColorScience {
         min(max(value, lower), upper)
     }
 
+    // MARK: White balance from a picked color
+
+    /// Estimates the correlated color temperature and tint of an RGB color.
+    ///
+    /// This is what a white-balance eyedropper needs: the user clicks a thing
+    /// that *should* be neutral, and setting the WB sliders to the clicked
+    /// color's temperature/tint makes the correction map it back to gray.
+    ///
+    /// The route is standard colorimetry: linearize sRGB, convert to XYZ, take
+    /// (x, y) chromaticity, then McCamy's cubic approximation for CCT. McCamy
+    /// is accurate to a few kelvin across the daylight range — far tighter
+    /// than the slider's own resolution. Tint is the signed distance from the
+    /// Planckian locus mapped onto the green–magenta axis, scaled to the
+    /// slider's `-100...100` range.
+    ///
+    /// - Returns: Temperature clamped to the slider range, and tint; or nil
+    ///   for colors too dark to carry usable chromaticity.
+    static func temperatureAndTint(ofRed red: Double, green: Double, blue: Double)
+        -> (temperature: Double, tint: Double)? {
+        // Gamma-decode sRGB to linear light.
+        func linearize(_ c: Double) -> Double {
+            c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let r = linearize(clamp(red))
+        let g = linearize(clamp(green))
+        let b = linearize(clamp(blue))
+
+        // Linear sRGB → XYZ (D65).
+        let x = 0.4124 * r + 0.3576 * g + 0.1805 * b
+        let y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let z = 0.0193 * r + 0.1192 * g + 0.9505 * b
+
+        let sum = x + y + z
+        guard sum > 1e-6, y > 1e-4 else { return nil }
+        let cx = x / sum
+        let cy = y / sum
+
+        // McCamy's approximation.
+        let n = (cx - 0.3320) / (0.1858 - cy)
+        let cct = 449.0 * pow(n, 3) + 3525.0 * pow(n, 2) + 6823.3 * n + 5520.33
+        guard cct.isFinite else { return nil }
+
+        // Tint: green–magenta offset from the locus. The Planckian locus's cy
+        // for a given cx is approximated well enough locally by the D-series
+        // daylight curve; the residual maps to the tint slider.
+        let daylightCY = -3.0 * cx * cx + 2.87 * cx - 0.275
+        let tint = (cy - daylightCY) * 3200.0
+
+        return (
+            temperature: min(max(cct, 2000), 10000),
+            tint: min(max(tint, -100), 100)
+        )
+    }
+
     // MARK: Curves
 
     /// Evaluates a tone curve at `x` using Catmull-Rom interpolation through

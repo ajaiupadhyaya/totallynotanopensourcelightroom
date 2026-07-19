@@ -80,6 +80,105 @@ final class EditorModel {
         editStack = EditStack()
     }
 
+    // MARK: Canvas pickers
+
+    /// What the next click on the canvas means.
+    enum CanvasPicker {
+        /// Click a neutral; temperature/tint are set to make it gray.
+        case whiteBalance
+        /// Click clear film border; the film base is sampled there.
+        case filmBase
+    }
+
+    /// The active canvas picker, or nil when clicks do nothing special.
+    var canvasPicker: CanvasPicker?
+
+    /// Routes a canvas click (in unit coordinates of the displayed image,
+    /// origin bottom-left to match Core Image) to the active picker.
+    func handleCanvasClick(atUnitPoint point: CGPoint) {
+        switch canvasPicker {
+        case .whiteBalance:
+            pickWhiteBalance(atUnitPoint: point)
+        case .filmBase:
+            let side = 0.02
+            sampleFilmBase(inUnitRect: CGRect(
+                x: point.x - side / 2, y: point.y - side / 2, width: side, height: side
+            ))
+        case nil:
+            return
+        }
+        canvasPicker = nil
+    }
+
+    /// Sets white balance so the clicked color becomes neutral.
+    ///
+    /// The color is sampled from a render with the WB sliders zeroed — the
+    /// exact image the WB stage sees — then its correlated temperature and
+    /// tint become the new slider values. Declaring the clicked color to be
+    /// the scene's illuminant is precisely what "pick a neutral" means.
+    func pickWhiteBalance(atUnitPoint point: CGPoint) {
+        guard let source else { return }
+
+        var neutralStack = editStack
+        neutralStack.whiteBalanceTemp = 6500
+        neutralStack.whiteBalanceTint = 0
+        let preWB = renderer.render(source: source, stack: neutralStack)
+
+        let extent = preWB.extent
+        let side = max(2.0, extent.width * 0.01)
+        let rect = CGRect(
+            x: extent.origin.x + point.x * extent.width - side / 2,
+            y: extent.origin.y + point.y * extent.height - side / 2,
+            width: side, height: side
+        )
+        guard let sampled = FilmBaseSampler.sampleAverage(
+            from: preWB, in: rect, context: renderer.context
+        ) else { return }
+
+        guard let wb = ColorScience.temperatureAndTint(
+            ofRed: sampled.red, green: sampled.green, blue: sampled.blue
+        ) else { return }
+
+        editStack.whiteBalanceTemp = wb.temperature
+        editStack.whiteBalanceTint = wb.tint
+    }
+
+    // MARK: Local adjustments
+
+    /// The mask currently selected for editing (canvas handles + sliders).
+    /// UI state only — never persisted.
+    var selectedMaskID: UUID?
+
+    /// The selected mask's index in the stack, if it still exists.
+    var selectedMaskIndex: Int? {
+        guard let selectedMaskID else { return nil }
+        return editStack.localAdjustments.firstIndex { $0.id == selectedMaskID }
+    }
+
+    /// Adds a mask and selects it for placement.
+    func addLocalAdjustment(_ shape: LocalAdjustment.Shape) {
+        var adjustment = LocalAdjustment(shape: shape)
+        // A fresh mask starts with a visible nudge, so placing it gives live
+        // feedback instead of an invisible no-op.
+        adjustment.exposure = shape == .linear ? -0.5 : 0.5
+        editStack.localAdjustments.append(adjustment)
+        selectedMaskID = adjustment.id
+    }
+
+    func removeLocalAdjustment(id: UUID) {
+        editStack.localAdjustments.removeAll { $0.id == id }
+        if selectedMaskID == id { selectedMaskID = nil }
+    }
+
+    // MARK: Crop mode
+
+    /// While true, the preview renders without the crop so the whole frame is
+    /// visible for re-composing. The crop rectangle itself is edited by the
+    /// canvas overlay and committed straight into ``editStack``.
+    var isCropping = false {
+        didSet { renderPreview() }
+    }
+
     // MARK: Focus peaking
 
     /// Tints the in-focus areas of the preview. A viewing aid only — it never
@@ -334,7 +433,11 @@ final class EditorModel {
             histogram = .empty
             return
         }
-        let stack = isShowingBefore ? beforeStack : editStack
+        var stack = isShowingBefore ? beforeStack : editStack
+        if isCropping {
+            // Show the full frame while composing the crop.
+            stack.geometry.cropRect = .unitFrame
+        }
         let edited = renderer.render(source: source, stack: stack)
 
         // The histogram describes the photo, so it is measured before the

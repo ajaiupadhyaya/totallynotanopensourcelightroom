@@ -38,6 +38,9 @@ struct EditRenderer {
     /// touch a color setting.
     private let cubeCache = ColorCubeCache()
 
+    /// Memoizes the developed source (film conversion + geometry).
+    private let developedCache = DevelopedSourceCache()
+
     init(context: CIContext = CIContext()) {
         self.context = context
     }
@@ -48,8 +51,9 @@ struct EditRenderer {
     func render(source: CIImage, stack: EditStack) -> CIImage {
         var image = source
 
-        image = FilmNegativeConverter.convert(image, settings: stack.filmNegative)
-        image = GeometryTransform.apply(image, geometry: stack.geometry)
+        image = developedCache.developed(from: image,
+                                         film: stack.filmNegative,
+                                         geometry: stack.geometry)
         image = applyWhiteBalance(image, stack: stack)
         image = applyExposure(image, stack: stack)
         image = applyWhitesAndBlacks(image, stack: stack)
@@ -59,6 +63,9 @@ struct EditRenderer {
         image = applyColor(image, stack: stack)
         image = applyColorLUT(image, stack: stack)
         image = applyToneCurve(image, stack: stack)
+        // Local adjustments ride on top of the finished global look, but
+        // before detail and effects so grain and vignette stay uniform.
+        image = LocalAdjustmentRenderer.apply(stack.localAdjustments, to: image)
         image = applyDetail(image, stack: stack)
         image = applyEffects(image, stack: stack)
 
