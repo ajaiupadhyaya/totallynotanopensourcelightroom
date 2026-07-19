@@ -34,6 +34,9 @@ struct LibrarySidebar: View {
             filmstrip
         }
         .editorSurface()
+        .dropDestination(for: URL.self) { urls, _ in
+            !app.importDropped(urls).isEmpty
+        }
         .searchable(text: $searchText, placement: .sidebar, prompt: "Camera, lens, file…")
         .navigationTitle("Library")
         .toolbar { toolbarContent }

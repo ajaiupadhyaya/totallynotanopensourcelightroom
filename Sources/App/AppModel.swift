@@ -1,6 +1,7 @@
 import CoreImage
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 
 /// Top-level application state: owns the catalog, the list of library entries,
 /// and the editor for the currently-open photo. Navigation is simply whether
@@ -76,6 +77,28 @@ final class AppModel {
             errorMessage = "Import failed: \(error.localizedDescription)"
             return nil
         }
+    }
+
+    /// Imports files dropped from Finder, skipping anything that isn't an
+    /// image. Returns the entries created.
+    ///
+    /// Non-images are filtered rather than imported-and-broken: a dropped
+    /// folder selection often sweeps in sidecar files (`.xmp`, `.txt`), and a
+    /// library full of unreadable placeholders helps nobody.
+    @discardableResult
+    func importDropped(_ urls: [URL]) -> [CatalogEntry] {
+        let imported = urls.filter { url in
+            guard let type = UTType(filenameExtension: url.pathExtension.lowercased())
+            else { return false }
+            return type.conforms(to: .image)
+        }.compactMap { importPhoto(from: $0) }
+
+        // A single dropped photo opens straight into the editor, matching the
+        // file-picker behavior.
+        if imported.count == 1, let entry = imported.first {
+            open(entry)
+        }
+        return imported
     }
 
     /// Removes an entry from the library and deletes its thumbnail. The

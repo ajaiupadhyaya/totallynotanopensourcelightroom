@@ -23,9 +23,14 @@ struct CanvasArea: View {
                 .font(.system(size: 48, weight: .ultraLight))
                 .foregroundStyle(Theme.secondaryText)
             Text(app.entries.isEmpty
-                 ? "Import a photo to begin"
+                 ? "Import a photo, or drop scans here"
                  : "Select a frame in the library")
                 .foregroundStyle(Theme.secondaryText)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .dropDestination(for: URL.self) { urls, _ in
+            !app.importDropped(urls).isEmpty
         }
     }
 }
