@@ -116,6 +116,15 @@ struct EditStack: Codable, Equatable {
     /// order after the global adjustments.
     var localAdjustments: [LocalAdjustment] = []
 
+    // MARK: Retouch
+
+    /// Spot-removal corrections (heal/clone), applied to the developed frame
+    /// before any global adjustment.
+    var retouch: [RetouchSpot] = []
+
+    /// Chromatic-aberration fringe removal, applied to the developed frame.
+    var defringe = Defringe()
+
     // MARK: Geometry
 
     /// Crop, rotation, straightening, and flips.
@@ -166,6 +175,8 @@ extension EditStack {
         toneCurvePoints = c.lenient(.toneCurvePoints, [])
         color = c.lenient(.color, ColorSettings())
         localAdjustments = c.lenient(.localAdjustments, [])
+        retouch = c.lenient(.retouch, [])
+        defringe = c.lenient(.defringe, Defringe())
         geometry = c.lenient(.geometry, Geometry())
         filmNegative = c.lenient(.filmNegative, FilmNegativeSettings())
     }

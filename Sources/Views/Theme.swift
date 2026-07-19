@@ -69,19 +69,37 @@ enum Theme {
     static let rejectedOpacity = 0.4
 
     // MARK: Type
+    //
+    // The chrome speaks in a single monospaced voice — the register of a
+    // drafting title block or an instrument's engraved fascia, not of a Mac
+    // dialog. Structure is caps + tracking; data is the same face at rest.
+    // Nothing in the chrome uses the system UI font, because nothing in the
+    // chrome should read as "window furniture."
 
     /// Engraved section label, like the labels on darkroom equipment:
     /// small, semibold, tracked wide, always uppercased by the caller.
-    static let engravedLabel = Font.system(size: 10, weight: .semibold)
+    static let engravedLabel = Font.system(size: 9.5, weight: .semibold, design: .monospaced)
 
     /// Tracking (kerning) for engraved labels.
-    static let engravedTracking: CGFloat = 1.4
+    static let engravedTracking: CGFloat = 1.6
+
+    /// The stage index preceding a section title ("04" in "04 LIGHT").
+    static let indexFont = Font.system(size: 9.5, weight: .regular, design: .monospaced)
 
     /// Numeric readouts. Monospaced so values don't jitter as they change.
     static let valueFont = Font.system(size: 11, weight: .regular, design: .monospaced)
 
     /// Control labels inside panels.
-    static let controlFont = Font.system(size: 11.5)
+    static let controlFont = Font.system(size: 11, design: .monospaced)
+
+    /// Drawn buttons, tabs, and lamps: caps, tracked.
+    static let plateFont = Font.system(size: 9.5, weight: .medium, design: .monospaced)
+
+    /// Tracking for plate/tab/lamp caps.
+    static let plateTracking: CGFloat = 1.2
+
+    /// The wordmark in the top bar.
+    static let wordmarkFont = Font.system(size: 11, weight: .semibold, design: .monospaced)
 
     /// Film-edge print in the filmstrip: monospaced caps, like the exposed
     /// legend along a rebate.
@@ -93,7 +111,13 @@ enum Theme {
     static let panelInset: CGFloat = 14
 
     /// Vertical rhythm between controls in a section.
-    static let controlSpacing: CGFloat = 10
+    static let controlSpacing: CGFloat = 12
+
+    /// Height of the custom title bar.
+    static let topBarHeight: CGFloat = 42
+
+    /// Width of a hairline rule.
+    static let hairline: CGFloat = 1
 }
 
 extension View {

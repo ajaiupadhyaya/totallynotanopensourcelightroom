@@ -20,6 +20,10 @@ final class AppModel {
     /// Frames selected in the library. Batch actions apply to these.
     var selection: Set<UUID> = []
 
+    /// Whether the export sheet for the open photo is showing. Lives here so
+    /// the top bar, keyboard shortcut, and sheet share one source of truth.
+    var isShowingExportSheet = false
+
     private let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
     private let renderer = EditRenderer()
@@ -41,6 +45,15 @@ final class AppModel {
         reload()
         reloadPresets()
         restoreLastSession()
+    }
+
+    /// Injectable seam for tests: the real model against an isolated store,
+    /// so nothing touches the user's actual library.
+    init(catalog: CatalogStore, thumbnails: ThumbnailGenerator) {
+        self.catalog = catalog
+        self.thumbnails = thumbnails
+        reload()
+        reloadPresets()
     }
 
     // MARK: Library
@@ -99,6 +112,44 @@ final class AppModel {
             open(entry)
         }
         return imported
+    }
+
+    /// Creates a virtual copy: a second catalog entry for the same original
+    /// file with an independent edit stack — one negative, several
+    /// interpretations, no duplicated pixels.
+    ///
+    /// The copy starts from the source's current state (edits, rating, label)
+    /// and sorts adjacent to it in the filmstrip.
+    @discardableResult
+    func createVirtualCopy(of entry: CatalogEntry) -> CatalogEntry? {
+        let number = (try? catalog.nextCopyNumber(forFileURL: entry.fileURL)) ?? 1
+        var copy = CatalogEntry(
+            id: UUID(),
+            fileURL: entry.fileURL,
+            // A hair later than the source so the copy sits next to it in the
+            // date-ordered filmstrip instead of jumping to the top.
+            dateImported: entry.dateImported.addingTimeInterval(0.001 * Double(number)),
+            editStack: entry.editStack,
+            thumbnailPath: nil,
+            rating: entry.rating,
+            flag: entry.flag,
+            colorLabel: entry.colorLabel,
+            cameraMake: entry.cameraMake,
+            cameraModel: entry.cameraModel,
+            lensModel: entry.lensModel,
+            iso: entry.iso,
+            captureDate: entry.captureDate
+        )
+        copy.copyNumber = number
+        do {
+            try catalog.save(copy)
+            regenerateThumbnail(for: copy)
+            reload()
+            return entries.first { $0.id == copy.id } ?? copy
+        } catch {
+            errorMessage = "Could not create a virtual copy: \(error.localizedDescription)"
+            return nil
+        }
     }
 
     /// Removes an entry from the library and deletes its thumbnail. The

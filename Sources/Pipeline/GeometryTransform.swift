@@ -23,6 +23,16 @@ enum GeometryTransform {
             result = straighten(result, degrees: geometry.straightenAngle)
         }
 
+        if geometry.distortion != 0 {
+            result = distort(result, amount: geometry.distortion)
+        }
+
+        if geometry.perspectiveVertical != 0 || geometry.perspectiveHorizontal != 0 {
+            result = perspective(result,
+                                 vertical: geometry.perspectiveVertical,
+                                 horizontal: geometry.perspectiveHorizontal)
+        }
+
         if geometry.cropRect != .unitFrame {
             result = crop(result, to: geometry.cropRect)
         }
@@ -79,6 +89,79 @@ enum GeometryTransform {
 
         guard !rect.isNull, rect.width >= 1, rect.height >= 1 else { return rotated }
         return normalizedOrigin(rotated.cropped(to: rect))
+    }
+
+    /// Manual barrel/pincushion correction as a radial bump covering the whole
+    /// frame, followed by a small constraining crop that hides the edges the
+    /// remap disturbs — the same "constrain crop" move Lightroom makes.
+    private static func distort(_ image: CIImage, amount: Double) -> CIImage {
+        let extent = image.extent
+        guard extent.width >= 2, extent.height >= 2 else { return image }
+
+        let normalized = min(max(amount / 100, -1), 1)
+        let halfDiagonal = hypot(extent.width, extent.height) / 2
+
+        guard let bump = CIFilter(name: "CIBumpDistortion") else { return image }
+        bump.setValue(image.clampedToExtent(), forKey: kCIInputImageKey)
+        bump.setValue(CIVector(x: extent.midX, y: extent.midY), forKey: kCIInputCenterKey)
+        bump.setValue(halfDiagonal * 1.1, forKey: kCIInputRadiusKey)
+        bump.setValue(normalized * 0.5, forKey: kCIInputScaleKey)
+        guard let distorted = bump.outputImage?.cropped(to: extent) else { return image }
+
+        let margin = abs(normalized) * 0.04
+        let constrained = CGRect(
+            x: extent.origin.x + extent.width * margin,
+            y: extent.origin.y + extent.height * margin,
+            width: extent.width * (1 - margin * 2),
+            height: extent.height * (1 - margin * 2)
+        ).integral.intersection(extent)
+        guard !constrained.isNull, constrained.width >= 1 else { return distorted }
+        return normalizedOrigin(distorted.cropped(to: constrained))
+    }
+
+    /// Vertical/horizontal keystone correction via a perspective remap, then a
+    /// crop to the largest axis-aligned rectangle inside the resulting quad so
+    /// the frame stays rectangular.
+    private static func perspective(
+        _ image: CIImage, vertical: Double, horizontal: Double
+    ) -> CIImage {
+        let extent = image.extent
+        guard extent.width >= 2, extent.height >= 2 else { return image }
+
+        let v = min(max(vertical / 100, -1), 1)
+        let h = min(max(horizontal / 100, -1), 1)
+
+        // How far the shrinking edge's corners move inward at full deflection.
+        let reach = 0.2
+        let topX = max(v, 0) * reach * extent.width
+        let bottomX = max(-v, 0) * reach * extent.width
+        let rightY = max(h, 0) * reach * extent.height
+        let leftY = max(-h, 0) * reach * extent.height
+
+        let topLeft = CGPoint(x: extent.minX + topX, y: extent.maxY - leftY)
+        let topRight = CGPoint(x: extent.maxX - topX, y: extent.maxY - rightY)
+        let bottomLeft = CGPoint(x: extent.minX + bottomX, y: extent.minY + leftY)
+        let bottomRight = CGPoint(x: extent.maxX - bottomX, y: extent.minY + rightY)
+
+        let filter = CIFilter(name: "CIPerspectiveTransform")
+        filter?.setValue(image, forKey: kCIInputImageKey)
+        filter?.setValue(CIVector(cgPoint: topLeft), forKey: "inputTopLeft")
+        filter?.setValue(CIVector(cgPoint: topRight), forKey: "inputTopRight")
+        filter?.setValue(CIVector(cgPoint: bottomLeft), forKey: "inputBottomLeft")
+        filter?.setValue(CIVector(cgPoint: bottomRight), forKey: "inputBottomRight")
+        guard let warped = filter?.outputImage else { return image }
+
+        // The quad is convex and its edges are straight, so the rectangle
+        // bounded by the innermost corners on each side lies fully inside it.
+        let inner = CGRect(
+            x: max(topLeft.x, bottomLeft.x),
+            y: max(bottomLeft.y, bottomRight.y),
+            width: min(topRight.x, bottomRight.x) - max(topLeft.x, bottomLeft.x),
+            height: min(topLeft.y, topRight.y) - max(bottomLeft.y, bottomRight.y)
+        ).integral.intersection(warped.extent)
+
+        guard !inner.isNull, inner.width >= 1, inner.height >= 1 else { return warped }
+        return normalizedOrigin(warped.cropped(to: inner))
     }
 
     private static func crop(_ image: CIImage, to unitRect: CGRect) -> CIImage {

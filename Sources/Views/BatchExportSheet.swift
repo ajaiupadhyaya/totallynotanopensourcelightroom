@@ -20,60 +20,72 @@ struct BatchExportSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(entries.count == 1 ? "Export Photo" : "Export \(entries.count) Photos")
-                .font(.title3.weight(.semibold))
+        VStack(alignment: .leading, spacing: 16) {
+            Text(entries.count == 1
+                 ? "EXPORT PHOTO"
+                 : "EXPORT \(entries.count) PHOTOS")
+                .engraved()
 
-            Form {
-                Picker("Format", selection: $settings.format) {
-                    ForEach(ExportSettings.Format.allCases) { format in
-                        Text(format.displayName).tag(format)
-                    }
+            VStack(alignment: .leading, spacing: 14) {
+                labeled("Format") {
+                    TabStrip(
+                        options: ExportSettings.Format.allCases.map { ($0, $0.displayName) },
+                        selection: $settings.format
+                    )
                 }
 
                 if settings.format.supportsQuality {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Slider(value: $settings.quality, in: 0.1...1.0) { Text("Quality") }
-                        Text("\(Int(settings.quality * 100))%")
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
+                    AdjustmentSlider(title: "Quality",
+                                     value: Binding(
+                                        get: { settings.quality * 100 },
+                                        set: { settings.quality = $0 / 100 }
+                                     ),
+                                     range: 10...100, format: "%.0f%%", neutral: 90)
                 }
 
-                Picker("Color Profile", selection: $settings.colorProfile) {
-                    ForEach(ExportSettings.ColorProfile.allCases) { profile in
-                        Text(profile.displayName).tag(profile)
-                    }
+                labeled("Profile") {
+                    TabStrip(
+                        options: ExportSettings.ColorProfile.allCases.map { ($0, $0.displayName) },
+                        selection: $settings.colorProfile
+                    )
                 }
 
-                Picker("Output Sharpening", selection: $settings.outputSharpening) {
-                    ForEach(ExportSettings.OutputSharpening.allCases) { option in
-                        Text(option.displayName).tag(option)
-                    }
+                labeled("Sharpen") {
+                    TabStrip(
+                        options: ExportSettings.OutputSharpening.allCases.map {
+                            ($0, $0 == .web ? "Web" : $0.displayName)
+                        },
+                        selection: $settings.outputSharpening
+                    )
                 }
 
-                Toggle("Limit long edge", isOn: $limitSize)
+                LampToggle(label: "Limit long edge", isOn: $limitSize)
                 if limitSize {
-                    HStack {
-                        Slider(value: $maxDimension, in: 640...8192, step: 64)
-                        Text("\(Int(maxDimension)) px")
-                            .font(.caption)
-                            .monospacedDigit()
-                            .frame(width: 64, alignment: .trailing)
-                    }
+                    AdjustmentSlider(title: "Long Edge",
+                                     value: $maxDimension,
+                                     range: 640...8192, format: "%.0f px", neutral: 2048)
                 }
             }
-            .formStyle(.grouped)
 
             if let progress = app.exportProgress {
                 VStack(alignment: .leading, spacing: 4) {
-                    ProgressView(value: Double(progress.completed),
-                                 total: Double(max(progress.total, 1)))
+                    // A drawn progress bar: hairline case, quiet fill.
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Theme.control)
+                            Rectangle()
+                                .fill(Theme.accent)
+                                .frame(width: geo.size.width
+                                       * CGFloat(progress.completed)
+                                       / CGFloat(max(progress.total, 1)))
+                        }
+                    }
+                    .frame(height: 3)
+                    .clipShape(RoundedRectangle(cornerRadius: 1.5))
+
                     Text("Exporting \(progress.completed) of \(progress.total)…")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .font(Theme.valueFont)
+                        .foregroundStyle(Theme.secondaryText)
                 }
             }
 
@@ -83,44 +95,64 @@ struct BatchExportSheet: View {
 
             HStack {
                 Text("Each photo renders from its full-resolution original.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Button(result == nil ? "Cancel" : "Done") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Choose Folder…") { presentPanel() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(entries.isEmpty || app.isExporting)
+                PlateButton(title: result == nil ? "Cancel" : "Done") { dismiss() }
+                PlateButton(title: "Choose Folder",
+                            isEnabled: !entries.isEmpty && !app.isExporting) {
+                    presentPanel()
+                }
             }
         }
         .padding(20)
         .frame(width: 470)
+        .background(Theme.surface)
+        .foregroundStyle(Theme.text)
+        .background {
+            Button("") { dismiss() }.keyboardShortcut(.cancelAction).opacity(0)
+        }
+    }
+
+    private func labeled(_ label: String, @ViewBuilder content: () -> some View) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label.uppercased())
+                .font(Theme.plateFont)
+                .kerning(Theme.plateTracking)
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 64, alignment: .leading)
+            content()
+            Spacer(minLength: 0)
+        }
     }
 
     /// Reports partial success honestly rather than claiming everything worked.
     @ViewBuilder
     private func resultSummary(_ result: BatchResult) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label("Exported \(result.written) of \(entries.count)",
-                  systemImage: result.failures.isEmpty
-                    ? "checkmark.circle" : "exclamationmark.triangle")
+            Text(result.failures.isEmpty
+                 ? "EXPORTED \(result.written) OF \(entries.count)"
+                 : "EXPORTED \(result.written) OF \(entries.count) — \(result.failures.count) FAILED")
+                .font(Theme.plateFont)
+                .kerning(Theme.plateTracking)
                 .foregroundStyle(result.failures.isEmpty
-                                 ? AnyShapeStyle(.green) : AnyShapeStyle(Color.orange))
+                                 ? AnyShapeStyle(Theme.text)
+                                 : AnyShapeStyle(Color.orange))
 
             ForEach(result.failures.prefix(4), id: \.entry.id) { failure in
                 Text("\(failure.entry.fileName): \(failure.error.localizedDescription)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.secondaryText)
             }
             if result.failures.count > 4 {
                 Text("…and \(result.failures.count - 4) more.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.secondaryText)
             }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
+        .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
     }
 
     private func presentPanel() {

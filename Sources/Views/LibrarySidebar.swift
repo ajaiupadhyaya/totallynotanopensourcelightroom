@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The library sidebar: filters, then a filmstrip of every matching frame.
+/// The library panel: header, filters, then a filmstrip of every matching
+/// frame.
 ///
 /// Selection drives the canvas directly — clicking a frame loads it, so there
 /// is no separate "open" step to break the rhythm of working through a roll.
@@ -27,19 +28,19 @@ struct LibrarySidebar: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            header
+            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
             LibraryFilterBar(filter: $filter,
+                             searchText: $searchText,
                              visibleCount: visibleEntries.count,
                              totalCount: app.entries.count)
-            Divider()
+            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
             filmstrip
         }
         .editorSurface()
         .dropDestination(for: URL.self) { urls, _ in
             !app.importDropped(urls).isEmpty
         }
-        .searchable(text: $searchText, placement: .sidebar, prompt: "Camera, lens, file…")
-        .navigationTitle("Library")
-        .toolbar { toolbarContent }
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.jpeg, .png, .heic, .tiff, .rawImage, .image],
@@ -49,6 +50,35 @@ struct LibrarySidebar: View {
         }
         .sheet(isPresented: $isShowingBatchExport) {
             BatchExportSheet(app: app, entries: actionTargets)
+        }
+    }
+
+    /// "ROLL" + the working actions. The panel is the roll; the header says so.
+    private var header: some View {
+        HStack(spacing: 8) {
+            Text("ROLL")
+                .engraved()
+
+            Spacer()
+
+            if app.canPasteSettings {
+                PlateButton(title: "Paste") {
+                    app.pasteSettings(to: actionTargets)
+                }
+            }
+            PlateButton(title: "Export", isEnabled: !app.entries.isEmpty) {
+                isShowingBatchExport = true
+            }
+            PlateButton(title: "Import") { isImporting = true }
+        }
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.vertical, 9)
+        .background {
+            // ⇧⌘V pastes onto the working targets, mirroring the button.
+            Button("") { app.pasteSettings(to: actionTargets) }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(!app.canPasteSettings)
+                .opacity(0)
         }
     }
 
@@ -122,6 +152,13 @@ struct LibrarySidebar: View {
     private func contextMenu(for entry: CatalogEntry) -> some View {
         Button("Edit") { app.open(entry) }
 
+        Button("Create Virtual Copy") {
+            if let copy = app.createVirtualCopy(of: entry) {
+                app.selection = [copy.id]
+                app.open(copy)
+            }
+        }
+
         Divider()
 
         Menu("Rating") {
@@ -164,61 +201,33 @@ struct LibrarySidebar: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            if app.canPasteSettings {
-                Button {
-                    app.pasteSettings(to: actionTargets)
-                } label: {
-                    Label("Paste Settings", systemImage: "doc.on.clipboard")
-                }
-                .help("Apply the copied look to \(actionTargets.count) photo(s)")
-                .keyboardShortcut("v", modifiers: [.command, .shift])
-            }
-
-            Button {
-                isShowingBatchExport = true
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .disabled(app.entries.isEmpty)
-
-            Button {
-                isImporting = true
-            } label: {
-                Label("Import Photo", systemImage: "photo.badge.plus")
-            }
-        }
-    }
-
     // MARK: States
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 40, weight: .thin))
-                .foregroundStyle(Theme.secondaryText)
-            Text("Your library is empty")
-                .font(.headline)
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Theme.tertiaryText, lineWidth: 1.2)
+                .frame(width: 54, height: 38)
+            Text("The roll is empty")
+                .font(Theme.controlFont)
             Text("Import a JPEG, PNG, HEIC, TIFF, RAW, or a scanned negative.")
-                .font(.caption)
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
-            Button("Import Photo…") { isImporting = true }
+            PlateButton(title: "Import Photo") { isImporting = true }
         }
         .padding(24)
         .frame(maxHeight: .infinity)
     }
 
     private var noMatchesState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "line.3.horizontal.decrease.circle")
-                .font(.system(size: 32, weight: .thin))
+        VStack(spacing: 12) {
+            Text("0/\(app.entries.count)")
+                .font(Theme.valueFont)
                 .foregroundStyle(Theme.secondaryText)
             Text("Nothing matches")
-                .font(.headline)
-            Button("Clear Filter") {
+                .font(Theme.controlFont)
+            PlateButton(title: "Clear Filter") {
                 filter = LibraryFilter()
                 searchText = ""
             }
@@ -254,7 +263,9 @@ struct LibrarySidebar: View {
 /// print — frame number, then the stock or camera — in the dim amber of
 /// exposed film-edge legend. The rebate isn't decoration: it encodes what the
 /// library actually is, frames on rolls, and carries the frame's provenance
-/// (what it was shot on) in the place a negative carries it.
+/// (what it was shot on) in the place a negative carries it. A virtual copy
+/// prints its copy number the same way — it's another frame of the same
+/// negative.
 private struct FilmstripRow: View {
     let entry: CatalogEntry
     let frameNumber: Int
@@ -265,7 +276,7 @@ private struct FilmstripRow: View {
         VStack(alignment: .leading, spacing: 0) {
             // Edge print along the rebate above the frame.
             HStack {
-                Text(String(format: "%02d", frameNumber))
+                Text(frameDesignation)
                 Spacer()
                 Text(edgeLegend)
                     .lineLimit(1)
@@ -291,17 +302,20 @@ private struct FilmstripRow: View {
                 if entry.rating > 0 {
                     HStack(spacing: 1.5) {
                         ForEach(1...entry.rating, id: \.self) { _ in
-                            Image(systemName: "star.fill").font(.system(size: 6.5))
+                            StarShape()
+                                .fill(Theme.text.opacity(0.85))
+                                .frame(width: 7, height: 7)
                         }
                     }
-                    .foregroundStyle(Theme.text.opacity(0.85))
                 }
-                if entry.flag != .unflagged {
-                    Image(systemName: entry.flag.symbolName)
-                        .font(.system(size: 7.5))
-                        .foregroundStyle(entry.flag == .rejected
-                                         ? AnyShapeStyle(.red.opacity(0.85))
-                                         : AnyShapeStyle(Theme.text.opacity(0.85)))
+                if entry.flag == .picked {
+                    Text("P")
+                        .font(Theme.filmEdgeFont)
+                        .foregroundStyle(Theme.text.opacity(0.85))
+                } else if entry.flag == .rejected {
+                    Text("X")
+                        .font(Theme.filmEdgeFont)
+                        .foregroundStyle(.red.opacity(0.85))
                 }
                 if entry.colorLabel != .none {
                     Circle().fill(labelColor).frame(width: 6, height: 6)
@@ -333,6 +347,12 @@ private struct FilmstripRow: View {
         .contentShape(Rectangle())
     }
 
+    private var frameDesignation: String {
+        entry.isVirtualCopy
+            ? String(format: "%02d·C%d", frameNumber, entry.copyNumber)
+            : String(format: "%02d", frameNumber)
+    }
+
     /// What a rebate legend says: the stock when known, else the camera, else
     /// the file type — most specific truth available.
     private var edgeLegend: String {
@@ -352,7 +372,9 @@ private struct FilmstripRow: View {
         } else {
             ZStack {
                 Theme.control
-                Image(systemName: "photo").foregroundStyle(Theme.secondaryText)
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Theme.secondaryText, lineWidth: 1)
+                    .frame(width: 28, height: 20)
             }
         }
     }
@@ -395,54 +417,117 @@ struct LibraryFilter: Equatable {
     }
 }
 
-/// The filter controls above the filmstrip.
+/// The filter controls above the filmstrip: search, minimum rating, flag,
+/// and color label — all drawn.
 private struct LibraryFilterBar: View {
     @Binding var filter: LibraryFilter
+    @Binding var searchText: String
     let visibleCount: Int
     let totalCount: Int
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 9) {
+            searchField
+
             HStack(spacing: 2) {
                 ForEach(1...5, id: \.self) { star in
                     Button {
                         filter.minimumRating = filter.minimumRating == star ? 0 : star
                     } label: {
-                        Image(systemName: star <= filter.minimumRating ? "star.fill" : "star")
-                            .font(.system(size: 11))
-                            .foregroundStyle(star <= filter.minimumRating
-                                             ? AnyShapeStyle(Theme.accent)
-                                             : AnyShapeStyle(Theme.secondaryText))
+                        StarShape()
+                            .fill(star <= filter.minimumRating
+                                  ? AnyShapeStyle(Theme.accent)
+                                  : AnyShapeStyle(.clear))
+                            .overlay {
+                                StarShape()
+                                    .stroke(star <= filter.minimumRating
+                                            ? Theme.accent : Theme.secondaryText,
+                                            lineWidth: 1)
+                            }
+                            .frame(width: 11, height: 11)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .help("Show \(star)+ stars")
                 }
                 Spacer()
-                Text(filter.isActive ? "\(visibleCount)/\(totalCount)" : "\(totalCount)")
-                    .font(.caption)
-                    .monospacedDigit()
+                Text(filter.isActive || !searchText.isEmpty
+                     ? "\(visibleCount)/\(totalCount)" : "\(totalCount)")
+                    .font(Theme.valueFont)
                     .foregroundStyle(Theme.secondaryText)
             }
 
-            HStack(spacing: 6) {
-                Picker("", selection: $filter.flag) {
-                    Text("Any Flag").tag(PickFlag?.none)
-                    ForEach(PickFlag.allCases) { flag in
-                        Text(flag.displayName).tag(PickFlag?.some(flag))
-                    }
-                }
-                .labelsHidden()
+            HStack(spacing: 10) {
+                TabStrip(
+                    options: [
+                        (PickFlag?.none, "All"),
+                        (PickFlag?.some(.picked), "Pick"),
+                        (PickFlag?.some(.rejected), "Rej"),
+                        (PickFlag?.some(.unflagged), "None"),
+                    ],
+                    selection: $filter.flag
+                )
 
-                Picker("", selection: $filter.colorLabel) {
-                    Text("Any Label").tag(ColorLabel?.none)
-                    ForEach(ColorLabel.allCases) { label in
-                        Text(label.displayName).tag(ColorLabel?.some(label))
+                Spacer()
+
+                // Color labels as their own colors — data, not chrome.
+                HStack(spacing: 4) {
+                    ForEach(ColorLabel.allCases.filter { $0 != .none }) { label in
+                        let isActive = filter.colorLabel == label
+                        Button {
+                            filter.colorLabel = isActive ? nil : label
+                        } label: {
+                            Circle()
+                                .fill(color(for: label).opacity(isActive ? 1 : 0.45))
+                                .frame(width: 9, height: 9)
+                                .overlay {
+                                    if isActive {
+                                        Circle().stroke(Theme.text, lineWidth: 1)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(label.displayName)
                     }
                 }
-                .labelsHidden()
             }
-            .controlSize(.small)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Theme.panelInset)
         .padding(.vertical, 10)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Text("⌕")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Theme.tertiaryText)
+            TextField("", text: $searchText,
+                      prompt: Text("camera, lens, file…")
+                        .font(Theme.controlFont)
+                        .foregroundStyle(Theme.tertiaryText))
+                .textFieldStyle(.plain)
+                .font(Theme.controlFont)
+                .foregroundStyle(Theme.text)
+            if !searchText.isEmpty {
+                GlyphButton(kind: .cross, label: "Clear search") { searchText = "" }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Theme.control.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
+        .overlay(RoundedRectangle(cornerRadius: 2)
+            .stroke(Theme.separator, lineWidth: Theme.hairline))
+    }
+
+    private func color(for label: ColorLabel) -> Color {
+        switch label {
+        case .none: .clear
+        case .red: .red
+        case .yellow: .yellow
+        case .green: .green
+        case .blue: .blue
+        case .purple: .purple
+        }
     }
 }

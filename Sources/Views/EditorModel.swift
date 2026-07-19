@@ -73,6 +73,7 @@ final class EditorModel {
         loadSource()
         renderPreview()
         reloadFilmStocks()
+        reloadSnapshots()
     }
 
     /// Resets all adjustments to their neutral defaults.
@@ -88,6 +89,8 @@ final class EditorModel {
         case whiteBalance
         /// Click clear film border; the film base is sampled there.
         case filmBase
+        /// Click a defect; a retouch spot is placed there.
+        case retouchPlace
     }
 
     /// The active canvas picker, or nil when clicks do nothing special.
@@ -104,10 +107,50 @@ final class EditorModel {
             sampleFilmBase(inUnitRect: CGRect(
                 x: point.x - side / 2, y: point.y - side / 2, width: side, height: side
             ))
+        case .retouchPlace:
+            addRetouchSpot(atUnitPoint: point)
         case nil:
             return
         }
         canvasPicker = nil
+    }
+
+    // MARK: View state (not persisted)
+
+    /// Zoom factor over image pixels; nil fits the frame to the viewport.
+    /// Owned here so the top bar and the canvas share one value.
+    var zoomLevel: Double?
+
+    // MARK: Retouch
+
+    /// The mode the next placed spot will use.
+    var retouchMode: RetouchSpot.Mode = .heal
+
+    /// The spot currently selected for on-canvas handle editing.
+    var selectedSpotID: UUID?
+
+    var selectedSpotIndex: Int? {
+        guard let selectedSpotID else { return nil }
+        return editStack.retouch.firstIndex { $0.id == selectedSpotID }
+    }
+
+    /// Places a spot at the clicked point, sourcing from just beside it —
+    /// the most common correct guess — and selects it for adjustment.
+    func addRetouchSpot(atUnitPoint point: CGPoint) {
+        var spot = RetouchSpot()
+        spot.mode = retouchMode
+        spot.center = point
+        // Default the source to the right unless that would leave the frame.
+        spot.sourceOffset = point.x < 0.85
+            ? CGVector(dx: 0.08, dy: 0)
+            : CGVector(dx: -0.08, dy: 0)
+        editStack.retouch.append(spot)
+        selectedSpotID = spot.id
+    }
+
+    func removeRetouchSpot(id: UUID) {
+        editStack.retouch.removeAll { $0.id == id }
+        if selectedSpotID == id { selectedSpotID = nil }
     }
 
     /// Sets white balance so the clicked color becomes neutral.
@@ -179,6 +222,23 @@ final class EditorModel {
         didSet { renderPreview() }
     }
 
+    /// The crop as it stood when crop mode was entered, for Cancel.
+    private var cropRectOnEntry: CGRect = .unitFrame
+
+    func enterCropMode() {
+        cropRectOnEntry = editStack.geometry.cropRect
+        isCropping = true
+    }
+
+    func cancelCrop() {
+        editStack.geometry.cropRect = cropRectOnEntry
+        isCropping = false
+    }
+
+    func finishCrop() {
+        isCropping = false
+    }
+
     // MARK: Focus peaking
 
     /// Tints the in-focus areas of the preview. A viewing aid only — it never
@@ -213,6 +273,44 @@ final class EditorModel {
     /// sampled film base intact.
     func applyPreset(_ preset: DevelopPreset, options: EditTransferOptions = .init()) {
         editStack = editStack.applying(preset.editStack, options: options)
+    }
+
+    // MARK: Snapshots
+
+    /// Saved states of this photo's edit stack, newest first.
+    private(set) var snapshots: [EditSnapshot] = []
+
+    func reloadSnapshots() {
+        snapshots = (try? catalog.snapshots(for: entry.id)) ?? []
+    }
+
+    /// Saves the current edit state under a name.
+    @discardableResult
+    func saveSnapshot(named name: String) -> EditSnapshot? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let snapshot = EditSnapshot(
+            entryID: entry.id,
+            name: trimmed.isEmpty ? "Snapshot \(snapshots.count + 1)" : trimmed,
+            editStack: editStack
+        )
+        do {
+            try catalog.saveSnapshot(snapshot)
+            reloadSnapshots()
+            return snapshot
+        } catch {
+            return nil
+        }
+    }
+
+    /// Restores a snapshot's stack. This is a normal edit — it lands in the
+    /// undo history, so restoring is itself reversible.
+    func applySnapshot(_ snapshot: EditSnapshot) {
+        editStack = snapshot.editStack
+    }
+
+    func deleteSnapshot(_ snapshot: EditSnapshot) {
+        try? catalog.deleteSnapshot(id: snapshot.id)
+        reloadSnapshots()
     }
 
     // MARK: Geometry

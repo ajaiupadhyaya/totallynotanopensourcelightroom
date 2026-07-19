@@ -64,10 +64,16 @@ struct HistogramView: View {
     }
 
     private var clipIndicator: some View {
-        Image(systemName: "triangle.fill")
-            .font(.system(size: 7))
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(5)
+        // A drawn warning triangle, matching the chrome's hairline voice.
+        Path { path in
+            path.move(to: CGPoint(x: 3.5, y: 0))
+            path.addLine(to: CGPoint(x: 7, y: 6))
+            path.addLine(to: CGPoint(x: 0, y: 6))
+            path.closeSubpath()
+        }
+        .fill(.white.opacity(0.9))
+        .frame(width: 7, height: 6)
+        .padding(5)
     }
 
     private func gridlines(in size: CGSize) -> some View {

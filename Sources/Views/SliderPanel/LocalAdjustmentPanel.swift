@@ -11,25 +11,15 @@ struct LocalAdjustmentPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.controlSpacing) {
             HStack(spacing: 6) {
-                Button {
-                    model.addLocalAdjustment(.linear)
-                } label: {
-                    Label("Linear", systemImage: "line.diagonal")
-                }
-                Button {
-                    model.addLocalAdjustment(.radial)
-                } label: {
-                    Label("Radial", systemImage: "circle.dashed")
-                }
+                PlateButton(title: "+ Linear") { model.addLocalAdjustment(.linear) }
+                PlateButton(title: "+ Radial") { model.addLocalAdjustment(.radial) }
                 Spacer()
             }
-            .controlSize(.small)
-            .font(Theme.controlFont)
 
             if model.editStack.localAdjustments.isEmpty {
                 Text("A linear gradient burns a sky the way a tilted card "
                      + "under the enlarger did; a radial dodges a face.")
-                    .font(.caption)
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Theme.secondaryText)
             } else {
                 maskList
@@ -46,35 +36,39 @@ struct LocalAdjustmentPanel: View {
             ForEach(model.editStack.localAdjustments) { adjustment in
                 let isSelected = adjustment.id == model.selectedMaskID
                 HStack(spacing: 8) {
-                    Image(systemName: adjustment.shape == .linear
-                          ? "line.diagonal" : "circle.dashed")
-                        .font(.system(size: 10))
-                        .foregroundStyle(isSelected ? Theme.accent : Theme.secondaryText)
-                        .frame(width: 14)
+                    // The mask's shape, drawn: a slanted line or an ellipse.
+                    Group {
+                        if adjustment.shape == .linear {
+                            Path { path in
+                                path.move(to: CGPoint(x: 1, y: 11))
+                                path.addLine(to: CGPoint(x: 11, y: 1))
+                            }
+                            .stroke(style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                        } else {
+                            Ellipse()
+                                .stroke(style: StrokeStyle(lineWidth: 1.2, dash: [2, 2]))
+                                .padding(1)
+                        }
+                    }
+                    .foregroundStyle(isSelected ? Theme.accent : Theme.secondaryText)
+                    .frame(width: 12, height: 12)
 
                     Text(adjustment.displayName)
                         .font(Theme.controlFont)
+                        .foregroundStyle(Theme.text.opacity(adjustment.isEnabled ? 0.9 : 0.4))
 
                     Spacer()
 
-                    Toggle("", isOn: binding(for: adjustment.id, \.isEnabled))
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                        .labelsHidden()
+                    LampToggle(label: "", isOn: binding(for: adjustment.id, \.isEnabled))
 
-                    Button {
+                    GlyphButton(kind: .cross, label: "Delete mask") {
                         model.removeLocalAdjustment(id: adjustment.id)
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 9))
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Theme.secondaryText)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background {
-                    RoundedRectangle(cornerRadius: 5)
+                    RoundedRectangle(cornerRadius: 3)
                         .fill(isSelected ? Theme.control : .clear)
                 }
                 .contentShape(Rectangle())
@@ -89,7 +83,7 @@ struct LocalAdjustmentPanel: View {
     private func maskControls(at index: Int) -> some View {
         let adjustment = model.editStack.localAdjustments[index]
 
-        Divider().overlay(Theme.separator)
+        Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
         AdjustmentSlider(title: "Exposure",
                          value: maskBinding(index, \.exposure),
@@ -116,13 +110,11 @@ struct LocalAdjustmentPanel: View {
                              range: 0...1, format: "%.2f", neutral: 0.5)
         }
 
-        Toggle("Invert (apply outside the shape)",
-               isOn: maskBinding(index, \.isInverted))
-            .font(Theme.controlFont)
-            .toggleStyle(.checkbox)
+        LampToggle(label: "Invert — apply outside the shape",
+                   isOn: maskBinding(index, \.isInverted))
 
         Text("Drag the handles on the photo to place the mask.")
-            .font(.caption)
+            .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(Theme.secondaryText)
     }
 

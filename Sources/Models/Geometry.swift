@@ -43,6 +43,22 @@ struct Geometry: Codable, Equatable {
     var flipHorizontal: Bool = false
     var flipVertical: Bool = false
 
+    // MARK: Optics
+
+    /// Manual lens-distortion correction, `-100...100`. Positive bulges the
+    /// center outward (corrects pincushion); negative pinches it in (corrects
+    /// barrel). `0` is off.
+    var distortion: Double = 0
+
+    /// Vertical keystone, `-100...100`. Positive narrows the top of the frame
+    /// (corrects the converging verticals of a camera tilted up); negative
+    /// narrows the bottom.
+    var perspectiveVertical: Double = 0
+
+    /// Horizontal keystone, `-100...100`. Positive narrows the right edge;
+    /// negative narrows the left.
+    var perspectiveHorizontal: Double = 0
+
     /// True when this leaves the frame completely untouched.
     var isIdentity: Bool {
         cropRect == .unitFrame
@@ -50,6 +66,9 @@ struct Geometry: Codable, Equatable {
             && straightenAngle == 0
             && !flipHorizontal
             && !flipVertical
+            && distortion == 0
+            && perspectiveVertical == 0
+            && perspectiveHorizontal == 0
     }
 
     init() {}
@@ -62,6 +81,9 @@ struct Geometry: Codable, Equatable {
         straightenAngle = c.lenient(.straightenAngle, 0)
         flipHorizontal = c.lenient(.flipHorizontal, false)
         flipVertical = c.lenient(.flipVertical, false)
+        distortion = c.lenient(.distortion, 0)
+        perspectiveVertical = c.lenient(.perspectiveVertical, 0)
+        perspectiveHorizontal = c.lenient(.perspectiveHorizontal, 0)
     }
 }
 

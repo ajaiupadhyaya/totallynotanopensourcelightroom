@@ -53,7 +53,10 @@ struct EditRenderer {
 
         image = developedCache.developed(from: image,
                                          film: stack.filmNegative,
-                                         geometry: stack.geometry)
+                                         geometry: stack.geometry,
+                                         defringe: stack.defringe,
+                                         retouch: stack.retouch,
+                                         context: context)
         image = applyWhiteBalance(image, stack: stack)
         image = applyExposure(image, stack: stack)
         image = applyWhitesAndBlacks(image, stack: stack)

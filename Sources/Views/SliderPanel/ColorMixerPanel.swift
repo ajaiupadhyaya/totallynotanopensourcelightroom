@@ -12,13 +12,10 @@ struct ColorMixerPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Treatment", selection: $model.editStack.color.treatment) {
-                ForEach(Treatment.allCases) { treatment in
-                    Text(treatment.displayName).tag(treatment)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            TabStrip(
+                options: Treatment.allCases.map { ($0, $0.displayName) },
+                selection: $model.editStack.color.treatment
+            )
 
             bandPicker
 
@@ -30,8 +27,8 @@ struct ColorMixerPanel: View {
                 )
                 Text("Brightens or darkens whatever was this color, the way a "
                      + "colored filter does on B&W film.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.secondaryText)
             } else {
                 AdjustmentSlider(title: "Hue", value: bandBinding(\.hue),
                                  range: -100...100, format: "%.0f", neutral: 0)
@@ -51,12 +48,12 @@ struct ColorMixerPanel: View {
                 Button {
                     selectedBand = band
                 } label: {
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 2)
                         .fill(swatchColor(for: band))
-                        .frame(height: 24)
+                        .frame(height: 22)
                         .overlay {
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 2)
+                                .stroke(isSelected ? Theme.text : .clear, lineWidth: 1.5)
                         }
                         .overlay(alignment: .bottom) {
                             if isAdjusted(band) {
@@ -113,13 +110,10 @@ struct ColorGradingPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Zone", selection: $selectedZone) {
-                ForEach(Zone.allCases) { zone in
-                    Text(zone.displayName).tag(zone)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            TabStrip(
+                options: Zone.allCases.map { ($0, $0.displayName) },
+                selection: $selectedZone
+            )
 
             AdjustmentSlider(title: "Hue", value: zoneBinding(\.hue),
                              range: 0...360, format: "%.0f°", neutral: 0)
@@ -128,7 +122,7 @@ struct ColorGradingPanel: View {
             AdjustmentSlider(title: "Luminance", value: zoneBinding(\.luminance),
                              range: -100...100, format: "%.0f", neutral: 0)
 
-            Divider()
+            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
             AdjustmentSlider(title: "Blending",
                              value: $model.editStack.color.grading.blending,

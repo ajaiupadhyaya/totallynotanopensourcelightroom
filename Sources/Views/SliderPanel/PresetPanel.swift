@@ -13,42 +13,28 @@ struct PresetPanel: View {
             if app.presets.isEmpty {
                 Text("No presets yet. Develop a frame, then save its look to "
                      + "apply across the roll.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.secondaryText)
             } else {
                 ForEach(groupedPresets, id: \.0) { group, presets in
                     Text(group.uppercased())
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .engraved()
                     ForEach(presets) { preset in
-                        HStack {
-                            Button(preset.name) { model.applyPreset(preset) }
-                                .buttonStyle(.plain)
-                            Spacer()
-                            Button {
-                                app.deletePreset(preset)
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.secondary)
-                        }
-                        .font(.subheadline)
+                        PresetRow(preset: preset, app: app, model: model)
                     }
                 }
             }
 
-            Button("Save Current as Preset…") {
+            PlateButton(title: "Save Current as Preset") {
                 presetName = ""
                 isNaming = true
             }
-            .controlSize(.small)
             .padding(.top, 4)
 
             Text("A preset carries the look, not the crop or this scan's film "
                  + "base — those belong to the individual frame.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9.5, design: .monospaced))
+                .foregroundStyle(Theme.secondaryText)
         }
         .alert("Save Preset", isPresented: $isNaming) {
             TextField("Preset name", text: $presetName)
@@ -68,6 +54,43 @@ struct PresetPanel: View {
     }
 }
 
+private struct PresetRow: View {
+    let preset: DevelopPreset
+    @Bindable var app: AppModel
+    @Bindable var model: EditorModel
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack {
+            Button {
+                model.applyPreset(preset)
+            } label: {
+                Text(preset.name)
+                    .font(Theme.controlFont)
+                    .foregroundStyle(Theme.text.opacity(0.9))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if isHovering {
+                GlyphButton(kind: .cross, label: "Delete preset") {
+                    app.deletePreset(preset)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(isHovering ? Theme.control.opacity(0.6) : .clear)
+        }
+        .onHover { isHovering = $0 }
+    }
+}
+
 /// Read-only capture metadata for the open photo.
 struct MetadataPanel: View {
     let metadata: PhotoMetadata
@@ -76,10 +99,10 @@ struct MetadataPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             row("File", fileName)
-            if let dimensions = metadata.dimensions { row("Dimensions", dimensions) }
+            if let dimensions = metadata.dimensions { row("Size", dimensions) }
             if let camera = metadata.camera { row("Camera", camera) }
             if let lens = metadata.lensModel { row("Lens", lens) }
-            if let focal = metadata.focalLengthDescription { row("Focal Length", focal) }
+            if let focal = metadata.focalLengthDescription { row("Focal", focal) }
             if let aperture = metadata.apertureDescription { row("Aperture", aperture) }
             if let shutter = metadata.shutterDescription { row("Shutter", shutter) }
             if let iso = metadata.iso { row("ISO", "\(iso)") }
@@ -92,12 +115,14 @@ struct MetadataPanel: View {
 
     private func row(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 90, alignment: .leading)
+            Text(label.uppercased())
+                .font(.system(size: 9.5, design: .monospaced))
+                .kerning(0.8)
+                .foregroundStyle(Theme.tertiaryText)
+                .frame(width: 78, alignment: .leading)
             Text(value)
-                .font(.caption)
+                .font(.system(size: 10.5, design: .monospaced))
+                .foregroundStyle(Theme.text.opacity(0.85))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()

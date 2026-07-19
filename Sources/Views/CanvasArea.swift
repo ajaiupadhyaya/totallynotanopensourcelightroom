@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The center canvas: the open photo with zoom, pan, crop, mask handles, and
-/// eyedropper targeting — or an empty state.
+/// The center canvas: the open photo with zoom, pan, crop, mask and retouch
+/// handles, and eyedropper targeting — or an empty state.
 struct CanvasArea: View {
     @Bindable var app: AppModel
 
@@ -18,13 +18,21 @@ struct CanvasArea: View {
     }
 
     private var placeholder: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "photo")
-                .font(.system(size: 48, weight: .ultraLight))
-                .foregroundStyle(Theme.secondaryText)
+        VStack(spacing: 14) {
+            // An empty film frame, drawn — the shape of what belongs here.
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Theme.tertiaryText, lineWidth: 1.2)
+                .frame(width: 64, height: 44)
+                .overlay(alignment: .top) {
+                    Text("00")
+                        .font(Theme.filmEdgeFont)
+                        .foregroundStyle(Theme.filmEdge.opacity(0.7))
+                        .offset(y: -14)
+                }
             Text(app.entries.isEmpty
                  ? "Import a photo, or drop scans here"
                  : "Select a frame in the library")
+                .font(Theme.controlFont)
                 .foregroundStyle(Theme.secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -40,14 +48,6 @@ private struct EditCanvas: View {
     @Bindable var editor: EditorModel
     @Bindable var app: AppModel
 
-    /// Zoom factor over image pixels; nil fits the frame to the viewport.
-    @State private var zoom: Double?
-
-    /// The crop rect as it stood when crop mode was entered, for Cancel.
-    @State private var cropRectOnEntry: CGRect = .unitFrame
-
-    @State private var isShowingExport = false
-
     var body: some View {
         Group {
             if editor.isMissingFile {
@@ -56,24 +56,6 @@ private struct EditCanvas: View {
                 viewport
             }
         }
-        .navigationTitle(editor.fileName)
-        .navigationSubtitle(subtitle)
-        .toolbar { toolbarContent }
-        .sheet(isPresented: $isShowingExport) {
-            BatchExportSheet(app: app, entries: [editor.entry])
-        }
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if let dimensions = editor.metadata.dimensions { parts.append(dimensions) }
-        if editor.editStack.filmNegative.isEnabled {
-            parts.append(editor.editStack.filmNegative.stockName ?? "Film Negative")
-        }
-        if let zoom {
-            parts.append("\(Int((zoom * 100).rounded()))%")
-        }
-        return parts.joined(separator: " · ")
     }
 
     // MARK: Viewport
@@ -106,7 +88,7 @@ private struct EditCanvas: View {
                                    height: max(viewportSize.height - inset * 2, 50))
             let fitScale = min(available.width / imageSize.width,
                                available.height / imageSize.height)
-            let scale = zoom.map { CGFloat($0) } ?? min(fitScale, 1.0)
+            let scale = editor.zoomLevel.map { CGFloat($0) } ?? min(fitScale, 1.0)
             let displaySize = CGSize(width: imageSize.width * scale,
                                      height: imageSize.height * scale)
             let contentSize = CGSize(width: max(displaySize.width + inset * 2, viewportSize.width),
@@ -126,6 +108,12 @@ private struct EditCanvas: View {
                     CropOverlay(cropRect: $editor.editStack.geometry.cropRect,
                                 displaySize: displaySize)
                         .frame(width: displaySize.width, height: displaySize.height)
+                } else if let index = editor.selectedSpotIndex {
+                    RetouchHandles(
+                        spot: $editor.editStack.retouch[index],
+                        displaySize: displaySize
+                    )
+                    .frame(width: displaySize.width, height: displaySize.height)
                 } else if let index = editor.selectedMaskIndex {
                     MaskHandles(
                         adjustment: $editor.editStack.localAdjustments[index],
@@ -136,12 +124,12 @@ private struct EditCanvas: View {
 
                 if editor.isShowingBefore {
                     Text("BEFORE")
-                        .font(.caption.weight(.semibold))
-                        .kerning(1.2)
+                        .font(Theme.plateFont)
+                        .kerning(Theme.plateTracking)
                         .foregroundStyle(Theme.text)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(.black.opacity(0.6), in: Capsule())
+                        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
                         .frame(width: displaySize.width, height: displaySize.height,
                                alignment: .topLeading)
                         .padding(12)
@@ -166,7 +154,7 @@ private struct EditCanvas: View {
             }
         let toggleZoom = SpatialTapGesture(count: 2)
             .onEnded { _ in
-                zoom = zoom == nil ? 1.0 : nil
+                editor.zoomLevel = editor.zoomLevel == nil ? 1.0 : nil
             }
         return toggleZoom.simultaneously(with: pick)
     }
@@ -177,24 +165,31 @@ private struct EditCanvas: View {
         switch editor.canvasPicker {
         case .whiteBalance: "Click something that should be neutral gray"
         case .filmBase: "Click a clear piece of film border"
+        case .retouchPlace: "Click the defect to remove"
         case nil: nil
         }
     }
 
     private func pickerBanner(_ prompt: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "eyedropper")
-                .font(.system(size: 10))
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Theme.accent)
+                .frame(width: 5, height: 5)
             Text(prompt)
                 .font(Theme.controlFont)
-            Button("Cancel") { editor.canvasPicker = nil }
-                .buttonStyle(.plain)
-                .font(Theme.controlFont)
-                .foregroundStyle(Theme.accent)
+            Button {
+                editor.canvasPicker = nil
+            } label: {
+                Text("CANCEL")
+                    .font(Theme.plateFont)
+                    .kerning(Theme.plateTracking)
+                    .foregroundStyle(Theme.accent)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
-        .background(.black.opacity(0.75), in: Capsule())
+        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 3))
         .foregroundStyle(Theme.text)
         .padding(.top, 12)
     }
@@ -202,121 +197,36 @@ private struct EditCanvas: View {
     // MARK: Crop bar
 
     private var cropBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Text("Recompose the frame")
                 .font(Theme.controlFont)
                 .foregroundStyle(Theme.secondaryText)
-            Button("Cancel") {
-                editor.editStack.geometry.cropRect = cropRectOnEntry
-                editor.isCropping = false
-            }
-            .keyboardShortcut(.cancelAction)
-            Button("Done") { editor.isCropping = false }
-                .keyboardShortcut(.defaultAction)
+            PlateButton(title: "Cancel") { editor.cancelCrop() }
+            PlateButton(title: "Done") { editor.finishCrop() }
         }
-        .controlSize(.small)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(.black.opacity(0.75), in: Capsule())
+        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 3))
         .padding(.bottom, 14)
-    }
-
-    // MARK: Toolbar
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button {
-                editor.undo()
-            } label: {
-                Label("Undo", systemImage: "arrow.uturn.backward")
+        .background {
+            // Escape cancels, return commits — invisible, standard keys.
+            Group {
+                Button("") { editor.cancelCrop() }.keyboardShortcut(.cancelAction)
+                Button("") { editor.finishCrop() }.keyboardShortcut(.defaultAction)
             }
-            .disabled(!editor.canUndo)
-            .keyboardShortcut("z", modifiers: .command)
-
-            Button {
-                editor.redo()
-            } label: {
-                Label("Redo", systemImage: "arrow.uturn.forward")
-            }
-            .disabled(!editor.canRedo)
-            .keyboardShortcut("z", modifiers: [.command, .shift])
-
-            zoomMenu
-
-            Button {
-                if editor.isCropping {
-                    editor.isCropping = false
-                } else {
-                    cropRectOnEntry = editor.editStack.geometry.cropRect
-                    editor.isCropping = true
-                }
-            } label: {
-                Label("Crop", systemImage: "crop")
-            }
-            .help("Recompose the frame on the canvas")
-            .background(editor.isCropping ? Theme.accent.opacity(0.35) : .clear,
-                        in: RoundedRectangle(cornerRadius: 5))
-
-            Button {
-                editor.isFocusPeakingEnabled.toggle()
-            } label: {
-                Label("Focus Peaking", systemImage: "camera.metering.partial")
-            }
-            .help("Highlight what's in critical focus")
-            .keyboardShortcut("f", modifiers: [.command, .shift])
-
-            Button {
-                editor.isShowingBefore.toggle()
-            } label: {
-                Label(editor.isShowingBefore ? "Showing Before" : "Before / After",
-                      systemImage: editor.isShowingBefore
-                        ? "rectangle.righthalf.filled" : "rectangle.lefthalf.filled")
-            }
-            .help("Compare against the unedited original")
-            .keyboardShortcut("\\", modifiers: [])
-
-            Button {
-                app.copySettings(from: editor.entry)
-            } label: {
-                Label("Copy Settings", systemImage: "doc.on.doc")
-            }
-            .help("Copy this look, to paste onto other frames")
-            .keyboardShortcut("c", modifiers: [.command, .shift])
-
-            Button {
-                isShowingExport = true
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .opacity(0)
         }
-    }
-
-    private var zoomMenu: some View {
-        Menu {
-            Button("Fit") { zoom = nil }
-                .keyboardShortcut("0", modifiers: .command)
-            Button("50%") { zoom = 0.5 }
-            Button("100%") { zoom = 1.0 }
-                .keyboardShortcut("1", modifiers: .command)
-            Button("200%") { zoom = 2.0 }
-        } label: {
-            Label(zoom == nil ? "Fit" : "\(Int((zoom! * 100).rounded()))%",
-                  systemImage: "plus.magnifyingglass")
-        }
-        .help("Zoom — double-click the photo to toggle Fit and 100%")
     }
 
     private var missingFileState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 40, weight: .thin))
+            Text("!")
+                .font(.system(size: 40, weight: .thin, design: .monospaced))
                 .foregroundStyle(Theme.secondaryText)
             Text("This photo's file could not be found.")
-                .font(.title3)
+                .font(Theme.controlFont)
             Text(editor.fileName)
-                .font(.callout)
+                .font(Theme.valueFont)
                 .foregroundStyle(Theme.secondaryText)
         }
     }
@@ -543,10 +453,10 @@ private struct MaskHandles: View {
             }
             .stroke(.white.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
 
-            pin(at: start, filled: true)
+            CanvasPin(at: start, filled: true)
                 .gesture(dragPin { adjustment.startPoint = $0 })
                 .help("Full effect")
-            pin(at: end, filled: false)
+            CanvasPin(at: end, filled: false)
                 .gesture(dragPin { adjustment.endPoint = $0 })
                 .help("Fades to nothing")
         }
@@ -567,11 +477,11 @@ private struct MaskHandles: View {
                 .position(center)
                 .allowsHitTesting(false)
 
-            pin(at: center, filled: true)
+            CanvasPin(at: center, filled: true)
                 .gesture(dragPin { adjustment.center = $0 })
                 .help("Move")
 
-            pin(at: CGPoint(x: center.x + radiusX, y: center.y), filled: false)
+            CanvasPin(at: CGPoint(x: center.x + radiusX, y: center.y), filled: false)
                 .gesture(
                     DragGesture(minimumDistance: 1).onChanged { value in
                         let dx = abs(value.location.x - center.x)
@@ -580,7 +490,7 @@ private struct MaskHandles: View {
                 )
                 .help("Width")
 
-            pin(at: CGPoint(x: center.x, y: center.y - radiusY), filled: false)
+            CanvasPin(at: CGPoint(x: center.x, y: center.y - radiusY), filled: false)
                 .gesture(
                     DragGesture(minimumDistance: 1).onChanged { value in
                         let dy = abs(center.y - value.location.y)
@@ -591,9 +501,85 @@ private struct MaskHandles: View {
         }
     }
 
-    // MARK: Pieces
+    private func dragPin(_ update: @escaping (CGPoint) -> Void) -> some Gesture {
+        DragGesture(minimumDistance: 1)
+            .onChanged { value in update(unitPoint(value.location)) }
+    }
+}
 
-    private func pin(at point: CGPoint, filled: Bool) -> some View {
+// MARK: - Retouch handles
+
+/// On-canvas editing for the selected retouch spot: a solid circle over the
+/// destination, a dashed circle over the source, and a connector — drag
+/// either circle to move that end.
+private struct RetouchHandles: View {
+    @Binding var spot: RetouchSpot
+    let displaySize: CGSize
+
+    var body: some View {
+        let radius = spot.radius * displaySize.width
+        let dest = viewPoint(spot.center)
+        let source = viewPoint(CGPoint(x: spot.center.x + spot.sourceOffset.dx,
+                                       y: spot.center.y + spot.sourceOffset.dy))
+
+        ZStack {
+            Path { path in
+                path.move(to: dest)
+                path.addLine(to: source)
+            }
+            .stroke(.white.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+
+            // Destination: solid — this is what gets repaired.
+            Circle()
+                .stroke(.white.opacity(0.95), lineWidth: 1.5)
+                .frame(width: radius * 2, height: radius * 2)
+                .position(dest)
+                .contentShape(Circle().scale(1.4))
+                .gesture(dragCircle { spot.center = $0 })
+
+            // Source: dashed — where the replacement pixels come from.
+            Circle()
+                .stroke(.white.opacity(0.7),
+                        style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
+                .frame(width: radius * 2, height: radius * 2)
+                .position(source)
+                .contentShape(Circle().scale(1.4))
+                .gesture(dragCircle { point in
+                    spot.sourceOffset = CGVector(dx: point.x - spot.center.x,
+                                                 dy: point.y - spot.center.y)
+                })
+        }
+    }
+
+    private func viewPoint(_ unit: CGPoint) -> CGPoint {
+        CGPoint(x: unit.x * displaySize.width,
+                y: (1 - unit.y) * displaySize.height)
+    }
+
+    private func unitPoint(_ view: CGPoint) -> CGPoint {
+        CGPoint(x: min(max(view.x / displaySize.width, 0), 1),
+                y: min(max(1 - view.y / displaySize.height, 0), 1))
+    }
+
+    private func dragCircle(_ update: @escaping (CGPoint) -> Void) -> some Gesture {
+        DragGesture(minimumDistance: 1)
+            .onChanged { value in update(unitPoint(value.location)) }
+    }
+}
+
+// MARK: - Shared pin
+
+/// A drag pin shared by the mask overlays.
+struct CanvasPin: View {
+    let point: CGPoint
+    let filled: Bool
+
+    init(at point: CGPoint, filled: Bool) {
+        self.point = point
+        self.filled = filled
+    }
+
+    var body: some View {
         ZStack {
             Circle()
                 .fill(filled ? Color.white : Theme.canvas)
@@ -605,10 +591,5 @@ private struct MaskHandles: View {
         .shadow(color: .black.opacity(0.6), radius: 2)
         .position(point)
         .contentShape(Circle().scale(2.2))
-    }
-
-    private func dragPin(_ update: @escaping (CGPoint) -> Void) -> some Gesture {
-        DragGesture(minimumDistance: 1)
-            .onChanged { value in update(unitPoint(value.location)) }
     }
 }

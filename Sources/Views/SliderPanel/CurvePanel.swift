@@ -31,21 +31,17 @@ struct CurvePanel: View {
     @State private var channel: Channel = .rgb
 
     var body: some View {
-        Picker("Channel", selection: $channel) {
-            ForEach(Channel.allCases) { channel in
-                Text(channel.rawValue).tag(channel)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .controlSize(.small)
+        TabStrip(
+            options: Channel.allCases.map { ($0, $0.rawValue) },
+            selection: $channel
+        )
 
         ToneCurveEditor(points: pointsBinding, lineColor: channel.color)
             .frame(height: 190)
 
         Text("Drag a point vertically to reshape. Double-click to reset "
              + "this channel.")
-            .font(.caption)
+            .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(Theme.secondaryText)
     }
 

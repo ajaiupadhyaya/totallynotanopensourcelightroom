@@ -93,7 +93,61 @@ final class CatalogStore {
             try db.create(index: "idx_catalogEntry_dateImported",
                           on: CatalogEntry.databaseTableName, columns: ["dateImported"])
         }
+        migrator.registerMigration("v6_virtualCopiesAndSnapshots") { db in
+            try db.alter(table: CatalogEntry.databaseTableName) { table in
+                table.add(column: "copyNumber", .integer).notNull().defaults(to: 0)
+            }
+            // Copies of the same file are looked up together (numbering the
+            // next copy, showing siblings).
+            try db.create(index: "idx_catalogEntry_fileURL",
+                          on: CatalogEntry.databaseTableName, columns: ["fileURL"])
+
+            try db.create(table: EditSnapshot.databaseTableName) { table in
+                table.primaryKey("id", .blob)
+                table.column("entryID", .blob).notNull()
+                table.column("name", .text).notNull()
+                table.column("dateCreated", .datetime).notNull()
+                table.column("editStack", .text).notNull() // JSON
+            }
+            try db.create(index: "idx_editSnapshot_entryID",
+                          on: EditSnapshot.databaseTableName, columns: ["entryID"])
+        }
         return migrator
+    }
+
+    // MARK: Virtual copies
+
+    /// The next free copy number for a file — one greater than the highest
+    /// among the master (0) and any existing copies.
+    func nextCopyNumber(forFileURL fileURL: URL) throws -> Int {
+        try dbQueue.read { db in
+            let highest = try Int.fetchOne(
+                db,
+                sql: "SELECT MAX(copyNumber) FROM \(CatalogEntry.databaseTableName) WHERE fileURL = ?",
+                arguments: [fileURL.absoluteString]
+            ) ?? 0
+            return highest + 1
+        }
+    }
+
+    // MARK: Snapshots
+
+    /// Snapshots belonging to one entry, newest first.
+    func snapshots(for entryID: UUID) throws -> [EditSnapshot] {
+        try dbQueue.read { db in
+            try EditSnapshot
+                .filter(Column("entryID") == entryID)
+                .order(Column("dateCreated").desc)
+                .fetchAll(db)
+        }
+    }
+
+    func saveSnapshot(_ snapshot: EditSnapshot) throws {
+        try dbQueue.write { db in try snapshot.save(db) }
+    }
+
+    func deleteSnapshot(id: UUID) throws {
+        _ = try dbQueue.write { db in try EditSnapshot.deleteOne(db, key: id) }
     }
 
     // MARK: Develop presets

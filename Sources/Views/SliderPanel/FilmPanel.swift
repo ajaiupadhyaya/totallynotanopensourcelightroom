@@ -10,8 +10,8 @@ struct FilmPanel: View {
     private var film: FilmNegativeSettings { model.editStack.filmNegative }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle("Film Negative", isOn: Binding(
+        VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            LampToggle(label: "Negative Conversion", isOn: Binding(
                 get: { model.editStack.filmNegative.isEnabled },
                 set: { isOn in
                     if isOn {
@@ -21,15 +21,16 @@ struct FilmPanel: View {
                     }
                 }
             ))
-            .font(.subheadline.weight(.medium))
 
             if film.isEnabled {
-                Picker("Film Type", selection: $model.editStack.filmNegative.type) {
-                    ForEach(FilmType.allCases) { type in
-                        Text(type.displayName).tag(type)
-                    }
-                }
-                .pickerStyle(.menu)
+                TabStrip(
+                    options: [
+                        (FilmType.colorNegative, "C-41"),
+                        (.blackAndWhiteNegative, "B&W"),
+                        (.slide, "Slide"),
+                    ],
+                    selection: $model.editStack.filmNegative.type
+                )
 
                 if film.type.requiresInversion {
                     filmBaseControls
@@ -61,41 +62,36 @@ struct FilmPanel: View {
     private var filmBaseControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 2)
                     .fill(Color(film.baseColor.cgColor))
                     .frame(width: 26, height: 20)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator))
+                    .overlay(RoundedRectangle(cornerRadius: 2)
+                        .stroke(Theme.separator, lineWidth: Theme.hairline))
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Film Base")
-                        .font(.subheadline)
-                    Text(model.hasSampledBase ? "Sampled from this scan" : "Assumed default")
-                        .font(.caption)
+                        .font(Theme.controlFont)
+                    Text(model.hasSampledBase ? "sampled from this scan" : "assumed default")
+                        .font(.system(size: 9.5, design: .monospaced))
                         .foregroundStyle(model.hasSampledBase
-                                         ? AnyShapeStyle(.secondary)
-                                         : AnyShapeStyle(Color.orange))
+                                         ? AnyShapeStyle(Theme.secondaryText)
+                                         : AnyShapeStyle(Theme.filmEdge))
                 }
 
                 Spacer()
 
-                Button("Auto") { model.sampleFilmBase() }
-                    .controlSize(.small)
-                    .help("Sample the brightest area automatically")
+                PlateButton(title: "Auto") { model.sampleFilmBase() }
 
-                Button {
+                PlateButton(title: model.canvasPicker == .filmBase ? "Click…" : "Pick") {
                     model.canvasPicker = model.canvasPicker == .filmBase ? nil : .filmBase
-                } label: {
-                    Image(systemName: "eyedropper")
                 }
-                .controlSize(.small)
-                .help("Click a clear piece of film border in the photo")
             }
 
-            Text("Sampling reads the brightest area, which on a negative is the "
-                 + "unexposed film base. Include some clear border in the scan "
-                 + "for the best result.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text("Sampling reads the brightest area, which on a negative is "
+                 + "the unexposed film base. Include some clear border in the "
+                 + "scan for the best result.")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 
@@ -104,13 +100,14 @@ struct FilmPanel: View {
     private var stockControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Film Stock")
-                    .font(.subheadline)
+                Text("STOCK")
+                    .engraved()
                 Spacer()
-                Button("Calibrate…") { isShowingCalibration = true }
-                    .controlSize(.small)
+                PlateButton(title: "Calibrate") { isShowingCalibration = true }
             }
 
+            // The stock list is long and grouped, which is exactly what a
+            // menu is for; only its closed face is drawn here.
             Menu {
                 ForEach(stockGroups, id: \.0) { group, stocks in
                     Section(group) {
@@ -120,9 +117,24 @@ struct FilmPanel: View {
                     }
                 }
             } label: {
-                Text(film.stockName ?? "None")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Text(film.stockName ?? "None")
+                        .font(Theme.controlFont)
+                        .foregroundStyle(Theme.text.opacity(0.9))
+                    Spacer()
+                    Glyph(kind: .chevronDown, size: 6, weight: 1.1)
+                        .foregroundStyle(Theme.tertiaryText)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Theme.control.opacity(0.6),
+                            in: RoundedRectangle(cornerRadius: 2))
+                .overlay(RoundedRectangle(cornerRadius: 2)
+                    .stroke(Theme.separator, lineWidth: Theme.hairline))
+                .contentShape(Rectangle())
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
 
             if !model.stockMatches.isEmpty {
                 matchList
@@ -132,26 +144,25 @@ struct FilmPanel: View {
 
     private var matchList: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Closest to this scan's base")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            Text("CLOSEST TO THIS SCAN'S BASE")
+                .engraved()
 
             ForEach(model.stockMatches.prefix(3)) { match in
                 Button {
                     model.applyFilmStock(match.stock)
                 } label: {
                     HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(Color(match.stock.baseColor.cgColor))
                             .frame(width: 14, height: 14)
                         Text(match.stock.displayName)
-                            .font(.caption)
+                            .font(.system(size: 10, design: .monospaced))
                         Spacer()
                         Text("\(Int(match.confidence * 100))%")
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Theme.secondaryText)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -161,12 +172,12 @@ struct FilmPanel: View {
                  + "reliably, but most C-41 stocks share a near-identical mask — "
                  + "so treat these as candidates, not an identification. For "
                  + "accuracy, pick the stock you actually shot and calibrate it.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9.5, design: .monospaced))
+                .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 2)
         }
         .padding(8)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
+        .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
     }
 
     /// Stocks grouped for the menu: calibrated profiles first, then by family.
@@ -197,25 +208,24 @@ private struct CalibrateStockSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Calibrate Film Stock")
-                .font(.title3.weight(.semibold))
-            Text("Saves this scan's film base and character as a profile you can "
-                 + "apply to the rest of the roll.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            Text("CALIBRATE FILM STOCK")
+                .engraved()
+            Text("Saves this scan's film base and character as a profile you "
+                 + "can apply to the rest of the roll.")
+                .font(Theme.controlFont)
+                .foregroundStyle(Theme.secondaryText)
 
-            Form {
-                TextField("Manufacturer", text: $manufacturer, prompt: Text("Kodak"))
-                TextField("Stock name", text: $name, prompt: Text("Portra 400"))
-                TextField("ISO", text: $isoText, prompt: Text("400"))
+            VStack(spacing: 8) {
+                field("Manufacturer", text: $manufacturer, prompt: "Kodak")
+                field("Stock name", text: $name, prompt: "Portra 400")
+                field("ISO", text: $isoText, prompt: "400")
             }
-            .formStyle(.grouped)
 
             HStack {
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Save") {
+                PlateButton(title: "Cancel") { dismiss() }
+                PlateButton(title: "Save",
+                            isEnabled: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
                     model.saveCalibratedStock(
                         name: name.trimmingCharacters(in: .whitespaces),
                         manufacturer: manufacturer.trimmingCharacters(in: .whitespaces),
@@ -223,11 +233,33 @@ private struct CalibrateStockSheet: View {
                     )
                     dismiss()
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(20)
-        .frame(width: 400)
+        .frame(width: 380)
+        .background(Theme.surface)
+        .foregroundStyle(Theme.text)
+    }
+
+    private func field(_ label: String, text: Binding<String>, prompt: String) -> some View {
+        HStack(spacing: 10) {
+            Text(label.uppercased())
+                .font(Theme.plateFont)
+                .kerning(Theme.plateTracking)
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 110, alignment: .leading)
+            TextField("", text: text,
+                      prompt: Text(prompt)
+                        .font(Theme.controlFont)
+                        .foregroundStyle(Theme.tertiaryText))
+                .textFieldStyle(.plain)
+                .font(Theme.controlFont)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Theme.control.opacity(0.6),
+                            in: RoundedRectangle(cornerRadius: 2))
+                .overlay(RoundedRectangle(cornerRadius: 2)
+                    .stroke(Theme.separator, lineWidth: Theme.hairline))
+        }
     }
 }

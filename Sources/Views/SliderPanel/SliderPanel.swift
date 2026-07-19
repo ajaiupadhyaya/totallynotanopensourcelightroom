@@ -1,7 +1,13 @@
 import SwiftUI
 
-/// The develop panel: histogram on top, then every adjustment group as a
-/// collapsible ``PanelSection``.
+/// The develop column: histogram on top, then every adjustment group as a
+/// numbered, collapsible ``PanelSection``.
+///
+/// The stage numbers are the order of the render pipeline itself — film
+/// conversion first, effects last — so the column reads as the signal chain
+/// it actually is. Snapshots, presets, and info follow unnumbered: they are
+/// catalog features, not pipeline stages, and the numbering stays honest by
+/// excluding them.
 ///
 /// Each section knows whether it carries non-neutral edits (the dot in its
 /// header) and can reset just itself — so state is visible even when folded,
@@ -19,6 +25,7 @@ struct SliderPanel: View {
 
                 PanelSection(
                     "Film",
+                    index: "01",
                     isModified: model.editStack.filmNegative != FilmNegativeSettings(),
                     onReset: { model.editStack.filmNegative = FilmNegativeSettings() }
                 ) {
@@ -26,14 +33,50 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
-                    "Crop & Rotate",
-                    isModified: !model.editStack.geometry.isIdentity,
-                    onReset: { model.editStack.geometry = Geometry() }
+                    "Frame",
+                    index: "02",
+                    isModified: isFrameModified,
+                    onReset: resetFrame
                 ) {
                     GeometryPanel(model: model)
                 }
 
-                PanelSection("Light", isModified: isLightModified, onReset: resetLight) {
+                PanelSection(
+                    "Optics",
+                    index: "03",
+                    isModified: isOpticsModified,
+                    onReset: resetOptics
+                ) {
+                    OpticsPanel(model: model)
+                }
+
+                PanelSection(
+                    "Retouch",
+                    index: "04",
+                    isModified: !model.editStack.retouch.isEmpty,
+                    onReset: {
+                        model.editStack.retouch = []
+                        model.selectedSpotID = nil
+                    }
+                ) {
+                    RetouchPanel(model: model)
+                }
+
+                PanelSection(
+                    "White Balance",
+                    index: "05",
+                    isModified: model.editStack.whiteBalanceTemp != 6500
+                        || model.editStack.whiteBalanceTint != 0,
+                    onReset: {
+                        model.editStack.whiteBalanceTemp = 6500
+                        model.editStack.whiteBalanceTint = 0
+                    }
+                ) {
+                    WhiteBalancePanel(model: model)
+                }
+
+                PanelSection("Light", index: "06",
+                             isModified: isLightModified, onReset: resetLight) {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
                                      range: -3...3, format: "%.2f EV", neutral: 0)
@@ -54,19 +97,8 @@ struct SliderPanel: View {
                                      range: -100...100, format: "%.0f", neutral: 0)
                 }
 
-                PanelSection(
-                    "White Balance",
-                    isModified: model.editStack.whiteBalanceTemp != 6500
-                        || model.editStack.whiteBalanceTint != 0,
-                    onReset: {
-                        model.editStack.whiteBalanceTemp = 6500
-                        model.editStack.whiteBalanceTint = 0
-                    }
-                ) {
-                    WhiteBalancePanel(model: model)
-                }
-
-                PanelSection("Presence", isModified: isPresenceModified, onReset: resetPresence) {
+                PanelSection("Presence", index: "07",
+                             isModified: isPresenceModified, onReset: resetPresence) {
                     AdjustmentSlider(title: "Texture",
                                      value: $model.editStack.texture,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -86,6 +118,7 @@ struct SliderPanel: View {
 
                 PanelSection(
                     "Color Mixer",
+                    index: "08",
                     isModified: model.editStack.color.treatment != .color
                         || !model.editStack.color.mixer.isNeutral,
                     onReset: {
@@ -97,7 +130,8 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
-                    "Color Grading",
+                    "Color Grade",
+                    index: "09",
                     isModified: !model.editStack.color.grading.isNeutral,
                     onReset: { model.editStack.color.grading = ColorGrading() }
                 ) {
@@ -106,6 +140,7 @@ struct SliderPanel: View {
 
                 PanelSection(
                     "Tone Curve",
+                    index: "10",
                     isModified: !model.editStack.toneCurvePoints.isEmpty
                         || !model.editStack.color.channelCurves.isNeutral,
                     onReset: {
@@ -117,14 +152,16 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
-                    "Local Adjustments",
+                    "Local Masks",
+                    index: "11",
                     isModified: !model.editStack.localAdjustments.isEmpty,
                     onReset: { model.editStack.localAdjustments = [] }
                 ) {
                     LocalAdjustmentPanel(model: model)
                 }
 
-                PanelSection("Detail", isModified: isDetailModified, onReset: resetDetail) {
+                PanelSection("Detail", index: "12",
+                             isModified: isDetailModified, onReset: resetDetail) {
                     AdjustmentSlider(title: "Sharpening",
                                      value: $model.editStack.sharpenAmount,
                                      range: 0...100, format: "%.0f", neutral: 0)
@@ -139,7 +176,8 @@ struct SliderPanel: View {
                                      range: 0...100, format: "%.0f", neutral: 0)
                 }
 
-                PanelSection("Effects", isModified: isEffectsModified, onReset: resetEffects) {
+                PanelSection("Effects", index: "13",
+                             isModified: isEffectsModified, onReset: resetEffects) {
                     AdjustmentSlider(title: "Vignette",
                                      value: $model.editStack.vignetteAmount,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -154,6 +192,10 @@ struct SliderPanel: View {
                                      range: 0...100, format: "%.0f", neutral: 25)
                 }
 
+                PanelSection("Snapshots") {
+                    SnapshotPanel(model: model)
+                }
+
                 PanelSection("Presets") {
                     PresetPanel(app: app, model: model)
                 }
@@ -162,12 +204,12 @@ struct SliderPanel: View {
                     MetadataPanel(metadata: model.metadata, fileName: model.fileName)
                 }
 
-                Button("Reset All Adjustments") {
+                PlateButton(title: "Reset All Adjustments",
+                            isEnabled: model.editStack != EditStack(),
+                            fillsWidth: true) {
                     model.resetAdjustments()
                 }
-                .font(Theme.controlFont)
-                .disabled(model.editStack == EditStack())
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Theme.panelInset)
                 .padding(.vertical, 14)
             }
         }
@@ -175,6 +217,33 @@ struct SliderPanel: View {
     }
 
     // MARK: Section state
+
+    private var isFrameModified: Bool {
+        let g = model.editStack.geometry
+        return g.cropRect != .unitFrame || g.rotation != .none
+            || g.straightenAngle != 0 || g.flipHorizontal || g.flipVertical
+    }
+
+    private func resetFrame() {
+        model.editStack.geometry.cropRect = .unitFrame
+        model.editStack.geometry.rotation = .none
+        model.editStack.geometry.straightenAngle = 0
+        model.editStack.geometry.flipHorizontal = false
+        model.editStack.geometry.flipVertical = false
+    }
+
+    private var isOpticsModified: Bool {
+        let g = model.editStack.geometry
+        return g.distortion != 0 || g.perspectiveVertical != 0
+            || g.perspectiveHorizontal != 0 || !model.editStack.defringe.isNeutral
+    }
+
+    private func resetOptics() {
+        model.editStack.geometry.distortion = 0
+        model.editStack.geometry.perspectiveVertical = 0
+        model.editStack.geometry.perspectiveHorizontal = 0
+        model.editStack.defringe = Defringe()
+    }
 
     private var isLightModified: Bool {
         let s = model.editStack
@@ -244,16 +313,10 @@ struct WhiteBalancePanel: View {
                          value: $model.editStack.whiteBalanceTint,
                          range: -100...100, format: "%.0f", neutral: 0)
 
-        Button {
+        PlateButton(title: model.canvasPicker == .whiteBalance
+                    ? "Click a neutral in the photo…"
+                    : "Pick Neutral") {
             model.canvasPicker = model.canvasPicker == .whiteBalance ? nil : .whiteBalance
-        } label: {
-            Label(model.canvasPicker == .whiteBalance
-                  ? "Click a neutral in the photo…"
-                  : "Pick Neutral",
-                  systemImage: "eyedropper")
-                .font(Theme.controlFont)
         }
-        .controlSize(.small)
-        .help("Click something that should be gray; temperature and tint are set to neutralize it")
     }
 }

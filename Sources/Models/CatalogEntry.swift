@@ -83,6 +83,13 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
     var iso: Int?
     var captureDate: Date?
 
+    /// `0` for the master import of a file; `1, 2, …` for virtual copies —
+    /// additional catalog entries sharing the same original file, each with
+    /// its own independent edit stack.
+    var copyNumber: Int = 0
+
+    var isVirtualCopy: Bool { copyNumber > 0 }
+
     var fileName: String { fileURL.lastPathComponent }
 
     init(
@@ -141,5 +148,6 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         lensModel = c.lenient(.lensModel, nil)
         iso = c.lenient(.iso, nil)
         captureDate = c.lenient(.captureDate, nil)
+        copyNumber = c.lenient(.copyNumber, 0)
     }
 }

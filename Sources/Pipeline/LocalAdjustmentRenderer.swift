@@ -127,7 +127,9 @@ enum LocalAdjustmentRenderer {
         let reference = max(radiusX, radiusY)
 
         let feather = min(max(adjustment.feather, 0), 1)
-        let inner = reference * (1 - feather)
+        // Keep at least half a pixel between the radii — CIRadialGradient with
+        // radius0 == radius1 degenerates into a soft falloff, not a hard edge.
+        let inner = max(min(reference * (1 - feather), reference - 0.5), 0)
 
         let filter = CIFilter.radialGradient()
         filter.center = .zero
