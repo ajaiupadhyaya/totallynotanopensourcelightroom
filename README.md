@@ -90,11 +90,9 @@ your choice of format, color profile, size, and output sharpening.
 ## Installing
 
 Grab `PhotoEditor.app` from the latest
-[release](../../releases), unzip, and drag it to `/Applications`.
-
-The app is ad-hoc signed, not notarized (no Apple developer account, no
-telemetry to pay for one). The first launch needs a right-click → **Open** →
-**Open**, once. Everything after that is normal.
+[release](../../releases), unzip, and drag it to `/Applications`. The app is
+Developer ID signed and notarized by Apple — it opens with a normal
+double-click. Requires macOS 14+.
 
 ## Building from source
 
