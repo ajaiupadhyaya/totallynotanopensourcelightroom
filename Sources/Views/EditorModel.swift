@@ -2,6 +2,15 @@ import CoreImage
 import Foundation
 import Observation
 
+/// One addressable state in the edit history. Keeping the stack with the row
+/// makes history a working Photoshop-like surface rather than a decorative log.
+struct EditHistoryEvent: Identifiable, Equatable {
+    let id = UUID()
+    let title: String
+    let timestamp: Date
+    let stack: EditStack
+}
+
 /// Drives editing of a single catalog entry: loads its original, renders the
 /// live non-destructive preview and histogram, tracks undo/redo, and persists
 /// changes back to the catalog.
@@ -45,6 +54,11 @@ final class EditorModel {
     private var redoStack: [EditStack] = []
     private let maxUndoDepth = 100
 
+    /// Recent committed states, newest last. A history row can be clicked to
+    /// restore that exact non-destructive stack.
+    private(set) var historyEvents: [EditHistoryEvent] = []
+    private let maxHistoryDepth = 40
+
     private var commitWorkItem: DispatchWorkItem?
     private let commitDelay: TimeInterval
 
@@ -54,6 +68,12 @@ final class EditorModel {
     let metadata: PhotoMetadata
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
+    var undoDepth: Int { undoStack.count }
+    var redoDepth: Int { redoStack.count }
+
+    /// Diagnostic viewing aids. These do not alter the exported image.
+    var showsShadowClipping = false
+    var showsHighlightClipping = false
 
     init(
         entry: CatalogEntry,
@@ -74,6 +94,7 @@ final class EditorModel {
         renderPreview()
         reloadFilmStocks()
         reloadSnapshots()
+        appendHistory(title: "Opened")
     }
 
     /// Resets all adjustments to their neutral defaults.
@@ -206,6 +227,34 @@ final class EditorModel {
         adjustment.exposure = shape == .linear ? -0.5 : 0.5
         editStack.localAdjustments.append(adjustment)
         selectedMaskID = adjustment.id
+    }
+
+    /// Begins a new painted stroke in the selected brush mask.
+    func beginBrushStroke(at point: CGPoint) {
+        guard let index = selectedMaskIndex,
+              editStack.localAdjustments[index].shape == .brush else { return }
+        let mask = editStack.localAdjustments[index]
+        let stroke = BrushStroke(points: [point], radius: mask.brushSize,
+                                 feather: mask.brushFeather, flow: mask.brushFlow)
+        editStack.localAdjustments[index].brushStrokes.append(stroke)
+    }
+
+    /// Extends the active stroke, dropping redundant sub-pixel points.
+    func continueBrushStroke(to point: CGPoint) {
+        guard let index = selectedMaskIndex,
+              editStack.localAdjustments[index].shape == .brush,
+              let strokeIndex = editStack.localAdjustments[index].brushStrokes.indices.last,
+              let previous = editStack.localAdjustments[index]
+                .brushStrokes[strokeIndex].points.last else { return }
+        let minimumDistance = max(editStack.localAdjustments[index].brushSize * 0.12, 0.001)
+        guard hypot(point.x - previous.x, point.y - previous.y) >= minimumDistance else { return }
+        editStack.localAdjustments[index].brushStrokes[strokeIndex].points.append(point)
+    }
+
+    func removeLastBrushStroke() {
+        guard let index = selectedMaskIndex,
+              !editStack.localAdjustments[index].brushStrokes.isEmpty else { return }
+        editStack.localAdjustments[index].brushStrokes.removeLast()
     }
 
     func removeLocalAdjustment(id: UUID) {
@@ -482,6 +531,7 @@ final class EditorModel {
         // so align lastCommittedStack before mutating editStack.
         lastCommittedStack = previous
         editStack = previous
+        appendHistory(title: "Undo")
     }
 
     func redo() {
@@ -489,6 +539,14 @@ final class EditorModel {
         undoStack.append(editStack)
         lastCommittedStack = next
         editStack = next
+        appendHistory(title: "Redo")
+    }
+
+    /// Restores a visible history state. The restoration remains undoable and
+    /// is committed through the same normal debounce boundary as any edit.
+    func restoreHistoryEvent(_ event: EditHistoryEvent) {
+        guard event.stack != editStack else { return }
+        editStack = event.stack
     }
 
     // MARK: Commit (debounced persistence + undo capture)
@@ -506,12 +564,49 @@ final class EditorModel {
     func commitEdit() {
         commitWorkItem?.cancel()
         if editStack != lastCommittedStack {
+            let title = historyTitle(from: lastCommittedStack, to: editStack)
             undoStack.append(lastCommittedStack)
             if undoStack.count > maxUndoDepth { undoStack.removeFirst() }
             redoStack.removeAll()
             lastCommittedStack = editStack
+            appendHistory(title: title)
         }
         persist()
+    }
+
+    private func appendHistory(title: String) {
+        historyEvents.append(EditHistoryEvent(title: title, timestamp: Date(), stack: editStack))
+        if historyEvents.count > maxHistoryDepth { historyEvents.removeFirst() }
+    }
+
+    /// Names the narrowest changed stage so the history reads like actions,
+    /// not anonymous snapshots. Simultaneous changes are recorded honestly.
+    private func historyTitle(from old: EditStack, to new: EditStack) -> String {
+        var stages: [String] = []
+        if old.filmNegative != new.filmNegative { stages.append("Film") }
+        if old.geometry != new.geometry { stages.append("Frame") }
+        if old.defringe != new.defringe { stages.append("Optics") }
+        if old.retouch != new.retouch { stages.append("Retouch") }
+        if old.whiteBalanceTemp != new.whiteBalanceTemp
+            || old.whiteBalanceTint != new.whiteBalanceTint { stages.append("White Balance") }
+        if old.exposure != new.exposure || old.contrast != new.contrast
+            || old.highlights != new.highlights || old.shadows != new.shadows
+            || old.whites != new.whites || old.blacks != new.blacks { stages.append("Light") }
+        if old.texture != new.texture || old.clarity != new.clarity
+            || old.dehaze != new.dehaze || old.vibrance != new.vibrance
+            || old.saturation != new.saturation { stages.append("Presence") }
+        if old.color != new.color { stages.append("Color") }
+        if old.toneCurvePoints != new.toneCurvePoints { stages.append("Tone Curve") }
+        if old.localAdjustments != new.localAdjustments { stages.append("Masks") }
+        if old.sharpenAmount != new.sharpenAmount || old.sharpenRadius != new.sharpenRadius
+            || old.luminanceNoiseReduction != new.luminanceNoiseReduction
+            || old.colorNoiseReduction != new.colorNoiseReduction { stages.append("Detail") }
+        if old.vignetteAmount != new.vignetteAmount
+            || old.vignetteMidpoint != new.vignetteMidpoint
+            || old.grainAmount != new.grainAmount || old.grainSize != new.grainSize {
+            stages.append("Effects")
+        }
+        return stages.count == 1 ? stages[0] : "Multiple Adjustments"
     }
 
     // MARK: Rendering & IO

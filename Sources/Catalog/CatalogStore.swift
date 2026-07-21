@@ -190,12 +190,36 @@ final class CatalogStore {
         _ = try dbQueue.write { db in try FilmStock.deleteOne(db, key: id) }
     }
 
-    /// All entries, newest import first.
+    /// All entries, newest import group first. A master and every virtual copy
+    /// of its file form one stable group, with the master followed by copies
+    /// in numeric order. Sorting only by `dateImported` made adjacency depend
+    /// on sub-millisecond timing when several files were imported quickly.
     func allEntries() throws -> [CatalogEntry] {
         try dbQueue.read { db in
-            try CatalogEntry
-                .order(Column("dateImported").desc)
-                .fetchAll(db)
+            let entries = try CatalogEntry.fetchAll(db)
+            let groups = Dictionary(grouping: entries, by: \.fileURL)
+            let groupDates = groups.mapValues { group in
+                group.first(where: { $0.copyNumber == 0 })?.dateImported
+                    ?? group.map(\.dateImported).min()
+                    ?? .distantPast
+            }
+
+            return entries.sorted { lhs, rhs in
+                if lhs.fileURL == rhs.fileURL {
+                    if lhs.copyNumber != rhs.copyNumber {
+                        return lhs.copyNumber < rhs.copyNumber
+                    }
+                    if lhs.dateImported != rhs.dateImported {
+                        return lhs.dateImported < rhs.dateImported
+                    }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+
+                let lhsDate = groupDates[lhs.fileURL] ?? lhs.dateImported
+                let rhsDate = groupDates[rhs.fileURL] ?? rhs.dateImported
+                if lhsDate != rhsDate { return lhsDate > rhsDate }
+                return lhs.fileURL.absoluteString < rhs.fileURL.absoluteString
+            }
         }
     }
 

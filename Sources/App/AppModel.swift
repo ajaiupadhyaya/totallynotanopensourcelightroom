@@ -126,9 +126,10 @@ final class AppModel {
         var copy = CatalogEntry(
             id: UUID(),
             fileURL: entry.fileURL,
-            // A hair later than the source so the copy sits next to it in the
-            // date-ordered filmstrip instead of jumping to the top.
-            dateImported: entry.dateImported.addingTimeInterval(0.001 * Double(number)),
+            // Copies share the master's import date. CatalogStore performs a
+            // stable group sort, keeping every interpretation together even
+            // when several files are imported within the same millisecond.
+            dateImported: entry.dateImported,
             editStack: entry.editStack,
             thumbnailPath: nil,
             rating: entry.rating,

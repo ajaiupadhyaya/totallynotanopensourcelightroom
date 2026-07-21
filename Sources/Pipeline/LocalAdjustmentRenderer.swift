@@ -91,6 +91,8 @@ enum LocalAdjustmentRenderer {
             gradient = linearGradient(adjustment, extent: extent)
         case .radial:
             gradient = radialGradient(adjustment, extent: extent)
+        case .brush:
+            gradient = brushMask(adjustment, extent: extent)
         }
         guard var grayscale = gradient?.cropped(to: extent) else { return nil }
 
@@ -143,6 +145,62 @@ enum LocalAdjustmentRenderer {
         let transform = CGAffineTransform(translationX: center.x, y: center.y)
             .scaledBy(x: radiusX / reference, y: radiusY / reference)
         return circle.transformed(by: transform)
+    }
+
+    /// Builds a painted mask by taking the maximum luminance of soft radial
+    /// dabs. Stroke points are interpolated so a fast pointer drag cannot leave
+    /// holes. The graph remains lazy Core Image work and scales with `extent`.
+    private static func brushMask(
+        _ adjustment: LocalAdjustment, extent: CGRect
+    ) -> CIImage? {
+        guard !adjustment.brushStrokes.isEmpty else {
+            return CIImage(color: .black).cropped(to: extent)
+        }
+
+        var result = CIImage(color: .black).cropped(to: extent)
+        for stroke in adjustment.brushStrokes where !stroke.points.isEmpty {
+            let radius = max(stroke.radius * min(extent.width, extent.height), 1)
+            let feather = min(max(stroke.feather, 0), 1)
+            let inner = max(min(radius * (1 - feather), radius - 0.5), 0)
+            let flow = CGFloat(min(max(stroke.flow, 0.02), 1))
+
+            for point in interpolatedPoints(stroke.points,
+                                            unitStep: max(stroke.radius * 0.45, 0.002)) {
+                let dab = CIFilter.radialGradient()
+                dab.center = pixelPoint(point, in: extent)
+                dab.radius0 = Float(inner)
+                dab.radius1 = Float(radius)
+                dab.color0 = CIColor(red: flow, green: flow, blue: flow, alpha: 1)
+                dab.color1 = CIColor.black
+                guard let image = dab.outputImage?.cropped(to: extent) else { continue }
+
+                let maximum = CIFilter.maximumCompositing()
+                maximum.inputImage = image
+                maximum.backgroundImage = result
+                result = maximum.outputImage?.cropped(to: extent) ?? result
+            }
+        }
+        return result
+    }
+
+    private static func interpolatedPoints(
+        _ points: [CGPoint], unitStep: Double
+    ) -> [CGPoint] {
+        guard var previous = points.first else { return [] }
+        var output = [previous]
+        for point in points.dropFirst() {
+            let distance = hypot(point.x - previous.x, point.y - previous.y)
+            let segments = max(Int(ceil(distance / unitStep)), 1)
+            for index in 1...segments {
+                let t = CGFloat(index) / CGFloat(segments)
+                output.append(CGPoint(
+                    x: previous.x + (point.x - previous.x) * t,
+                    y: previous.y + (point.y - previous.y) * t
+                ))
+            }
+            previous = point
+        }
+        return output
     }
 
     private static func pixelPoint(_ unit: CGPoint, in extent: CGRect) -> CGPoint {

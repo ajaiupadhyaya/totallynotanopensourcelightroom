@@ -1,6 +1,34 @@
 import CoreGraphics
 import Foundation
 
+/// One continuous pass of a local-adjustment brush. Points and radius are
+/// stored in unit coordinates so the same hand-painted mask lands identically
+/// on the preview proxy and a full-resolution export.
+struct BrushStroke: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var points: [CGPoint] = []
+    var radius: Double = 0.04
+    var feather: Double = 0.65
+    var flow: Double = 0.8
+
+    init(points: [CGPoint] = [], radius: Double = 0.04,
+         feather: Double = 0.65, flow: Double = 0.8) {
+        self.points = points
+        self.radius = radius
+        self.feather = feather
+        self.flow = flow
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(.id, UUID())
+        points = c.lenient(.points, [])
+        radius = c.lenient(.radius, 0.04)
+        feather = c.lenient(.feather, 0.65)
+        flow = c.lenient(.flow, 0.8)
+    }
+}
+
 /// One masked local adjustment: a gradient-shaped region plus the corrections
 /// applied inside it.
 ///
@@ -19,6 +47,8 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
         case linear
         /// An ellipse centered on ``center``, feathered at its edge.
         case radial
+        /// A hand-painted mask made from resolution-independent brush strokes.
+        case brush
     }
 
     var id = UUID()
@@ -49,6 +79,17 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
     /// Radial: edge softness, `0...1`. 0 is a hard ellipse edge.
     var feather = 0.5
 
+    // MARK: Brush
+
+    /// Hand-painted strokes. Each stroke captures its own brush settings so
+    /// changing the brush later does not rewrite work already laid down.
+    var brushStrokes: [BrushStroke] = []
+
+    /// Settings for the next brush stroke.
+    var brushSize = 0.04
+    var brushFeather = 0.65
+    var brushFlow = 0.8
+
     // MARK: Corrections
 
     /// EV stops, the classic dodge/burn.
@@ -76,7 +117,11 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
     }
 
     var displayName: String {
-        shape == .linear ? "Linear" : "Radial"
+        switch shape {
+        case .linear: "Linear"
+        case .radial: "Radial"
+        case .brush: "Brush"
+        }
     }
 
     init(shape: Shape = .linear) {
@@ -96,6 +141,10 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
         radiusX = c.lenient(.radiusX, 0.3)
         radiusY = c.lenient(.radiusY, 0.25)
         feather = c.lenient(.feather, 0.5)
+        brushStrokes = c.lenient(.brushStrokes, [])
+        brushSize = c.lenient(.brushSize, 0.04)
+        brushFeather = c.lenient(.brushFeather, 0.65)
+        brushFlow = c.lenient(.brushFlow, 0.8)
         exposure = c.lenient(.exposure, 0)
         contrast = c.lenient(.contrast, 0)
         highlights = c.lenient(.highlights, 0)

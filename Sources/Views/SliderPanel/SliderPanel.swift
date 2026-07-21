@@ -19,10 +19,6 @@ struct SliderPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HistogramView(histogram: model.histogram)
-                    .padding(.horizontal, Theme.panelInset)
-                    .padding(.vertical, 12)
-
                 PanelSection(
                     "Film",
                     index: "01",
