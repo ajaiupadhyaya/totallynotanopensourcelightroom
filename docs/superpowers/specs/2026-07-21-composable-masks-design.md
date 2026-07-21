@@ -72,8 +72,8 @@ struct MaskComponent: Codable, Equatable, Identifiable {
     var refine = MaskRefinement()
 
     // Linear
-    var start = CGPoint(x: 0.5, y: 0.8)
-    var end = CGPoint(x: 0.5, y: 0.4)
+    var startPoint = CGPoint(x: 0.5, y: 0.85)
+    var endPoint = CGPoint(x: 0.5, y: 0.45)
 
     // Radial
     var center = CGPoint(x: 0.5, y: 0.5)
@@ -113,9 +113,14 @@ useful.
 
 Stacks are JSON in SQLite, so a stack written by 1.2.x has no `components` key.
 The lenient decoder on `LocalAdjustment` synthesizes a single-component list
-from the legacy `shape`, `start`, `end`, `center`, `radiusX`, `radiusY`,
-`feather`, `brushStrokes`, `brushSize`, `brushFeather`, and `brushFlow` keys
-when `components` is absent, and leaves it alone when present.
+from the legacy `shape`, `startPoint`, `endPoint`, `center`, `radiusX`,
+`radiusY`, `feather`, `brushStrokes`, `brushSize`, `brushFeather`, and
+`brushFlow` keys when `components` is absent, and leaves it alone when present.
+
+Because those keys no longer correspond to stored properties, `LocalAdjustment`
+declares its `CodingKeys` explicitly (current keys plus the legacy ones) and
+implements `encode(to:)` by hand. Legacy keys are read on the way in and never
+written on the way out.
 
 Per the rule already learned in this codebase, `MaskComponent` and
 `MaskRefinement` each get their own lenient decoder. A missing key inside a
