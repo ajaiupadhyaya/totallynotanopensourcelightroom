@@ -857,12 +857,15 @@ Append inside `MaskCompositorTests`:
     }
 
     func testPositiveShiftGrowsAndNegativeShrinks() {
-        let justOutside = CGPoint(x: 100, y: 162)
+        // The disc's edge is 50px from centre on a 200px frame, and shift 0.8
+        // moves it 8px. Probe just past the original edge — far enough out that
+        // the unshifted disc reads zero, close enough that the growth reaches.
+        let justOutside = CGPoint(x: 100, y: 154)
 
         var grown = hardDisc()
-        grown.refine = MaskRefinement(shift: 0.5)
+        grown.refine = MaskRefinement(shift: 0.8)
         var shrunk = hardDisc()
-        shrunk.refine = MaskRefinement(shift: -0.5)
+        shrunk.refine = MaskRefinement(shift: -0.8)
 
         let base = coverage(
             MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
