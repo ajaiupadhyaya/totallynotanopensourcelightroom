@@ -293,9 +293,15 @@ final class LocalAdjustmentTests: XCTestCase {
 
     // MARK: Mask source
 
-    /// Generated masks measure the frame as it entered the local-adjustment
-    /// stage, so editing one mask cannot move another one underneath it.
-    func testASecondMaskIsNotAffectedByTheFirstOnesCorrections() {
+    /// Two spatially disjoint masks stay independent: the first one's
+    /// corrections do not bleed into the second one's region.
+    ///
+    /// Note this does NOT prove the `maskSource` rule. Linear, radial and
+    /// brush components are pure geometry and never read the source image at
+    /// all, so this test passes even if masks cascade. The rule is proven in
+    /// `testAGeneratedMaskReadsTheFrameBeforeLocalAdjustments`, which needs a
+    /// luminance component to have something that actually measures the frame.
+    func testAdjacentMasksDoNotBleedIntoEachOther() {
         var darkener = LocalAdjustment(shape: .radial)
         darkener.only.center = CGPoint(x: 0.25, y: 0.5)
         darkener.only.radiusX = 0.2
