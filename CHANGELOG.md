@@ -2,6 +2,19 @@
 
 All notable changes to PhotoEditor are documented here.
 
+## 1.2.1 — 2026-07-21
+
+### Fixed
+
+- The tool rail advertised a single-key shortcut in every tooltip — `B` for
+  brush, `C` for crop, and so on — but none of them were bound. All eight now
+  work, and they yield to text fields, so typing in search or naming a preset
+  no longer risks switching tools.
+- Comparing with `\` no longer commits an in-progress crop or changes the tool
+  in hand; it is a momentary look at the original again.
+- Opening a different frame resets the tool rail instead of inheriting the
+  previous frame's tool while the canvas is not in that mode.
+
 ## 1.2.0 — 2026-07-21
 
 ### Added

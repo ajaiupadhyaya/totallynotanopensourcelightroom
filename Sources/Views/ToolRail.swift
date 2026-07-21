@@ -5,14 +5,13 @@ import SwiftUI
 /// inspector changes mode, so muscle memory can form.
 struct ToolRail: View {
     @Bindable var model: EditorModel
-    @Binding var activeTool: EditorTool
-    @Binding var inspectorMode: InspectorMode
+    @Bindable var workspace: WorkspaceModel
 
     var body: some View {
         VStack(spacing: 2) {
             ForEach(EditorTool.allCases) { tool in
-                ToolRailButton(tool: tool, isSelected: tool == activeTool) {
-                    activate(tool)
+                ToolRailButton(tool: tool, isSelected: tool == workspace.activeTool) {
+                    workspace.activate(tool, in: model)
                 }
             }
             Spacer()
@@ -28,52 +27,6 @@ struct ToolRail: View {
         .padding(.top, 7)
         .frame(width: Theme.toolRailWidth)
         .background(Color(white: 0.065))
-    }
-
-    private func activate(_ tool: EditorTool) {
-        activeTool = tool
-
-        if tool != .crop, model.isCropping { model.finishCrop() }
-        if tool != .heal, tool != .clone { model.canvasPicker = nil }
-        if tool != .brush, tool != .gradient { model.selectedMaskID = nil }
-        if tool != .heal, tool != .clone { model.selectedSpotID = nil }
-
-        switch tool {
-        case .hand:
-            break
-        case .crop:
-            model.enterCropMode()
-            inspectorMode = .adjust
-        case .heal:
-            model.retouchMode = .heal
-            model.canvasPicker = .retouchPlace
-            inspectorMode = .adjust
-        case .clone:
-            model.retouchMode = .clone
-            model.canvasPicker = .retouchPlace
-            inspectorMode = .adjust
-        case .brush:
-            if let brush = model.editStack.localAdjustments.last(where: { $0.shape == .brush }) {
-                model.selectedMaskID = brush.id
-            } else {
-                model.addLocalAdjustment(.brush)
-            }
-            inspectorMode = .masks
-        case .gradient:
-            if let gradient = model.editStack.localAdjustments.last(where: {
-                $0.shape == .linear || $0.shape == .radial
-            }) {
-                model.selectedMaskID = gradient.id
-            } else {
-                model.addLocalAdjustment(.linear)
-            }
-            inspectorMode = .masks
-        case .eyedropper:
-            model.canvasPicker = .whiteBalance
-            inspectorMode = .adjust
-        case .compare:
-            model.isShowingBefore.toggle()
-        }
     }
 }
 
@@ -111,11 +64,11 @@ private struct ToolRailButton: View {
 /// modal sheets for the frequent parts of crop, retouch, and brush work.
 struct ToolOptionsBar: View {
     @Bindable var model: EditorModel
-    @Binding var activeTool: EditorTool
+    @Bindable var workspace: WorkspaceModel
 
     var body: some View {
         HStack(spacing: 16) {
-            Text(activeTool.label.uppercased())
+            Text(workspace.activeTool.label.uppercased())
                 .font(Theme.engravedLabel)
                 .kerning(Theme.engravedTracking)
                 .foregroundStyle(Theme.text)
@@ -137,7 +90,7 @@ struct ToolOptionsBar: View {
 
     @ViewBuilder
     private var options: some View {
-        switch activeTool {
+        switch workspace.activeTool {
         case .hand:
             contextNote("Double-click the photograph to toggle Fit and 100%")
         case .crop:
@@ -149,11 +102,11 @@ struct ToolOptionsBar: View {
                 Rectangle().fill(Theme.separator).frame(width: Theme.hairline, height: 18)
                 PlateButton(title: "Cancel") {
                     model.cancelCrop()
-                    activeTool = .hand
+                    workspace.activeTool = .hand
                 }
                 PlateButton(title: "Apply") {
                     model.finishCrop()
-                    activeTool = .hand
+                    workspace.activeTool = .hand
                 }
             }
         case .heal, .clone:

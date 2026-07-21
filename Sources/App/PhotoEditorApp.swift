@@ -34,8 +34,7 @@ struct RootView: View {
     @State private var app = AppModel()
     @State private var isShowingLibrary = true
     @State private var isShowingDevelop = true
-    @State private var activeTool: EditorTool = .hand
-    @State private var inspectorMode: InspectorMode = .adjust
+    @State private var workspace = WorkspaceModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -55,14 +54,12 @@ struct RootView: View {
 
                 VStack(spacing: 0) {
                     if let editor = app.editor {
-                        ToolOptionsBar(model: editor, activeTool: $activeTool)
+                        ToolOptionsBar(model: editor, workspace: workspace)
                     }
 
                     HStack(spacing: 0) {
                         if let editor = app.editor {
-                            ToolRail(model: editor,
-                                     activeTool: $activeTool,
-                                     inspectorMode: $inspectorMode)
+                            ToolRail(model: editor, workspace: workspace)
                             Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
                         }
 
@@ -73,7 +70,7 @@ struct RootView: View {
 
                 if isShowingDevelop, let editor = app.editor {
                     Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
-                    InspectorPanel(model: editor, app: app, mode: $inspectorMode)
+                    InspectorPanel(model: editor, app: app, mode: $workspace.inspectorMode)
                         .frame(width: Theme.inspectorWidth)
                         .transition(.move(edge: .trailing))
                 }
@@ -84,6 +81,8 @@ struct RootView: View {
         .background(Theme.background)
         .frame(minWidth: 1180, minHeight: 720)
         .background { keyboardShortcuts }
+        .toolKeyShortcuts(app: app, workspace: workspace)
+        .onChange(of: app.editor?.entry.id) { workspace.resetForNewPhoto() }
         .sheet(isPresented: $app.isShowingExportSheet) {
             if let editor = app.editor {
                 BatchExportSheet(app: app, entries: [editor.entry])
@@ -108,19 +107,17 @@ struct RootView: View {
                     .keyboardShortcut("0", modifiers: .command)
                 Button("") { editor.zoomLevel = 1.0 }
                     .keyboardShortcut("1", modifiers: .command)
-                Button("") { editor.isShowingBefore.toggle() }
-                    .keyboardShortcut("\\", modifiers: [])
                 Button("") { editor.isFocusPeakingEnabled.toggle() }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
                 Button("") { app.copySettings(from: editor.entry) }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                 Button("") { app.isShowingExportSheet = true }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
-                Button("") { inspectorMode = .adjust }
+                Button("") { workspace.inspectorMode = .adjust }
                     .keyboardShortcut("1", modifiers: [.command, .option])
-                Button("") { inspectorMode = .masks }
+                Button("") { workspace.inspectorMode = .masks }
                     .keyboardShortcut("2", modifiers: [.command, .option])
-                Button("") { inspectorMode = .history }
+                Button("") { workspace.inspectorMode = .history }
                     .keyboardShortcut("3", modifiers: [.command, .option])
             }
         }

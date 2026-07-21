@@ -65,4 +65,19 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .compare: "\\"
         }
     }
+
+    /// Resolves the bare key a tool advertises in ``shortcutHint``. Selecting
+    /// a tool by keystroke and reading its tooltip must never disagree, so
+    /// both sides derive from the same table.
+    ///
+    /// `compare` is excluded on purpose: `\` is a momentary before/after look,
+    /// not a mode to enter, and routing it through tool activation would
+    /// commit an in-progress crop as a side effect.
+    init?(shortcutKey: String) {
+        let key = shortcutKey.lowercased()
+        guard let match = Self.allCases.first(where: {
+            $0 != .compare && $0.shortcutHint?.lowercased() == key
+        }) else { return nil }
+        self = match
+    }
 }
