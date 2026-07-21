@@ -21,8 +21,8 @@ final class LocalAdjustmentTests: XCTestCase {
     func testLinearMaskDarkensItsEndAndSparesTheOther() {
         var mask = LocalAdjustment(shape: .linear)
         // Full effect at the top of the frame, fading out by the middle.
-        mask.startPoint = CGPoint(x: 0.5, y: 0.95)
-        mask.endPoint = CGPoint(x: 0.5, y: 0.5)
+        mask.only.startPoint = CGPoint(x: 0.5, y: 0.95)
+        mask.only.endPoint = CGPoint(x: 0.5, y: 0.5)
         mask.exposure = -2.0
 
         var stack = EditStack()
@@ -42,8 +42,8 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testLinearMaskFadesMonotonically() {
         var mask = LocalAdjustment(shape: .linear)
-        mask.startPoint = CGPoint(x: 0.5, y: 1.0)
-        mask.endPoint = CGPoint(x: 0.5, y: 0.0)
+        mask.only.startPoint = CGPoint(x: 0.5, y: 1.0)
+        mask.only.endPoint = CGPoint(x: 0.5, y: 0.0)
         mask.exposure = -2.0
 
         var stack = EditStack()
@@ -62,10 +62,10 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testRadialMaskAffectsCenterNotCorners() {
         var mask = LocalAdjustment(shape: .radial)
-        mask.center = CGPoint(x: 0.5, y: 0.5)
-        mask.radiusX = 0.25
-        mask.radiusY = 0.25
-        mask.feather = 0.3
+        mask.only.center = CGPoint(x: 0.5, y: 0.5)
+        mask.only.radiusX = 0.25
+        mask.only.radiusY = 0.25
+        mask.only.feather = 0.3
         mask.exposure = 1.5
 
         var stack = EditStack()
@@ -82,9 +82,9 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testInvertedRadialAffectsCornersNotCenter() {
         var mask = LocalAdjustment(shape: .radial)
-        mask.center = CGPoint(x: 0.5, y: 0.5)
-        mask.radiusX = 0.3
-        mask.radiusY = 0.3
+        mask.only.center = CGPoint(x: 0.5, y: 0.5)
+        mask.only.radiusX = 0.3
+        mask.only.radiusY = 0.3
         mask.isInverted = true
         mask.exposure = -1.5
 
@@ -103,10 +103,10 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testAnisotropicRadiusMakesAnEllipseNotACircle() {
         var mask = LocalAdjustment(shape: .radial)
-        mask.center = CGPoint(x: 0.5, y: 0.5)
-        mask.radiusX = 0.45   // wide…
-        mask.radiusY = 0.10   // …and short
-        mask.feather = 0.2
+        mask.only.center = CGPoint(x: 0.5, y: 0.5)
+        mask.only.radiusX = 0.45   // wide…
+        mask.only.radiusY = 0.10   // …and short
+        mask.only.feather = 0.2
         mask.exposure = 1.5
 
         var stack = EditStack()
@@ -127,7 +127,7 @@ final class LocalAdjustmentTests: XCTestCase {
     func testBrushMaskAffectsPaintedStrokeAndSparesOutside() {
         var mask = LocalAdjustment(shape: .brush)
         mask.exposure = 1.5
-        mask.brushStrokes = [BrushStroke(
+        mask.only.brushStrokes = [BrushStroke(
             points: [CGPoint(x: 0.25, y: 0.25), CGPoint(x: 0.5, y: 0.5),
                      CGPoint(x: 0.75, y: 0.75)],
             radius: 0.07, feather: 0.4, flow: 1
@@ -147,8 +147,8 @@ final class LocalAdjustmentTests: XCTestCase {
     func testBrushMaskIsResolutionIndependent() {
         var mask = LocalAdjustment(shape: .brush)
         mask.exposure = -1
-        mask.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.3, y: 0.7)],
-                                          radius: 0.1, feather: 0.5, flow: 1)]
+        mask.only.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.3, y: 0.7)],
+                                               radius: 0.1, feather: 0.5, flow: 1)]
         var stack = EditStack()
         stack.localAdjustments = [mask]
 
@@ -163,9 +163,9 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testWarmthShiftsTheMaskedRegionWarm() {
         var mask = LocalAdjustment(shape: .radial)
-        mask.center = CGPoint(x: 0.5, y: 0.5)
-        mask.radiusX = 0.4
-        mask.radiusY = 0.4
+        mask.only.center = CGPoint(x: 0.5, y: 0.5)
+        mask.only.radiusX = 0.4
+        mask.only.radiusY = 0.4
         mask.warmth = 80
 
         var stack = EditStack()
@@ -195,13 +195,13 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testMasksStack() {
         var burn = LocalAdjustment(shape: .linear)
-        burn.startPoint = CGPoint(x: 0.5, y: 1.0)
-        burn.endPoint = CGPoint(x: 0.5, y: 0.6)
+        burn.only.startPoint = CGPoint(x: 0.5, y: 1.0)
+        burn.only.endPoint = CGPoint(x: 0.5, y: 0.6)
         burn.exposure = -1.0
 
         var dodge = LocalAdjustment(shape: .linear)
-        dodge.startPoint = CGPoint(x: 0.5, y: 0.0)
-        dodge.endPoint = CGPoint(x: 0.5, y: 0.4)
+        dodge.only.startPoint = CGPoint(x: 0.5, y: 0.0)
+        dodge.only.endPoint = CGPoint(x: 0.5, y: 0.4)
         dodge.exposure = 1.0
 
         var stack = EditStack()
@@ -218,9 +218,9 @@ final class LocalAdjustmentTests: XCTestCase {
 
     func testMasksLandOnTheSameRegionAtAnyResolution() {
         var mask = LocalAdjustment(shape: .radial)
-        mask.center = CGPoint(x: 0.25, y: 0.75)
-        mask.radiusX = 0.15
-        mask.radiusY = 0.15
+        mask.only.center = CGPoint(x: 0.25, y: 0.75)
+        mask.only.radiusX = 0.15
+        mask.only.radiusY = 0.15
         mask.exposure = 1.5
 
         var stack = EditStack()
@@ -244,15 +244,15 @@ final class LocalAdjustmentTests: XCTestCase {
         var entry = TestSupport.makeEntry(fileURL: URL(fileURLWithPath: "/tmp/a.jpg"))
 
         var linear = LocalAdjustment(shape: .linear)
-        linear.startPoint = CGPoint(x: 0.2, y: 0.9)
+        linear.only.startPoint = CGPoint(x: 0.2, y: 0.9)
         linear.exposure = -0.7
         var radial = LocalAdjustment(shape: .radial)
-        radial.center = CGPoint(x: 0.6, y: 0.4)
+        radial.only.center = CGPoint(x: 0.6, y: 0.4)
         radial.warmth = 25
         radial.isInverted = true
         var brush = LocalAdjustment(shape: .brush)
-        brush.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.2, y: 0.3)],
-                                           radius: 0.08, feather: 0.7, flow: 0.6)]
+        brush.only.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.2, y: 0.3)],
+                                                radius: 0.08, feather: 0.7, flow: 0.6)]
         entry.editStack.localAdjustments = [linear, radial, brush]
         try store.save(entry)
 

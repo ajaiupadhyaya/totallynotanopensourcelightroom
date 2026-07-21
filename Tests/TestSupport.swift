@@ -131,3 +131,11 @@ enum TestSupport {
         )
     }
 }
+
+extension LocalAdjustment {
+    /// Test convenience for the common single-component case.
+    var only: MaskComponent {
+        get { components[0] }
+        set { components[0] = newValue }
+    }
+}

@@ -165,9 +165,11 @@ private struct EditCanvas: View {
                         displaySize: displaySize
                     )
                     .frame(width: displaySize.width, height: displaySize.height)
-                } else if let index = editor.selectedMaskIndex {
+                } else if let maskIndex = editor.selectedMaskIndex,
+                          let componentIndex = editor.selectedComponentIndex {
                     MaskHandles(
-                        adjustment: $editor.editStack.localAdjustments[index],
+                        component: $editor.editStack
+                            .localAdjustments[maskIndex].components[componentIndex],
                         displaySize: displaySize
                     )
                     .frame(width: displaySize.width, height: displaySize.height)
@@ -496,22 +498,24 @@ private struct CropOverlay: View {
 
 // MARK: - Mask handles
 
-/// On-canvas editing for the selected local adjustment.
+/// On-canvas editing for the selected mask component.
 ///
 /// Linear: two pins — full-effect end and fade-out end — joined by a line,
 /// with dashed rails marking the gradient band's orientation. Radial: a
 /// center pin that moves the ellipse, plus edge pins on the right and top
-/// that set each radius.
+/// that set each radius. Generated components (luminance, colour range) have
+/// no on-canvas geometry, so they draw nothing.
 private struct MaskHandles: View {
-    @Binding var adjustment: LocalAdjustment
+    @Binding var component: MaskComponent
     let displaySize: CGSize
 
     var body: some View {
         ZStack {
-            switch adjustment.shape {
+            switch component.shape {
             case .linear: linearHandles
             case .radial: radialHandles
             case .brush: brushOverlay
+            case .luminance, .colorRange: EmptyView()
             }
         }
         .allowsHitTesting(true)
@@ -523,7 +527,7 @@ private struct MaskHandles: View {
 
     private var brushOverlay: some View {
         ZStack {
-            ForEach(adjustment.brushStrokes) { stroke in
+            ForEach(component.brushStrokes) { stroke in
                 Path { path in
                     guard let first = stroke.points.first else { return }
                     path.move(to: viewPoint(first))
@@ -552,16 +556,16 @@ private struct MaskHandles: View {
                             let point = unitPoint(value.location)
                             if !isPainting {
                                 isPainting = true
-                                adjustment.brushStrokes.append(BrushStroke(
-                                    points: [point], radius: adjustment.brushSize,
-                                    feather: adjustment.brushFeather,
-                                    flow: adjustment.brushFlow
+                                component.brushStrokes.append(BrushStroke(
+                                    points: [point], radius: component.brushSize,
+                                    feather: component.brushFeather,
+                                    flow: component.brushFlow
                                 ))
-                            } else if let strokeIndex = adjustment.brushStrokes.indices.last,
-                                      let previous = adjustment.brushStrokes[strokeIndex].points.last {
-                                let threshold = max(adjustment.brushSize * 0.12, 0.001)
+                            } else if let strokeIndex = component.brushStrokes.indices.last,
+                                      let previous = component.brushStrokes[strokeIndex].points.last {
+                                let threshold = max(component.brushSize * 0.12, 0.001)
                                 if hypot(point.x - previous.x, point.y - previous.y) >= threshold {
-                                    adjustment.brushStrokes[strokeIndex].points.append(point)
+                                    component.brushStrokes[strokeIndex].points.append(point)
                                 }
                             }
                         }
@@ -585,8 +589,8 @@ private struct MaskHandles: View {
     // MARK: Linear
 
     private var linearHandles: some View {
-        let start = viewPoint(adjustment.startPoint)
-        let end = viewPoint(adjustment.endPoint)
+        let start = viewPoint(component.startPoint)
+        let end = viewPoint(component.endPoint)
 
         return ZStack {
             Path { path in
@@ -596,10 +600,10 @@ private struct MaskHandles: View {
             .stroke(.white.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
 
             CanvasPin(at: start, filled: true)
-                .gesture(dragPin { adjustment.startPoint = $0 })
+                .gesture(dragPin { component.startPoint = $0 })
                 .help("Full effect")
             CanvasPin(at: end, filled: false)
-                .gesture(dragPin { adjustment.endPoint = $0 })
+                .gesture(dragPin { component.endPoint = $0 })
                 .help("Fades to nothing")
         }
     }
@@ -607,9 +611,9 @@ private struct MaskHandles: View {
     // MARK: Radial
 
     private var radialHandles: some View {
-        let center = viewPoint(adjustment.center)
-        let radiusX = adjustment.radiusX * displaySize.width
-        let radiusY = adjustment.radiusY * displaySize.height
+        let center = viewPoint(component.center)
+        let radiusX = component.radiusX * displaySize.width
+        let radiusY = component.radiusY * displaySize.height
 
         return ZStack {
             Ellipse()
@@ -620,14 +624,14 @@ private struct MaskHandles: View {
                 .allowsHitTesting(false)
 
             CanvasPin(at: center, filled: true)
-                .gesture(dragPin { adjustment.center = $0 })
+                .gesture(dragPin { component.center = $0 })
                 .help("Move")
 
             CanvasPin(at: CGPoint(x: center.x + radiusX, y: center.y), filled: false)
                 .gesture(
                     DragGesture(minimumDistance: 1).onChanged { value in
                         let dx = abs(value.location.x - center.x)
-                        adjustment.radiusX = min(max(Double(dx / displaySize.width), 0.02), 1)
+                        component.radiusX = min(max(Double(dx / displaySize.width), 0.02), 1)
                     }
                 )
                 .help("Width")
@@ -636,7 +640,7 @@ private struct MaskHandles: View {
                 .gesture(
                     DragGesture(minimumDistance: 1).onChanged { value in
                         let dy = abs(center.y - value.location.y)
-                        adjustment.radiusY = min(max(Double(dy / displaySize.height), 0.02), 1)
+                        component.radiusY = min(max(Double(dy / displaySize.height), 0.02), 1)
                     }
                 )
                 .help("Height")

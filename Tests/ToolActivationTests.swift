@@ -55,7 +55,7 @@ final class ToolActivationTests: XCTestCase {
 
         workspace.activate(.brush, in: editor)
         XCTAssertEqual(editor.editStack.localAdjustments.count, 1)
-        XCTAssertEqual(editor.editStack.localAdjustments.first?.shape, .brush)
+        XCTAssertEqual(editor.editStack.localAdjustments.first?.components.first?.shape, .brush)
         XCTAssertEqual(workspace.inspectorMode, .masks)
         let first = editor.selectedMaskID
 

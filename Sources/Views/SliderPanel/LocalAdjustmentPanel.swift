@@ -37,9 +37,11 @@ struct LocalAdjustmentPanel: View {
             ForEach(model.editStack.localAdjustments) { adjustment in
                 let isSelected = adjustment.id == model.selectedMaskID
                 HStack(spacing: 8) {
-                    // The mask's shape, drawn: a slanted line or an ellipse.
+                    // The mask's leading component, drawn: a slanted line, an
+                    // ellipse, or the glyph for a generated selection. The
+                    // first component names the mask, as ``displayName`` does.
                     Group {
-                        switch adjustment.shape {
+                        switch adjustment.components.first?.shape {
                         case .linear:
                             Path { path in
                                 path.move(to: CGPoint(x: 1, y: 11))
@@ -53,6 +55,16 @@ struct LocalAdjustmentPanel: View {
                         case .brush:
                             Image(systemName: "paintbrush.pointed")
                                 .font(.system(size: 10, weight: .medium))
+                        case .luminance:
+                            Image(systemName: "circle.righthalf.filled")
+                                .font(.system(size: 10, weight: .medium))
+                        case .colorRange:
+                            Image(systemName: "eyedropper")
+                                .font(.system(size: 10, weight: .medium))
+                        case nil:
+                            Rectangle()
+                                .stroke(style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                                .padding(1)
                         }
                     }
                     .foregroundStyle(isSelected ? Theme.accent : Theme.secondaryText)
@@ -79,14 +91,24 @@ struct LocalAdjustmentPanel: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     model.selectedMaskID = isSelected ? nil : adjustment.id
+                    model.selectedComponentID = isSelected
+                        ? nil : adjustment.components.first?.id
                 }
             }
         }
     }
 
+    /// The component whose controls this panel shows.
+    private func component(_ index: Int) -> MaskComponent? {
+        let components = model.editStack.localAdjustments[index].components
+        guard let id = model.selectedComponentID,
+              let match = components.first(where: { $0.id == id }) else { return components.first }
+        return match
+    }
+
     @ViewBuilder
     private func maskControls(at index: Int) -> some View {
-        let adjustment = model.editStack.localAdjustments[index]
+        let selected = component(index)
 
         Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
@@ -109,29 +131,29 @@ struct LocalAdjustmentPanel: View {
                          value: maskBinding(index, \.warmth),
                          range: -100...100, format: "%.0f", neutral: 0)
 
-        if adjustment.shape == .radial {
+        if selected?.shape == .radial {
             AdjustmentSlider(title: "Feather",
-                             value: maskBinding(index, \.feather),
+                             value: componentBinding(index, \.feather),
                              range: 0...1, format: "%.2f", neutral: 0.5)
         }
 
-        if adjustment.shape == .brush {
+        if selected?.shape == .brush {
             AdjustmentSlider(title: "Brush Size",
-                             value: maskBinding(index, \.brushSize),
+                             value: componentBinding(index, \.brushSize),
                              range: 0.005...0.2, format: "%.3f", neutral: 0.04)
             AdjustmentSlider(title: "Brush Feather",
-                             value: maskBinding(index, \.brushFeather),
+                             value: componentBinding(index, \.brushFeather),
                              range: 0...1, format: "%.2f", neutral: 0.65)
             AdjustmentSlider(title: "Brush Flow",
-                             value: maskBinding(index, \.brushFlow),
+                             value: componentBinding(index, \.brushFlow),
                              range: 0.05...1, format: "%.2f", neutral: 0.8)
 
             HStack {
-                Text("\(adjustment.brushStrokes.count) STROKES")
+                Text("\(selected?.brushStrokes.count ?? 0) STROKES")
                     .engraved()
                 Spacer()
                 PlateButton(title: "Undo Stroke",
-                            isEnabled: !adjustment.brushStrokes.isEmpty) {
+                            isEnabled: !(selected?.brushStrokes ?? []).isEmpty) {
                     model.removeLastBrushStroke()
                 }
             }
@@ -140,7 +162,7 @@ struct LocalAdjustmentPanel: View {
         LampToggle(label: "Invert — apply outside the shape",
                    isOn: maskBinding(index, \.isInverted))
 
-        Text(adjustment.shape == .brush
+        Text(selected?.shape == .brush
              ? "Drag on the photograph to paint this mask."
              : "Drag the handles on the photograph to place this mask.")
             .font(Theme.readableFont)
@@ -148,6 +170,26 @@ struct LocalAdjustmentPanel: View {
     }
 
     // MARK: Bindings
+
+    /// Addresses a property of the *selected component* of the mask at `index`.
+    /// Distinct from ``maskBinding(_:_:)``, which addresses the adjustment's
+    /// own corrections — the two live on different types now.
+    private func componentBinding(
+        _ index: Int, _ keyPath: WritableKeyPath<MaskComponent, Double>
+    ) -> Binding<Double> {
+        Binding(
+            get: {
+                guard let componentIndex = model.selectedComponentIndex else { return 0 }
+                return model.editStack.localAdjustments[index]
+                    .components[componentIndex][keyPath: keyPath]
+            },
+            set: {
+                guard let componentIndex = model.selectedComponentIndex else { return }
+                model.editStack.localAdjustments[index]
+                    .components[componentIndex][keyPath: keyPath] = $0
+            }
+        )
+    }
 
     private func maskBinding<T>(
         _ index: Int, _ keyPath: WritableKeyPath<LocalAdjustment, T>

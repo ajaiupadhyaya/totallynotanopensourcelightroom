@@ -126,7 +126,9 @@ struct ToolOptionsBar: View {
             }
         case .brush:
             if let index = model.selectedMaskIndex,
-               model.editStack.localAdjustments[index].shape == .brush {
+               let componentIndex = model.selectedComponentIndex,
+               model.editStack.localAdjustments[index]
+                   .components[componentIndex].shape == .brush {
                 HStack(spacing: 18) {
                     MiniContextFader(label: "SIZE",
                                      value: maskBinding(index, \.brushSize),
@@ -139,7 +141,7 @@ struct ToolOptionsBar: View {
                                      range: 0.05...1, format: "%.2f")
                     PlateButton(title: "Undo Stroke",
                                 isEnabled: !model.editStack.localAdjustments[index]
-                                    .brushStrokes.isEmpty) {
+                                    .components[componentIndex].brushStrokes.isEmpty) {
                         model.removeLastBrushStroke()
                     }
                 }
@@ -185,12 +187,21 @@ struct ToolOptionsBar: View {
         )
     }
 
+    /// Addresses a property of the selected mask's selected component.
     private func maskBinding(
-        _ index: Int, _ keyPath: WritableKeyPath<LocalAdjustment, Double>
+        _ index: Int, _ keyPath: WritableKeyPath<MaskComponent, Double>
     ) -> Binding<Double> {
         Binding(
-            get: { model.editStack.localAdjustments[index][keyPath: keyPath] },
-            set: { model.editStack.localAdjustments[index][keyPath: keyPath] = $0 }
+            get: {
+                guard let componentIndex = model.selectedComponentIndex else { return 0 }
+                return model.editStack.localAdjustments[index]
+                    .components[componentIndex][keyPath: keyPath]
+            },
+            set: {
+                guard let componentIndex = model.selectedComponentIndex else { return }
+                model.editStack.localAdjustments[index]
+                    .components[componentIndex][keyPath: keyPath] = $0
+            }
         )
     }
 }

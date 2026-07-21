@@ -68,7 +68,9 @@ struct EditRenderer {
         image = applyToneCurve(image, stack: stack)
         // Local adjustments ride on top of the finished global look, but
         // before detail and effects so grain and vignette stay uniform.
-        image = LocalAdjustmentRenderer.apply(stack.localAdjustments, to: image)
+        let maskSource = image
+        image = LocalAdjustmentRenderer.apply(stack.localAdjustments, to: image,
+                                              maskSource: maskSource)
         image = applyDetail(image, stack: stack)
         image = applyEffects(image, stack: stack)
 

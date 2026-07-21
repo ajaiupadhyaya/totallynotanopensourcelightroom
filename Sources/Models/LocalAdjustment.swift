@@ -29,66 +29,22 @@ struct BrushStroke: Codable, Equatable, Identifiable {
     }
 }
 
-/// One masked local adjustment: a gradient-shaped region plus the corrections
-/// applied inside it.
+/// One masked local adjustment: a built selection plus the corrections applied
+/// inside it.
 ///
-/// Geometry lives in **unit coordinates** of the (geometry-applied) frame,
-/// origin bottom-left to match Core Image — the same convention as the crop —
-/// so one stored mask lands identically on the preview and the export.
-///
-/// There is deliberately no AI here. A linear gradient and a radial ellipse
-/// are the two shapes darkroom printing actually used — a graduated burn for
-/// a sky, a dodge for a face — and both are fully described by a few numbers
-/// the photographer placed by hand.
+/// The selection lives in ``components`` — a list folded together with set
+/// algebra by ``MaskCompositor``. Before 1.3 an adjustment carried exactly one
+/// shape; those stacks migrate to a one-component list on decode.
 struct LocalAdjustment: Codable, Equatable, Identifiable {
-    enum Shape: String, Codable, CaseIterable {
-        /// A gradient band: full effect at ``startPoint`` fading to nothing at
-        /// ``endPoint``.
-        case linear
-        /// An ellipse centered on ``center``, feathered at its edge.
-        case radial
-        /// A hand-painted mask made from resolution-independent brush strokes.
-        case brush
-    }
-
     var id = UUID()
-    var shape: Shape = .linear
     var isEnabled = true
 
-    /// Applies the corrections *outside* the shape instead of inside — a
-    /// radial becomes a burn of everything but the subject.
+    /// Inverts the *composed* mask — a radial becomes a burn of everything but
+    /// the subject. Individual components have their own invert.
     var isInverted = false
 
-    // MARK: Geometry (unit coordinates, origin bottom-left)
-
-    /// Linear: where the effect is at full strength.
-    var startPoint = CGPoint(x: 0.5, y: 0.85)
-
-    /// Linear: where the effect has faded to nothing.
-    var endPoint = CGPoint(x: 0.5, y: 0.45)
-
-    /// Radial: ellipse center.
-    var center = CGPoint(x: 0.5, y: 0.5)
-
-    /// Radial: horizontal radius as a fraction of the frame width.
-    var radiusX = 0.3
-
-    /// Radial: vertical radius as a fraction of the frame height.
-    var radiusY = 0.25
-
-    /// Radial: edge softness, `0...1`. 0 is a hard ellipse edge.
-    var feather = 0.5
-
-    // MARK: Brush
-
-    /// Hand-painted strokes. Each stroke captures its own brush settings so
-    /// changing the brush later does not rewrite work already laid down.
-    var brushStrokes: [BrushStroke] = []
-
-    /// Settings for the next brush stroke.
-    var brushSize = 0.04
-    var brushFeather = 0.65
-    var brushFlow = 0.8
+    /// The pieces this selection is built from, folded in order.
+    var components: [MaskComponent] = []
 
     // MARK: Corrections
 
@@ -116,40 +72,77 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
             && shadows == 0 && saturation == 0 && warmth == 0
     }
 
+    /// True when the selection cannot select anything.
+    var isEmpty: Bool { !components.contains(where: \.isContributing) }
+
     var displayName: String {
-        switch shape {
-        case .linear: "Linear"
-        case .radial: "Radial"
-        case .brush: "Brush"
-        }
+        guard let first = components.first else { return "Empty" }
+        return components.count == 1 ? first.displayName : "\(first.displayName) +\(components.count - 1)"
     }
 
-    init(shape: Shape = .linear) {
-        self.shape = shape
+    init(shape: MaskComponent.Shape = .linear) {
+        components = [MaskComponent(shape: shape)]
+    }
+
+    // Current keys plus the pre-1.3 flat mask keys. The legacy ones no longer
+    // map to properties, so both the decoder and the encoder are written by
+    // hand: legacy keys are read on the way in and never written back.
+    enum CodingKeys: String, CodingKey {
+        case id, isEnabled, isInverted, components
+        case exposure, contrast, highlights, shadows, saturation, warmth
+        case shape, startPoint, endPoint, center, radiusX, radiusY, feather
+        case brushStrokes, brushSize, brushFeather, brushFlow
     }
 
     init(from decoder: Decoder) throws {
         self.init()
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = c.lenient(.id, UUID())
-        shape = c.lenient(.shape, .linear)
         isEnabled = c.lenient(.isEnabled, true)
         isInverted = c.lenient(.isInverted, false)
-        startPoint = c.lenient(.startPoint, CGPoint(x: 0.5, y: 0.85))
-        endPoint = c.lenient(.endPoint, CGPoint(x: 0.5, y: 0.45))
-        center = c.lenient(.center, CGPoint(x: 0.5, y: 0.5))
-        radiusX = c.lenient(.radiusX, 0.3)
-        radiusY = c.lenient(.radiusY, 0.25)
-        feather = c.lenient(.feather, 0.5)
-        brushStrokes = c.lenient(.brushStrokes, [])
-        brushSize = c.lenient(.brushSize, 0.04)
-        brushFeather = c.lenient(.brushFeather, 0.65)
-        brushFlow = c.lenient(.brushFlow, 0.8)
+
+        let stored: [MaskComponent] = c.lenient(.components, [])
+        components = stored.isEmpty ? [Self.migratedComponent(from: c)] : stored
+
         exposure = c.lenient(.exposure, 0)
         contrast = c.lenient(.contrast, 0)
         highlights = c.lenient(.highlights, 0)
         shadows = c.lenient(.shadows, 0)
         saturation = c.lenient(.saturation, 0)
         warmth = c.lenient(.warmth, 0)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(isInverted, forKey: .isInverted)
+        try c.encode(components, forKey: .components)
+        try c.encode(exposure, forKey: .exposure)
+        try c.encode(contrast, forKey: .contrast)
+        try c.encode(highlights, forKey: .highlights)
+        try c.encode(shadows, forKey: .shadows)
+        try c.encode(saturation, forKey: .saturation)
+        try c.encode(warmth, forKey: .warmth)
+    }
+
+    /// Rebuilds the single component a pre-1.3 adjustment described with flat
+    /// fields. `isInverted` is deliberately not copied down: it inverted the
+    /// whole mask then and still does now.
+    private static func migratedComponent(
+        from c: KeyedDecodingContainer<CodingKeys>
+    ) -> MaskComponent {
+        var component = MaskComponent(shape: c.lenient(.shape, MaskComponent.Shape.linear))
+        component.startPoint = c.lenient(.startPoint, CGPoint(x: 0.5, y: 0.85))
+        component.endPoint = c.lenient(.endPoint, CGPoint(x: 0.5, y: 0.45))
+        component.center = c.lenient(.center, CGPoint(x: 0.5, y: 0.5))
+        component.radiusX = c.lenient(.radiusX, 0.3)
+        component.radiusY = c.lenient(.radiusY, 0.25)
+        component.feather = c.lenient(.feather, 0.5)
+        component.brushStrokes = c.lenient(.brushStrokes, [])
+        component.brushSize = c.lenient(.brushSize, 0.04)
+        component.brushFeather = c.lenient(.brushFeather, 0.65)
+        component.brushFlow = c.lenient(.brushFlow, 0.8)
+        return component
     }
 }

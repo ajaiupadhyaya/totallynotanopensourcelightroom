@@ -4,29 +4,40 @@ import CoreImage.CIFilterBuiltins
 /// Applies masked local adjustments.
 ///
 /// Each adjustment renders as: build the fully-corrected version of the image,
-/// build the mask as a grayscale gradient, then `CIBlendWithMask` interpolates
-/// between corrected and untouched per pixel. Everything stays lazy `CIImage`
-/// graph-building; nothing rasterizes here.
+/// compose its mask from ``MaskComponent``s via ``MaskCompositor``, then
+/// `CIBlendWithMask` interpolates between corrected and untouched per pixel.
+/// Everything stays lazy `CIImage` graph-building; nothing rasterizes here.
 ///
 /// Note `CIBlendWithMask` reads the mask's **alpha** (see ``FocusPeaking`` for
-/// the scar tissue), so gradients are generated as grayscale and passed through
+/// the scar tissue), so masks are composed as grayscale and passed through
 /// `CIMaskToAlpha` before blending.
 enum LocalAdjustmentRenderer {
     /// Applies every enabled, non-neutral adjustment in order.
-    static func apply(_ adjustments: [LocalAdjustment], to image: CIImage) -> CIImage {
+    ///
+    /// `maskSource` is the image generated components measure — the frame as it
+    /// entered this stage, *not* the running result, so masks do not cascade
+    /// into one another.
+    static func apply(
+        _ adjustments: [LocalAdjustment], to image: CIImage, maskSource: CIImage
+    ) -> CIImage {
         var result = image
-        for adjustment in adjustments where adjustment.isEnabled && !adjustment.isNeutral {
-            result = apply(adjustment, to: result)
+        for adjustment in adjustments
+        where adjustment.isEnabled && !adjustment.isNeutral && !adjustment.isEmpty {
+            result = apply(adjustment, to: result, maskSource: maskSource)
         }
         return result
     }
 
-    static func apply(_ adjustment: LocalAdjustment, to image: CIImage) -> CIImage {
+    static func apply(
+        _ adjustment: LocalAdjustment, to image: CIImage, maskSource: CIImage
+    ) -> CIImage {
         let extent = image.extent
         guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else { return image }
 
         let corrected = corrections(of: adjustment, applied: image)
-        guard let mask = mask(for: adjustment, extent: extent) else { return image }
+        guard let mask = mask(for: adjustment, source: maskSource, extent: extent) else {
+            return image
+        }
 
         let blend = CIFilter.blendWithMask()
         blend.inputImage = corrected
@@ -82,131 +93,31 @@ enum LocalAdjustmentRenderer {
 
     // MARK: Masks
 
-    /// The adjustment's mask over `extent`: white (alpha 1) where corrections
-    /// apply fully, black (alpha 0) where the image stays untouched.
-    static func mask(for adjustment: LocalAdjustment, extent: CGRect) -> CIImage? {
-        let gradient: CIImage?
-        switch adjustment.shape {
-        case .linear:
-            gradient = linearGradient(adjustment, extent: extent)
-        case .radial:
-            gradient = radialGradient(adjustment, extent: extent)
-        case .brush:
-            gradient = brushMask(adjustment, extent: extent)
-        }
-        guard var grayscale = gradient?.cropped(to: extent) else { return nil }
+    /// The adjustment's composed mask as **grayscale**, with the whole-mask
+    /// invert applied. The overlay draws this directly; the blend converts it.
+    static func grayscaleMask(
+        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect
+    ) -> CIImage? {
+        guard var grayscale = MaskCompositor.composedMask(
+            adjustment.components, source: source, extent: extent
+        ) else { return nil }
 
         if adjustment.isInverted {
             let invert = CIFilter.colorInvert()
             invert.inputImage = grayscale
             grayscale = invert.outputImage?.cropped(to: extent) ?? grayscale
         }
+        return grayscale
+    }
 
-        // Luminance → alpha; CIBlendWithMask reads alpha.
+    /// The composed mask as **alpha**, which is what `CIBlendWithMask` reads.
+    static func mask(
+        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect
+    ) -> CIImage? {
+        guard let grayscale = grayscaleMask(for: adjustment, source: source, extent: extent)
+        else { return nil }
         let toAlpha = CIFilter.maskToAlpha()
         toAlpha.inputImage = grayscale
         return toAlpha.outputImage
-    }
-
-    private static func linearGradient(
-        _ adjustment: LocalAdjustment, extent: CGRect
-    ) -> CIImage? {
-        let filter = CIFilter.smoothLinearGradient()
-        filter.point0 = pixelPoint(adjustment.startPoint, in: extent)
-        filter.point1 = pixelPoint(adjustment.endPoint, in: extent)
-        filter.color0 = CIColor.white
-        filter.color1 = CIColor.black
-        return filter.outputImage
-    }
-
-    /// An elliptical feathered gradient, built as a circular gradient and
-    /// scaled anisotropically into the requested ellipse.
-    private static func radialGradient(
-        _ adjustment: LocalAdjustment, extent: CGRect
-    ) -> CIImage? {
-        let radiusX = max(adjustment.radiusX * extent.width, 1)
-        let radiusY = max(adjustment.radiusY * extent.height, 1)
-        let reference = max(radiusX, radiusY)
-
-        let feather = min(max(adjustment.feather, 0), 1)
-        // Keep at least half a pixel between the radii — CIRadialGradient with
-        // radius0 == radius1 degenerates into a soft falloff, not a hard edge.
-        let inner = max(min(reference * (1 - feather), reference - 0.5), 0)
-
-        let filter = CIFilter.radialGradient()
-        filter.center = .zero
-        filter.radius0 = Float(inner)
-        filter.radius1 = Float(reference)
-        filter.color0 = CIColor.white
-        filter.color1 = CIColor.black
-        guard let circle = filter.outputImage else { return nil }
-
-        let center = pixelPoint(adjustment.center, in: extent)
-        let transform = CGAffineTransform(translationX: center.x, y: center.y)
-            .scaledBy(x: radiusX / reference, y: radiusY / reference)
-        return circle.transformed(by: transform)
-    }
-
-    /// Builds a painted mask by taking the maximum luminance of soft radial
-    /// dabs. Stroke points are interpolated so a fast pointer drag cannot leave
-    /// holes. The graph remains lazy Core Image work and scales with `extent`.
-    private static func brushMask(
-        _ adjustment: LocalAdjustment, extent: CGRect
-    ) -> CIImage? {
-        guard !adjustment.brushStrokes.isEmpty else {
-            return CIImage(color: .black).cropped(to: extent)
-        }
-
-        var result = CIImage(color: .black).cropped(to: extent)
-        for stroke in adjustment.brushStrokes where !stroke.points.isEmpty {
-            let radius = max(stroke.radius * min(extent.width, extent.height), 1)
-            let feather = min(max(stroke.feather, 0), 1)
-            let inner = max(min(radius * (1 - feather), radius - 0.5), 0)
-            let flow = CGFloat(min(max(stroke.flow, 0.02), 1))
-
-            for point in interpolatedPoints(stroke.points,
-                                            unitStep: max(stroke.radius * 0.45, 0.002)) {
-                let dab = CIFilter.radialGradient()
-                dab.center = pixelPoint(point, in: extent)
-                dab.radius0 = Float(inner)
-                dab.radius1 = Float(radius)
-                dab.color0 = CIColor(red: flow, green: flow, blue: flow, alpha: 1)
-                dab.color1 = CIColor.black
-                guard let image = dab.outputImage?.cropped(to: extent) else { continue }
-
-                let maximum = CIFilter.maximumCompositing()
-                maximum.inputImage = image
-                maximum.backgroundImage = result
-                result = maximum.outputImage?.cropped(to: extent) ?? result
-            }
-        }
-        return result
-    }
-
-    private static func interpolatedPoints(
-        _ points: [CGPoint], unitStep: Double
-    ) -> [CGPoint] {
-        guard var previous = points.first else { return [] }
-        var output = [previous]
-        for point in points.dropFirst() {
-            let distance = hypot(point.x - previous.x, point.y - previous.y)
-            let segments = max(Int(ceil(distance / unitStep)), 1)
-            for index in 1...segments {
-                let t = CGFloat(index) / CGFloat(segments)
-                output.append(CGPoint(
-                    x: previous.x + (point.x - previous.x) * t,
-                    y: previous.y + (point.y - previous.y) * t
-                ))
-            }
-            previous = point
-        }
-        return output
-    }
-
-    private static func pixelPoint(_ unit: CGPoint, in extent: CGRect) -> CGPoint {
-        CGPoint(
-            x: extent.origin.x + unit.x * extent.width,
-            y: extent.origin.y + unit.y * extent.height
-        )
     }
 }

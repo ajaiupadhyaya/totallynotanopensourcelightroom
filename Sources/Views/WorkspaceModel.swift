@@ -36,7 +36,10 @@ final class WorkspaceModel {
             model.canvasPicker = nil
             model.selectedSpotID = nil
         }
-        if tool != .brush, tool != .gradient { model.selectedMaskID = nil }
+        if tool != .brush, tool != .gradient {
+            model.selectedMaskID = nil
+            model.selectedComponentID = nil
+        }
 
         switch tool {
         case .hand:
@@ -53,17 +56,22 @@ final class WorkspaceModel {
             model.canvasPicker = .retouchPlace
             inspectorMode = .adjust
         case .brush:
-            if let brush = model.editStack.localAdjustments.last(where: { $0.shape == .brush }) {
-                model.selectedMaskID = brush.id
+            if let existing = model.editStack.localAdjustments.last(where: { adjustment in
+                adjustment.components.contains { $0.shape == .brush }
+            }) {
+                model.selectedMaskID = existing.id
+                model.selectedComponentID = existing.components.first { $0.shape == .brush }?.id
             } else {
                 model.addLocalAdjustment(.brush)
             }
             inspectorMode = .masks
         case .gradient:
-            if let gradient = model.editStack.localAdjustments.last(where: {
-                $0.shape == .linear || $0.shape == .radial
+            if let existing = model.editStack.localAdjustments.last(where: { adjustment in
+                adjustment.components.contains { $0.shape == .linear || $0.shape == .radial }
             }) {
-                model.selectedMaskID = gradient.id
+                model.selectedMaskID = existing.id
+                model.selectedComponentID = existing.components
+                    .first { $0.shape == .linear || $0.shape == .radial }?.id
             } else {
                 model.addLocalAdjustment(.linear)
             }

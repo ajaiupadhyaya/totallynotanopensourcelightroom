@@ -219,47 +219,91 @@ final class EditorModel {
         return editStack.localAdjustments.firstIndex { $0.id == selectedMaskID }
     }
 
+    /// The component of the selected mask that canvas handles and the options
+    /// bar act on.
+    var selectedComponentID: UUID?
+
+    /// Index of the selected component inside the selected mask.
+    var selectedComponentIndex: Int? {
+        guard let maskIndex = selectedMaskIndex, let id = selectedComponentID else { return nil }
+        return editStack.localAdjustments[maskIndex].components.firstIndex { $0.id == id }
+    }
+
     /// Adds a mask and selects it for placement.
-    func addLocalAdjustment(_ shape: LocalAdjustment.Shape) {
+    func addLocalAdjustment(_ shape: MaskComponent.Shape) {
         var adjustment = LocalAdjustment(shape: shape)
         // A fresh mask starts with a visible nudge, so placing it gives live
         // feedback instead of an invisible no-op.
         adjustment.exposure = shape == .linear ? -0.5 : 0.5
         editStack.localAdjustments.append(adjustment)
         selectedMaskID = adjustment.id
+        selectedComponentID = adjustment.components.first?.id
     }
 
-    /// Begins a new painted stroke in the selected brush mask.
+    /// Adds a component to the selected mask, or starts a new mask when none
+    /// is selected.
+    func addMaskComponent(_ shape: MaskComponent.Shape) {
+        guard let index = selectedMaskIndex else {
+            addLocalAdjustment(shape)
+            return
+        }
+        let component = MaskComponent(shape: shape)
+        editStack.localAdjustments[index].components.append(component)
+        selectedComponentID = component.id
+    }
+
+    func removeMaskComponent(id: UUID) {
+        guard let index = selectedMaskIndex else { return }
+        editStack.localAdjustments[index].components.removeAll { $0.id == id }
+        if selectedComponentID == id {
+            selectedComponentID = editStack.localAdjustments[index].components.first?.id
+        }
+    }
+
+    /// The selected brush component, if the selection is on one.
+    private var selectedBrushIndices: (mask: Int, component: Int)? {
+        guard let mask = selectedMaskIndex, let component = selectedComponentIndex,
+              editStack.localAdjustments[mask].components[component].shape == .brush
+        else { return nil }
+        return (mask, component)
+    }
+
+    /// Begins a new painted stroke in the selected brush component.
     func beginBrushStroke(at point: CGPoint) {
-        guard let index = selectedMaskIndex,
-              editStack.localAdjustments[index].shape == .brush else { return }
-        let mask = editStack.localAdjustments[index]
-        let stroke = BrushStroke(points: [point], radius: mask.brushSize,
-                                 feather: mask.brushFeather, flow: mask.brushFlow)
-        editStack.localAdjustments[index].brushStrokes.append(stroke)
+        guard let (mask, component) = selectedBrushIndices else { return }
+        let settings = editStack.localAdjustments[mask].components[component]
+        let stroke = BrushStroke(points: [point], radius: settings.brushSize,
+                                 feather: settings.brushFeather, flow: settings.brushFlow)
+        editStack.localAdjustments[mask].components[component].brushStrokes.append(stroke)
     }
 
     /// Extends the active stroke, dropping redundant sub-pixel points.
     func continueBrushStroke(to point: CGPoint) {
-        guard let index = selectedMaskIndex,
-              editStack.localAdjustments[index].shape == .brush,
-              let strokeIndex = editStack.localAdjustments[index].brushStrokes.indices.last,
-              let previous = editStack.localAdjustments[index]
-                .brushStrokes[strokeIndex].points.last else { return }
-        let minimumDistance = max(editStack.localAdjustments[index].brushSize * 0.12, 0.001)
-        guard hypot(point.x - previous.x, point.y - previous.y) >= minimumDistance else { return }
-        editStack.localAdjustments[index].brushStrokes[strokeIndex].points.append(point)
+        guard let (mask, component) = selectedBrushIndices,
+              let strokeIndex = editStack.localAdjustments[mask]
+                .components[component].brushStrokes.indices.last,
+              let previous = editStack.localAdjustments[mask]
+                .components[component].brushStrokes[strokeIndex].points.last else { return }
+        let minimum = max(editStack.localAdjustments[mask]
+            .components[component].brushSize * 0.12, 0.001)
+        guard hypot(point.x - previous.x, point.y - previous.y) >= minimum else { return }
+        editStack.localAdjustments[mask].components[component]
+            .brushStrokes[strokeIndex].points.append(point)
     }
 
     func removeLastBrushStroke() {
-        guard let index = selectedMaskIndex,
-              !editStack.localAdjustments[index].brushStrokes.isEmpty else { return }
-        editStack.localAdjustments[index].brushStrokes.removeLast()
+        guard let (mask, component) = selectedBrushIndices,
+              !editStack.localAdjustments[mask].components[component].brushStrokes.isEmpty
+        else { return }
+        editStack.localAdjustments[mask].components[component].brushStrokes.removeLast()
     }
 
     func removeLocalAdjustment(id: UUID) {
         editStack.localAdjustments.removeAll { $0.id == id }
-        if selectedMaskID == id { selectedMaskID = nil }
+        if selectedMaskID == id {
+            selectedMaskID = nil
+            selectedComponentID = nil
+        }
     }
 
     // MARK: Crop mode
