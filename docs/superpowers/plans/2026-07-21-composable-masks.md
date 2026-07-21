@@ -1158,8 +1158,14 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
         isEnabled = c.lenient(.isEnabled, true)
         isInverted = c.lenient(.isInverted, false)
 
+        // Branch on whether the key EXISTS, not on whether it decoded empty.
+        // `lenient` returns [] for three different inputs — key absent, key
+        // present and empty, key present but malformed — and only the first is
+        // a pre-1.3 mask. Treating an emptied mask as legacy would hand it back
+        // a linear gradient the photographer never placed, and then apply that
+        // adjustment's corrections through it.
         let stored: [MaskComponent] = c.lenient(.components, [])
-        components = stored.isEmpty ? [Self.migratedComponent(from: c)] : stored
+        components = c.contains(.components) ? stored : [Self.migratedComponent(from: c)]
 
         exposure = c.lenient(.exposure, 0)
         contrast = c.lenient(.contrast, 0)
