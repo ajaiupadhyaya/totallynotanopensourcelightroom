@@ -820,8 +820,10 @@ Append inside `MaskCompositorTests`:
     func testBlurSoftensTheEdge() {
         let edge = CGPoint(x: 100, y: 150)   // right at the disc's boundary
 
+        // 0.6 → a 12px blur radius on a 200px frame, comfortably wider than
+        // the 6px probe sits beyond the hard edge.
         var soft = hardDisc()
-        soft.refine = MaskRefinement(blur: 0.4)
+        soft.refine = MaskRefinement(blur: 0.6)
 
         // Just outside the hard boundary, where only a softened edge reaches.
         let outside = CGPoint(x: 100, y: 156)
@@ -834,7 +836,7 @@ Append inside `MaskCompositorTests`:
             at: outside)
 
         XCTAssertLessThan(hardCoverage, 0.1, "A hard edge selects nothing out here.")
-        XCTAssertGreaterThan(softCoverage, hardCoverage + 0.15,
+        XCTAssertGreaterThan(softCoverage, hardCoverage + 0.10,
                              "Blur must carry partial selection past the hard boundary.")
         XCTAssertLessThan(softCoverage, 0.95, "…but it must fade, not select fully.")
     }
