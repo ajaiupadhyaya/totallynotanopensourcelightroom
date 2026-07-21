@@ -6,13 +6,20 @@ struct CanvasArea: View {
     @Bindable var app: AppModel
 
     var body: some View {
-        ZStack {
-            Theme.canvas.ignoresSafeArea()
+        VStack(spacing: 0) {
+            ZStack {
+                Theme.canvas.ignoresSafeArea()
+
+                if let editor = app.editor {
+                    EditCanvas(editor: editor, app: app)
+                } else {
+                    placeholder
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if let editor = app.editor {
-                EditCanvas(editor: editor, app: app)
-            } else {
-                placeholder
+                CanvasStatusBar(editor: editor)
             }
         }
     }
@@ -39,6 +46,50 @@ struct CanvasArea: View {
         .contentShape(Rectangle())
         .dropDestination(for: URL.self) { urls, _ in
             !app.importDropped(urls).isEmpty
+        }
+    }
+}
+
+/// Persistent document facts and viewing state. The bar is deliberately quiet:
+/// it answers "what am I looking at?" without competing with the photograph.
+private struct CanvasStatusBar: View {
+    @Bindable var editor: EditorModel
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "viewfinder")
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(Theme.secondaryText)
+
+            Text(editor.zoomLevel.map { "\(Int($0 * 100))%" } ?? "FIT")
+                .font(Theme.valueFont)
+                .foregroundStyle(Theme.text)
+
+            Rectangle().fill(Theme.separator).frame(width: Theme.hairline, height: 14)
+
+            Text(editor.metadata.colorProfile ?? "sRGB")
+                .font(Theme.valueFont)
+                .foregroundStyle(Theme.secondaryText)
+                .lineLimit(1)
+
+            if let dimensions = editor.metadata.dimensions {
+                Text(dimensions)
+                    .font(Theme.valueFont)
+                    .foregroundStyle(Theme.tertiaryText)
+            }
+
+            Spacer()
+
+            Text(editor.isShowingBefore ? "BEFORE" : "DEVELOPED")
+                .font(Theme.plateFont)
+                .kerning(Theme.plateTracking)
+                .foregroundStyle(editor.isShowingBefore ? Theme.warning : Theme.secondaryText)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .background(Theme.background)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
         }
     }
 }
@@ -134,9 +185,46 @@ private struct EditCanvas: View {
                                alignment: .topLeading)
                         .padding(12)
                 }
+
+                if editor.showsShadowClipping || editor.showsHighlightClipping {
+                    clippingReadout
+                        .frame(width: displaySize.width, height: displaySize.height,
+                               alignment: .bottomLeading)
+                        .padding(12)
+                        .allowsHitTesting(false)
+                }
             }
             .frame(width: contentSize.width, height: contentSize.height)
         }
+    }
+
+    private var clippingReadout: some View {
+        HStack(spacing: 10) {
+            if editor.showsShadowClipping {
+                diagnosticLabel(
+                    "SHADOWS \(editor.histogram.shadowClippedFraction.formatted(.percent.precision(.fractionLength(1))))",
+                    active: editor.histogram.isClippingShadows
+                )
+            }
+            if editor.showsHighlightClipping {
+                diagnosticLabel(
+                    "HIGHLIGHTS \(editor.histogram.highlightClippedFraction.formatted(.percent.precision(.fractionLength(1))))",
+                    active: editor.histogram.isClippingHighlights
+                )
+            }
+        }
+    }
+
+    private func diagnosticLabel(_ text: String, active: Bool) -> some View {
+        Text(text)
+            .font(Theme.plateFont)
+            .kerning(Theme.plateTracking)
+            .foregroundStyle(active ? Theme.warning : Theme.secondaryText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(.black.opacity(0.76))
+            .overlay(Rectangle().stroke(active ? Theme.warning.opacity(0.75) : Theme.separator,
+                                        lineWidth: Theme.hairline))
     }
 
     /// Single click drives the active eyedropper; double click toggles
@@ -423,9 +511,63 @@ private struct MaskHandles: View {
             switch adjustment.shape {
             case .linear: linearHandles
             case .radial: radialHandles
+            case .brush: brushOverlay
             }
         }
         .allowsHitTesting(true)
+    }
+
+    // MARK: Brush
+
+    @State private var isPainting = false
+
+    private var brushOverlay: some View {
+        ZStack {
+            ForEach(adjustment.brushStrokes) { stroke in
+                Path { path in
+                    guard let first = stroke.points.first else { return }
+                    path.move(to: viewPoint(first))
+                    for point in stroke.points.dropFirst() {
+                        path.addLine(to: viewPoint(point))
+                    }
+                    if stroke.points.count == 1 {
+                        path.addLine(to: viewPoint(first))
+                    }
+                }
+                .stroke(Theme.accent.opacity(0.52),
+                        style: StrokeStyle(
+                            lineWidth: max(stroke.radius * min(displaySize.width,
+                                                               displaySize.height) * 2, 2),
+                            lineCap: .round,
+                            lineJoin: .round
+                        ))
+                .allowsHitTesting(false)
+            }
+
+            Color.clear
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let point = unitPoint(value.location)
+                            if !isPainting {
+                                isPainting = true
+                                adjustment.brushStrokes.append(BrushStroke(
+                                    points: [point], radius: adjustment.brushSize,
+                                    feather: adjustment.brushFeather,
+                                    flow: adjustment.brushFlow
+                                ))
+                            } else if let strokeIndex = adjustment.brushStrokes.indices.last,
+                                      let previous = adjustment.brushStrokes[strokeIndex].points.last {
+                                let threshold = max(adjustment.brushSize * 0.12, 0.001)
+                                if hypot(point.x - previous.x, point.y - previous.y) >= threshold {
+                                    adjustment.brushStrokes[strokeIndex].points.append(point)
+                                }
+                            }
+                        }
+                        .onEnded { _ in isPainting = false }
+                )
+        }
     }
 
     // MARK: Coordinate mapping (unit bottom-left ↔ view top-left)

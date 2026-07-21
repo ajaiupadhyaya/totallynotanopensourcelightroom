@@ -3,6 +3,7 @@
 
 # Xcode / build artifacts
 build/
+artifacts/
 DerivedData/
 *.xcuserstate
 xcuserdata/

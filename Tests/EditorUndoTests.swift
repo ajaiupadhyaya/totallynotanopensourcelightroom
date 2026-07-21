@@ -60,6 +60,24 @@ final class EditorUndoTests: XCTestCase {
         XCTAssertFalse(editor.canRedo, "A fresh edit should clear the redo stack.")
     }
 
+    func testHistoryRowsRestoreCommittedState() throws {
+        let (editor, url, _) = try makeEditor()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        editor.editStack.exposure = 1
+        editor.commitEdit()
+        let firstEdit = try XCTUnwrap(editor.historyEvents.last)
+
+        editor.editStack.exposure = 2
+        editor.commitEdit()
+        XCTAssertEqual(editor.editStack.exposure, 2, accuracy: 1e-9)
+
+        editor.restoreHistoryEvent(firstEdit)
+        editor.commitEdit()
+        XCTAssertEqual(editor.editStack.exposure, 1, accuracy: 1e-9)
+        XCTAssertTrue(editor.canUndo, "Restoring history should remain undoable.")
+    }
+
     func testCommitPersistsStackAndThumbnail() throws {
         let (editor, url, catalog) = try makeEditor()
         defer { try? FileManager.default.removeItem(at: url) }

@@ -11,15 +11,16 @@ struct LocalAdjustmentPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.controlSpacing) {
             HStack(spacing: 6) {
+                PlateButton(title: "+ Brush") { model.addLocalAdjustment(.brush) }
                 PlateButton(title: "+ Linear") { model.addLocalAdjustment(.linear) }
                 PlateButton(title: "+ Radial") { model.addLocalAdjustment(.radial) }
                 Spacer()
             }
 
             if model.editStack.localAdjustments.isEmpty {
-                Text("A linear gradient burns a sky the way a tilted card "
-                     + "under the enlarger did; a radial dodges a face.")
-                    .font(.system(size: 10, design: .monospaced))
+                Text("Paint a correction directly, burn a sky with a linear "
+                     + "gradient, or dodge a face with a radial mask.")
+                    .font(Theme.readableFont)
                     .foregroundStyle(Theme.secondaryText)
             } else {
                 maskList
@@ -38,16 +39,20 @@ struct LocalAdjustmentPanel: View {
                 HStack(spacing: 8) {
                     // The mask's shape, drawn: a slanted line or an ellipse.
                     Group {
-                        if adjustment.shape == .linear {
+                        switch adjustment.shape {
+                        case .linear:
                             Path { path in
                                 path.move(to: CGPoint(x: 1, y: 11))
                                 path.addLine(to: CGPoint(x: 11, y: 1))
                             }
                             .stroke(style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
-                        } else {
+                        case .radial:
                             Ellipse()
                                 .stroke(style: StrokeStyle(lineWidth: 1.2, dash: [2, 2]))
                                 .padding(1)
+                        case .brush:
+                            Image(systemName: "paintbrush.pointed")
+                                .font(.system(size: 10, weight: .medium))
                         }
                     }
                     .foregroundStyle(isSelected ? Theme.accent : Theme.secondaryText)
@@ -68,7 +73,7 @@ struct LocalAdjustmentPanel: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background {
-                    RoundedRectangle(cornerRadius: 3)
+                    Rectangle()
                         .fill(isSelected ? Theme.control : .clear)
                 }
                 .contentShape(Rectangle())
@@ -110,11 +115,35 @@ struct LocalAdjustmentPanel: View {
                              range: 0...1, format: "%.2f", neutral: 0.5)
         }
 
+        if adjustment.shape == .brush {
+            AdjustmentSlider(title: "Brush Size",
+                             value: maskBinding(index, \.brushSize),
+                             range: 0.005...0.2, format: "%.3f", neutral: 0.04)
+            AdjustmentSlider(title: "Brush Feather",
+                             value: maskBinding(index, \.brushFeather),
+                             range: 0...1, format: "%.2f", neutral: 0.65)
+            AdjustmentSlider(title: "Brush Flow",
+                             value: maskBinding(index, \.brushFlow),
+                             range: 0.05...1, format: "%.2f", neutral: 0.8)
+
+            HStack {
+                Text("\(adjustment.brushStrokes.count) STROKES")
+                    .engraved()
+                Spacer()
+                PlateButton(title: "Undo Stroke",
+                            isEnabled: !adjustment.brushStrokes.isEmpty) {
+                    model.removeLastBrushStroke()
+                }
+            }
+        }
+
         LampToggle(label: "Invert — apply outside the shape",
                    isOn: maskBinding(index, \.isInverted))
 
-        Text("Drag the handles on the photo to place the mask.")
-            .font(.system(size: 10, design: .monospaced))
+        Text(adjustment.shape == .brush
+             ? "Drag on the photograph to paint this mask."
+             : "Drag the handles on the photograph to place this mask.")
+            .font(Theme.readableFont)
             .foregroundStyle(Theme.secondaryText)
     }
 

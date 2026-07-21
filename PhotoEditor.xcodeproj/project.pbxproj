@@ -60,11 +60,13 @@
 		923E24859305CF8D1E1577FC /* Defringe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B1C63E06502A5AD187DA403 /* Defringe.swift */; };
 		94D724351379DB477A5F2E19 /* DevelopedSourceCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */; };
 		95EEE8788082E374AFA57BBE /* DefringeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */; };
+		97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */; };
 		A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */; };
 		A537E63094B2875F0B5AB93B /* CanvasArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A2A7F2E531320ECECC92DF /* CanvasArea.swift */; };
 		AD60EE40143A15C8FE0BC6BE /* CullingCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1166D48907F88359EBF4DA05 /* CullingCommands.swift */; };
 		B19B7753F1618E46FB0C83E9 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3F4EDBF61BFD5A46628D40DB /* GRDB */; };
 		B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD40FF611C66AC099F6A793E /* EditorModelTests.swift */; };
+		B7101FFF5DD365F5D7946F73 /* InspectorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */; };
 		B9EF8A6A2D3635E698B2294D /* FilmBaseSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EDA462DA2F0278D71489A7 /* FilmBaseSampler.swift */; };
 		BB4A129B5DD8EE0A16DF4850 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA4A8702F7807BAA87F5D7C /* ExportService.swift */; };
 		BB4B230C9FB8D4D3EFF1A34A /* GeometryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */; };
@@ -75,6 +77,7 @@
 		CEA25C022BD3801BB4A0E305 /* LocalAdjustmentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */; };
 		D3058BEA6B891477F0E22411 /* ColorSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B22E289B6818B14FC289C0C /* ColorSettings.swift */; };
 		D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */; };
+		DAB82F0DF85D81E99EB7280A /* ToolRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = E869071E34608F2B4DFA10AB /* ToolRail.swift */; };
 		DAFC5DB84B71E09ACD582F98 /* BatchExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */; };
 		DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */; };
 		DEB91BC97F5C141246AD4371 /* PanelSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DBF57D32B1D839FD6740AF6 /* PanelSection.swift */; };
@@ -104,6 +107,7 @@
 		0D6106C96E36873E9FC2FA21 /* LumenFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LumenFeatureTests.swift; sourceTree = "<group>"; };
 		0ECAC9F574B3BA9437A1C07D /* PresetPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetPanel.swift; sourceTree = "<group>"; };
 		1166D48907F88359EBF4DA05 /* CullingCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingCommands.swift; sourceTree = "<group>"; };
+		14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceState.swift; sourceTree = "<group>"; };
 		1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportServiceTests.swift; sourceTree = "<group>"; };
 		1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeTests.swift; sourceTree = "<group>"; };
 		22A2A7F2E531320ECECC92DF /* CanvasArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasArea.swift; sourceTree = "<group>"; };
@@ -115,6 +119,7 @@
 		2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustment.swift; sourceTree = "<group>"; };
 		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustmentPanel.swift; sourceTree = "<group>"; };
+		34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanel.swift; sourceTree = "<group>"; };
 		3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExportSheet.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		42064BDE271E9B76EFFD6DCC /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -168,6 +173,7 @@
 		DAA4A8702F7807BAA87F5D7C /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetouchTests.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
+		E869071E34608F2B4DFA10AB /* ToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRail.swift; sourceTree = "<group>"; };
 		E9D15A748FF24B2B1214C31E /* PhotoMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoMetadata.swift; sourceTree = "<group>"; };
 		EC55460271E2A012E80DEEEC /* FilmPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmPanel.swift; sourceTree = "<group>"; };
 		ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerPanel.swift; sourceTree = "<group>"; };
@@ -230,8 +236,10 @@
 				1166D48907F88359EBF4DA05 /* CullingCommands.swift */,
 				CD897D60EAA5BF2C6D21704E /* EditorModel.swift */,
 				5A2F971CBD017A251DD0D590 /* HistogramView.swift */,
+				34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */,
 				602AF91A44F0025239865F8D /* LibrarySidebar.swift */,
 				42064BDE271E9B76EFFD6DCC /* Theme.swift */,
+				E869071E34608F2B4DFA10AB /* ToolRail.swift */,
 				D3CA76467E58A8DDB86E59D8 /* Controls */,
 				E37EADA26F247A3BA96152BC /* SliderPanel */,
 			);
@@ -299,6 +307,7 @@
 				2C025E535BEBABD61B0AD7CF /* LenientDecoding.swift */,
 				2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */,
 				00464425C644621741D179E5 /* RetouchSpot.swift */,
+				14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -529,6 +538,7 @@
 				2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */,
 				80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */,
 				F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */,
+				B7101FFF5DD365F5D7946F73 /* InspectorPanel.swift in Sources */,
 				527F26C97FA8BD75E7190F21 /* InstrumentControls.swift in Sources */,
 				7C57EAFB33A8061A0B57350B /* LenientDecoding.swift in Sources */,
 				5874FF400B0872B7850891C2 /* LibrarySidebar.swift in Sources */,
@@ -548,6 +558,8 @@
 				1F2E47439F4A2C335ECEA0B2 /* Theme.swift in Sources */,
 				D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */,
 				79D25177A236D7A08A806296 /* ToneCurveEditor.swift in Sources */,
+				DAB82F0DF85D81E99EB7280A /* ToolRail.swift in Sources */,
+				97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -634,7 +646,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -654,7 +666,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -719,7 +731,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -733,7 +745,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

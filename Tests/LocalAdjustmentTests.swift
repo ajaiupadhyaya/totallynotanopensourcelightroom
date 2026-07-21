@@ -122,6 +122,43 @@ final class LocalAdjustmentTests: XCTestCase {
                              "The ellipse must be wider than it is tall.")
     }
 
+    // MARK: Brush
+
+    func testBrushMaskAffectsPaintedStrokeAndSparesOutside() {
+        var mask = LocalAdjustment(shape: .brush)
+        mask.exposure = 1.5
+        mask.brushStrokes = [BrushStroke(
+            points: [CGPoint(x: 0.25, y: 0.25), CGPoint(x: 0.5, y: 0.5),
+                     CGPoint(x: 0.75, y: 0.75)],
+            radius: 0.07, feather: 0.4, flow: 1
+        )]
+
+        var stack = EditStack()
+        stack.localAdjustments = [mask]
+        let result = renderer.render(source: frame(), stack: stack)
+
+        let painted = brightness(result, at: CGRect(x: 94, y: 94, width: 12, height: 12))
+        let outside = brightness(result, at: CGRect(x: 4, y: 180, width: 12, height: 12))
+        XCTAssertGreaterThan(painted, 0.65, "Painted pixels should take the correction.")
+        XCTAssertEqual(outside, 0.5, accuracy: 0.03,
+                       "Pixels outside the painted stroke must remain untouched.")
+    }
+
+    func testBrushMaskIsResolutionIndependent() {
+        var mask = LocalAdjustment(shape: .brush)
+        mask.exposure = -1
+        mask.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.3, y: 0.7)],
+                                          radius: 0.1, feather: 0.5, flow: 1)]
+        var stack = EditStack()
+        stack.localAdjustments = [mask]
+
+        let small = renderer.render(source: frame(size: 200), stack: stack)
+        let large = renderer.render(source: frame(size: 1000), stack: stack)
+        let smallValue = brightness(small, at: CGRect(x: 56, y: 136, width: 8, height: 8))
+        let largeValue = brightness(large, at: CGRect(x: 280, y: 680, width: 40, height: 40))
+        XCTAssertEqual(smallValue, largeValue, accuracy: 0.03)
+    }
+
     // MARK: Corrections
 
     func testWarmthShiftsTheMaskedRegionWarm() {
@@ -213,12 +250,15 @@ final class LocalAdjustmentTests: XCTestCase {
         radial.center = CGPoint(x: 0.6, y: 0.4)
         radial.warmth = 25
         radial.isInverted = true
-        entry.editStack.localAdjustments = [linear, radial]
+        var brush = LocalAdjustment(shape: .brush)
+        brush.brushStrokes = [BrushStroke(points: [CGPoint(x: 0.2, y: 0.3)],
+                                           radius: 0.08, feather: 0.7, flow: 0.6)]
+        entry.editStack.localAdjustments = [linear, radial, brush]
         try store.save(entry)
 
         let fetched = try XCTUnwrap(store.entry(id: entry.id))
         XCTAssertEqual(fetched.editStack.localAdjustments, entry.editStack.localAdjustments)
-        XCTAssertEqual(fetched.editStack.localAdjustments.count, 2)
+        XCTAssertEqual(fetched.editStack.localAdjustments.count, 3)
     }
 
     func testLegacyStacksDecodeWithNoLocalAdjustments() throws {

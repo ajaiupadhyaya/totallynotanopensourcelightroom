@@ -76,6 +76,20 @@ final class VirtualCopyAndSnapshotTests: XCTestCase {
                        "the copy must sit next to its source in the filmstrip")
     }
 
+    func testMultipleCopiesStayOrderedInsideTheirImportGroup() throws {
+        let app = try makeApp()
+        _ = app.importPhoto(from: try TestSupport.makeTempPNG(gray: 10))
+        let master = try XCTUnwrap(app.importPhoto(from: try TestSupport.makeTempPNG(gray: 20)))
+        _ = app.importPhoto(from: try TestSupport.makeTempPNG(gray: 30))
+
+        let first = try XCTUnwrap(app.createVirtualCopy(of: master))
+        let second = try XCTUnwrap(app.createVirtualCopy(of: master))
+        let group = app.entries.filter { $0.fileURL == master.fileURL }
+
+        XCTAssertEqual(group.map(\.id), [master.id, first.id, second.id])
+        XCTAssertEqual(group.map(\.copyNumber), [0, 1, 2])
+    }
+
     // MARK: Snapshots
 
     func testSnapshotRoundTrip() throws {

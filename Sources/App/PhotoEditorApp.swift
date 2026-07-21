@@ -34,6 +34,8 @@ struct RootView: View {
     @State private var app = AppModel()
     @State private var isShowingLibrary = true
     @State private var isShowingDevelop = true
+    @State private var activeTool: EditorTool = .hand
+    @State private var inspectorMode: InspectorMode = .adjust
 
     var body: some View {
         VStack(spacing: 0) {
@@ -46,19 +48,33 @@ struct RootView: View {
             HStack(spacing: 0) {
                 if isShowingLibrary {
                     LibrarySidebar(app: app)
-                        .frame(width: 280)
+                        .frame(width: Theme.libraryWidth)
                         .transition(.move(edge: .leading))
                     Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
                 }
 
-                CanvasArea(app: app)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    if let editor = app.editor {
+                        ToolOptionsBar(model: editor, activeTool: $activeTool)
+                    }
+
+                    HStack(spacing: 0) {
+                        if let editor = app.editor {
+                            ToolRail(model: editor,
+                                     activeTool: $activeTool,
+                                     inspectorMode: $inspectorMode)
+                            Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
+                        }
+
+                        CanvasArea(app: app)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
 
                 if isShowingDevelop, let editor = app.editor {
                     Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
-                    SliderPanel(model: editor, app: app)
-                        .frame(width: 320)
-                        .editorSurface()
+                    InspectorPanel(model: editor, app: app, mode: $inspectorMode)
+                        .frame(width: Theme.inspectorWidth)
                         .transition(.move(edge: .trailing))
                 }
             }
@@ -66,7 +82,7 @@ struct RootView: View {
             .animation(.easeOut(duration: 0.18), value: isShowingLibrary)
         }
         .background(Theme.background)
-        .frame(minWidth: 1080, minHeight: 700)
+        .frame(minWidth: 1180, minHeight: 720)
         .background { keyboardShortcuts }
         .sheet(isPresented: $app.isShowingExportSheet) {
             if let editor = app.editor {
@@ -100,6 +116,12 @@ struct RootView: View {
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                 Button("") { app.isShowingExportSheet = true }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
+                Button("") { inspectorMode = .adjust }
+                    .keyboardShortcut("1", modifiers: [.command, .option])
+                Button("") { inspectorMode = .masks }
+                    .keyboardShortcut("2", modifiers: [.command, .option])
+                Button("") { inspectorMode = .history }
+                    .keyboardShortcut("3", modifiers: [.command, .option])
             }
         }
         .opacity(0)

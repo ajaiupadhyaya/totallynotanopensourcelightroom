@@ -34,7 +34,10 @@ struct PanelSection<Content: View>: View {
         self.isModified = isModified
         self.onReset = onReset
         self.content = content
-        _isExpanded = AppStorage(wrappedValue: true, "panel.expanded.\(title)")
+        // A fresh inspector opens on Light, the most common operation, while
+        // the rest of the chain stays legible as a compact index.
+        _isExpanded = AppStorage(wrappedValue: title == "Light",
+                                 "panel.v2.expanded.\(title)")
     }
 
     var body: some View {
@@ -96,7 +99,8 @@ struct PanelSection<Content: View>: View {
                     .foregroundStyle(Theme.tertiaryText)
             }
             .padding(.horizontal, Theme.panelInset)
-            .padding(.vertical, 10)
+            .padding(.vertical, 11)
+            .background(isHovering ? Theme.raisedSurface : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -24,20 +24,26 @@ enum Theme {
     // MARK: Surfaces
 
     /// Calibrated neutral background for color judgement.
-    static let background = Color(white: 0x16 / 255)
+    static let background = Color(white: 0x14 / 255)
 
     /// Panels and sidebars — one step up so structure reads without a border.
-    static let surface = Color(white: 0x1E / 255)
+    static let surface = Color(white: 0x1B / 255)
+
+    /// A panel header or selected row, raised only by luminance.
+    static let raisedSurface = Color(white: 0x21 / 255)
 
     /// Raised controls within a panel.
-    static let control = Color(white: 0x2A / 255)
+    static let control = Color(white: 0x29 / 255)
 
     /// Hairline separators.
-    static let separator = Color(white: 0x33 / 255)
+    static let separator = Color(white: 0x31 / 255)
+
+    /// A stronger rule for active workspace boundaries.
+    static let strongSeparator = Color(white: 0x45 / 255)
 
     /// The canvas immediately around the photo. Darker than the chrome so the
     /// image reads as the brightest thing on screen, but still not black.
-    static let canvas = Color(white: 0x10 / 255)
+    static let canvas = Color(white: 0x0E / 255)
 
     /// The filmstrip rebate — the darkest chrome surface, standing in for the
     /// unexposed film base the frames sit on.
@@ -46,19 +52,22 @@ enum Theme {
     // MARK: Text
 
     /// Primary text: soft ivory, not pure white.
-    static let text = Color(red: 0xE2 / 255, green: 0xE8 / 255, blue: 0xF0 / 255)
+    static let text = Color(white: 0xE5 / 255)
 
     /// De-emphasized text.
-    static let secondaryText = Color(white: 0x8A / 255)
+    static let secondaryText = Color(white: 0x99 / 255)
 
     /// Faint text — engraved section labels at rest.
-    static let tertiaryText = Color(white: 0x5E / 255)
+    static let tertiaryText = Color(white: 0x69 / 255)
 
     // MARK: Accents
 
     /// Selection / active accent. Cool and clearly "interface", so it is never
     /// mistaken for image content.
-    static let accent = Color(red: 0.34, green: 0.60, blue: 0.98)
+    static let accent = Color(red: 0.36, green: 0.61, blue: 1.0)
+
+    /// Diagnostic warning used only for clipping and irreversible actions.
+    static let warning = Color(red: 0.93, green: 0.64, blue: 0.24)
 
     /// Film edge printing: the dim amber of frame numbers and stock names
     /// exposed along a negative's rebate. Used only in the filmstrip.
@@ -78,7 +87,7 @@ enum Theme {
 
     /// Engraved section label, like the labels on darkroom equipment:
     /// small, semibold, tracked wide, always uppercased by the caller.
-    static let engravedLabel = Font.system(size: 9.5, weight: .semibold, design: .monospaced)
+    static let engravedLabel = Font.system(size: 10, weight: .semibold, design: .monospaced)
 
     /// Tracking (kerning) for engraved labels.
     static let engravedTracking: CGFloat = 1.6
@@ -87,10 +96,13 @@ enum Theme {
     static let indexFont = Font.system(size: 9.5, weight: .regular, design: .monospaced)
 
     /// Numeric readouts. Monospaced so values don't jitter as they change.
-    static let valueFont = Font.system(size: 11, weight: .regular, design: .monospaced)
+    static let valueFont = Font.system(size: 11.5, weight: .regular, design: .monospaced)
 
     /// Control labels inside panels.
-    static let controlFont = Font.system(size: 11, design: .monospaced)
+    static let controlFont = Font.system(size: 11.5, design: .monospaced)
+
+    /// More readable text used for filenames, helper copy, and history rows.
+    static let readableFont = Font.system(size: 12, weight: .regular, design: .default)
 
     /// Drawn buttons, tabs, and lamps: caps, tracked.
     static let plateFont = Font.system(size: 9.5, weight: .medium, design: .monospaced)
@@ -114,7 +126,15 @@ enum Theme {
     static let controlSpacing: CGFloat = 12
 
     /// Height of the custom title bar.
-    static let topBarHeight: CGFloat = 42
+    static let topBarHeight: CGFloat = 48
+
+    /// Context-sensitive options directly below the title bar.
+    static let contextBarHeight: CGFloat = 44
+
+    /// Tool rail and pane proportions from the selected design target.
+    static let toolRailWidth: CGFloat = 44
+    static let libraryWidth: CGFloat = 250
+    static let inspectorWidth: CGFloat = 348
 
     /// Width of a hairline rule.
     static let hairline: CGFloat = 1
