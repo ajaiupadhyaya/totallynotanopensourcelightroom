@@ -187,18 +187,33 @@ struct ToolOptionsBar: View {
         )
     }
 
+    /// Index of the component ``maskBinding`` should address: the explicitly
+    /// selected one when it still exists in this mask, otherwise the first —
+    /// mirroring ``LocalAdjustmentPanel``'s ``component(_:)`` fallback. `nil`
+    /// only when the mask genuinely has no components left.
+    private func resolvedComponentIndex(_ index: Int) -> Int? {
+        let components = model.editStack.localAdjustments[index].components
+        if let componentIndex = model.selectedComponentIndex,
+           components.indices.contains(componentIndex) {
+            return componentIndex
+        }
+        return components.indices.first
+    }
+
     /// Addresses a property of the selected mask's selected component.
     private func maskBinding(
         _ index: Int, _ keyPath: WritableKeyPath<MaskComponent, Double>
     ) -> Binding<Double> {
         Binding(
             get: {
-                guard let componentIndex = model.selectedComponentIndex else { return 0 }
+                guard let componentIndex = resolvedComponentIndex(index) else {
+                    return MaskComponent()[keyPath: keyPath]
+                }
                 return model.editStack.localAdjustments[index]
                     .components[componentIndex][keyPath: keyPath]
             },
             set: {
-                guard let componentIndex = model.selectedComponentIndex else { return }
+                guard let componentIndex = resolvedComponentIndex(index) else { return }
                 model.editStack.localAdjustments[index]
                     .components[componentIndex][keyPath: keyPath] = $0
             }

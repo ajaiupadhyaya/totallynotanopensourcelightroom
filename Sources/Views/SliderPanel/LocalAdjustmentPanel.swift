@@ -106,6 +106,20 @@ struct LocalAdjustmentPanel: View {
         return match
     }
 
+    /// Index of the component ``componentBinding`` should address: the
+    /// explicitly selected one when it still exists in this mask, otherwise
+    /// the first — the same fallback ``component(_:)`` uses, so the sliders
+    /// never disagree with the mask-list glyph about which component is live.
+    /// `nil` only when the mask genuinely has no components left.
+    private func resolvedComponentIndex(_ index: Int) -> Int? {
+        let components = model.editStack.localAdjustments[index].components
+        if let componentIndex = model.selectedComponentIndex,
+           components.indices.contains(componentIndex) {
+            return componentIndex
+        }
+        return components.indices.first
+    }
+
     @ViewBuilder
     private func maskControls(at index: Int) -> some View {
         let selected = component(index)
@@ -179,12 +193,14 @@ struct LocalAdjustmentPanel: View {
     ) -> Binding<Double> {
         Binding(
             get: {
-                guard let componentIndex = model.selectedComponentIndex else { return 0 }
+                guard let componentIndex = resolvedComponentIndex(index) else {
+                    return MaskComponent()[keyPath: keyPath]
+                }
                 return model.editStack.localAdjustments[index]
                     .components[componentIndex][keyPath: keyPath]
             },
             set: {
-                guard let componentIndex = model.selectedComponentIndex else { return }
+                guard let componentIndex = resolvedComponentIndex(index) else { return }
                 model.editStack.localAdjustments[index]
                     .components[componentIndex][keyPath: keyPath] = $0
             }

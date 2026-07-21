@@ -144,6 +144,25 @@ final class LocalAdjustmentTests: XCTestCase {
                        "Pixels outside the painted stroke must remain untouched.")
     }
 
+    /// A brush with no strokes selects nothing, even inverted. Before masks
+    /// became composable an empty brush produced an all-black mask that
+    /// inversion turned all-white, applying the correction to every pixel —
+    /// a surprise nobody asked for by creating a mask they had not painted.
+    func testAnInvertedBrushWithNoStrokesLeavesTheFrameAlone() {
+        var mask = LocalAdjustment(shape: .brush)
+        mask.isInverted = true
+        mask.exposure = -3
+
+        var stack = EditStack()
+        stack.localAdjustments = [mask]
+        let result = renderer.render(source: frame(), stack: stack)
+
+        let probe = CGRect(x: 90, y: 90, width: 20, height: 20)
+        XCTAssertEqual(brightness(result, at: probe),
+                       brightness(frame(), at: probe), accuracy: 0.02,
+                       "An unpainted brush must not correct anything.")
+    }
+
     func testBrushMaskIsResolutionIndependent() {
         var mask = LocalAdjustment(shape: .brush)
         mask.exposure = -1

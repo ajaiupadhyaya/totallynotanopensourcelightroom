@@ -21,7 +21,7 @@ final class MaskMigrationTests: XCTestCase {
         let stack = try decodeStack("""
         {"exposure":0.5,"localAdjustments":[{
           "id":"11111111-1111-1111-1111-111111111111",
-          "shape":"radial","isEnabled":true,"isInverted":true,
+          "shape":"radial","isEnabled":false,"isInverted":true,
           "center":[0.3,0.7],"radiusX":0.4,"radiusY":0.15,"feather":0.8,
           "exposure":-1.25,"warmth":30
         }]}
@@ -42,6 +42,11 @@ final class MaskMigrationTests: XCTestCase {
         XCTAssertFalse(component.isInverted, "It must not be copied onto the component too.")
         XCTAssertEqual(adjustment.exposure, -1.25, accuracy: 1e-9)
         XCTAssertEqual(adjustment.warmth, 30, accuracy: 1e-9)
+
+        XCTAssertEqual(adjustment.id, UUID(uuidString: "11111111-1111-1111-1111-111111111111"),
+                       "The adjustment's identity must survive migration too.")
+        XCTAssertFalse(adjustment.isEnabled,
+                       "isEnabled must round-trip from the fixture's false, not silently default to true.")
     }
 
     func testLegacyLinearMaskKeepsItsEndpoints() throws {
@@ -94,6 +99,20 @@ final class MaskMigrationTests: XCTestCase {
         XCTAssertEqual(adjustment.components[1].combine, .intersect)
     }
 
+    /// An emptied mask must come back empty, not carrying a gradient nobody
+    /// placed. `lenient` cannot tell "key absent" from "key present but empty",
+    /// so the decoder has to ask whether the key exists.
+    func testAnExplicitlyEmptyComponentListStaysEmpty() throws {
+        let stack = try decodeStack("""
+        {"localAdjustments":[{"components":[],"exposure":-2}]}
+        """)
+
+        let adjustment = try XCTUnwrap(stack.localAdjustments.first)
+        XCTAssertTrue(adjustment.components.isEmpty,
+                      "An emptied mask must not be mistaken for a pre-1.3 one.")
+        XCTAssertEqual(adjustment.exposure, -2, accuracy: 1e-9)
+    }
+
     /// Encoding must not write the legacy keys back out.
     ///
     /// Checked against the adjustment's **own** top-level keys rather than a
@@ -114,6 +133,27 @@ final class MaskMigrationTests: XCTestCase {
             "Legacy keys are read on the way in and never written back."
         )
         XCTAssertEqual((object["components"] as? [Any])?.count, 1)
+    }
+
+    /// `encode(to:)` is hand-written, so a property added later can silently
+    /// go unencoded. Populating every field and asserting round-trip equality
+    /// is what catches that.
+    func testEveryFieldSurvivesARoundTrip() throws {
+        var adjustment = LocalAdjustment(shape: .radial)
+        adjustment.isEnabled = false
+        adjustment.isInverted = true
+        adjustment.exposure = -1.5
+        adjustment.contrast = 12
+        adjustment.highlights = -30
+        adjustment.shadows = 44
+        adjustment.saturation = -18
+        adjustment.warmth = 27
+        adjustment.components[0].combine = .intersect
+        adjustment.components[0].refine = MaskRefinement(blur: 0.3, shift: -0.4)
+
+        let data = try JSONEncoder().encode(adjustment)
+        let decoded = try JSONDecoder().decode(LocalAdjustment.self, from: data)
+        XCTAssertEqual(decoded, adjustment)
     }
 
     func testMigratedMaskStillRenders() throws {
