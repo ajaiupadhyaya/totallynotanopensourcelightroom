@@ -818,8 +818,6 @@ Append inside `MaskCompositorTests`:
     }
 
     func testBlurSoftensTheEdge() {
-        let edge = CGPoint(x: 100, y: 150)   // right at the disc's boundary
-
         // 0.6 → a 12px blur radius on a 200px frame, comfortably wider than
         // the 6px probe sits beyond the hard edge.
         var soft = hardDisc()
@@ -852,7 +850,10 @@ Append inside `MaskCompositorTests`:
         wide.refine = MaskRefinement(blur: 0.5)
 
         let mask = MaskCompositor.composedMask([wide], source: source(), extent: extent)
-        XCTAssertGreaterThan(coverage(mask, at: CGPoint(x: 6, y: 100)), 0.5,
+        // Measured: 0.9995 with the clamp, 0.7212 without it. A threshold of
+        // 0.5 passes in BOTH cases — it would not catch the regression this
+        // test exists for.
+        XCTAssertGreaterThan(coverage(mask, at: CGPoint(x: 6, y: 100)), 0.9,
                              "The frame edge must stay selected.")
     }
 
@@ -860,25 +861,31 @@ Append inside `MaskCompositorTests`:
         // The disc's edge is 50px from centre on a 200px frame, and shift 0.8
         // moves it 8px. Probe just past the original edge — far enough out that
         // the unshifted disc reads zero, close enough that the growth reaches.
+        // Each direction needs its own probe: growth is only observable
+        // outside the original edge and shrink only inside it, so probing one
+        // side alone leaves the other assertion vacuous — it would pass with
+        // that branch of the morphology deleted outright.
         let justOutside = CGPoint(x: 100, y: 154)
+        let justInside = CGPoint(x: 100, y: 146)
 
         var grown = hardDisc()
         grown.refine = MaskRefinement(shift: 0.8)
         var shrunk = hardDisc()
         shrunk.refine = MaskRefinement(shift: -0.8)
 
-        let base = coverage(
-            MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
-            at: justOutside)
-        let grownCoverage = coverage(
-            MaskCompositor.composedMask([grown], source: source(), extent: extent),
-            at: justOutside)
-        let shrunkCoverage = coverage(
-            MaskCompositor.composedMask([shrunk], source: source(), extent: extent),
-            at: justOutside)
+        func mask(_ component: MaskComponent) -> CIImage? {
+            MaskCompositor.composedMask([component], source: source(), extent: extent)
+        }
 
-        XCTAssertGreaterThan(grownCoverage, base + 0.3, "Expand must reach further out.")
-        XCTAssertLessThanOrEqual(shrunkCoverage, base + 0.01, "Contract must not grow.")
+        XCTAssertLessThan(coverage(mask(hardDisc()), at: justOutside), 0.05,
+                          "Nothing is selected past the hard edge to begin with.")
+        XCTAssertGreaterThan(coverage(mask(grown), at: justOutside), 0.8,
+                             "Expand must carry the selection past the original edge.")
+
+        XCTAssertGreaterThan(coverage(mask(hardDisc()), at: justInside), 0.9,
+                             "Inside the edge is fully selected to begin with.")
+        XCTAssertLessThan(coverage(mask(shrunk), at: justInside), 0.1,
+                          "Contract must pull the selection back off this point.")
     }
 
     func testNeutralRefinementChangesNothing() {
