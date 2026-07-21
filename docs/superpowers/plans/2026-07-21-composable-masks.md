@@ -1562,9 +1562,15 @@ Append to `LocalAdjustmentTests`:
 ```swift
     // MARK: Mask source
 
-    /// Generated masks measure the frame as it entered the local-adjustment
-    /// stage, so editing one mask cannot move another one underneath it.
-    func testASecondMaskIsNotAffectedByTheFirstOnesCorrections() {
+    /// Two spatially disjoint masks stay independent: the first one's
+    /// corrections do not bleed into the second one's region.
+    ///
+    /// Note this does NOT prove the `maskSource` rule. Linear, radial and
+    /// brush components are pure geometry and never read the source image at
+    /// all, so this test passes even if masks cascade. The rule is proven in
+    /// `testAGeneratedMaskReadsTheFrameBeforeLocalAdjustments`, which needs a
+    /// luminance component to have something that actually measures the frame.
+    func testAdjacentMasksDoNotBleedIntoEachOther() {
         var darkener = LocalAdjustment(shape: .radial)
         darkener.only.center = CGPoint(x: 0.25, y: 0.5)
         darkener.only.radiusX = 0.2
@@ -1707,6 +1713,54 @@ final class RangeMaskTests: XCTestCase {
 
         XCTAssertGreaterThan(softCoverage, hardCoverage + 0.15,
                              "A wider falloff must reach further below the band.")
+    }
+
+    /// A generated mask measures the frame as it entered the local-adjustment
+    /// stage, not the running result, so editing one mask cannot move what a
+    /// later one selects.
+    ///
+    /// Built to fail on a cascade: adjustment 1 drives its region far darker
+    /// than the band adjustment 2 selects. Reading the running result would
+    /// push that region out of the band and adjustment 2 would skip it.
+    func testAGeneratedMaskReadsTheFrameBeforeLocalAdjustments() {
+        let flat = TestSupport.solidImage(red: 0.5, green: 0.5, blue: 0.5, size: 200)
+
+        var darkener = LocalAdjustment(shape: .radial)
+        darkener.only.center = CGPoint(x: 0.25, y: 0.5)
+        darkener.only.radiusX = 0.2
+        darkener.only.radiusY = 0.2
+        darkener.only.feather = 0.1
+        darkener.exposure = -3
+
+        var band = LocalAdjustment(shape: .luminance)
+        band.only.luminanceMin = 0.35
+        band.only.luminanceMax = 0.65
+        band.only.luminanceFalloff = 0.05
+        band.exposure = 1
+
+        var bandOnly = EditStack()
+        bandOnly.localAdjustments = [band]
+        var both = EditStack()
+        both.localAdjustments = [darkener, band]
+
+        // Inside the darkened disc, where a cascade would change the answer.
+        let probe = CGRect(x: 44, y: 94, width: 12, height: 12)
+        let renderer = EditRenderer()
+
+        let darkenedThenBanded = TestSupport.readColor(
+            renderer.render(source: flat, stack: both).cropped(to: probe)).red
+        let darkenedOnly = TestSupport.readColor(
+            renderer.render(source: flat, stack: {
+                var s = EditStack(); s.localAdjustments = [darkener]; return s
+            }()).cropped(to: probe)).red
+
+        XCTAssertGreaterThan(darkenedThenBanded, darkenedOnly * 1.5,
+                             "The band must still select the darkened region, because it "
+                             + "measures the frame as it was before any local adjustment.")
+        XCTAssertGreaterThan(
+            TestSupport.readColor(
+                renderer.render(source: flat, stack: bandOnly).cropped(to: probe)).red,
+            0.6, "Sanity: the band selects this region on the untouched frame.")
     }
 
     /// The mask is derived from tone, not position, so it must not depend on
