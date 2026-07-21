@@ -345,7 +345,7 @@ struct MaskComponent: Codable, Equatable, Identifiable {
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 207 tests total (200 + 7 new).
+Expected: PASS. 7 new tests in `MaskComponentTests`, full suite green.
 
 - [ ] **Step 5: Commit**
 
@@ -778,7 +778,7 @@ enum MaskCompositor {
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 218 tests total.
+Expected: PASS. 10 new tests in `MaskCompositorTests`, full suite green.
 
 - [ ] **Step 5: Commit**
 
@@ -823,18 +823,20 @@ Append inside `MaskCompositorTests`:
         var soft = hardDisc()
         soft.refine = MaskRefinement(blur: 0.4)
 
+        // Just outside the hard boundary, where only a softened edge reaches.
+        let outside = CGPoint(x: 100, y: 156)
+
         let hardCoverage = coverage(
             MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
-            at: edge)
+            at: outside)
         let softCoverage = coverage(
             MaskCompositor.composedMask([soft], source: source(), extent: extent),
-            at: edge)
+            at: outside)
 
-        XCTAssertNotEqual(hardCoverage, softCoverage, accuracy: 0.0,
-                          "Blur must change the boundary.")
-        XCTAssertGreaterThan(softCoverage, 0.05,
-                             "A blurred edge must bleed selection outward, not erase it.")
-        XCTAssertLessThan(softCoverage, 0.95)
+        XCTAssertLessThan(hardCoverage, 0.1, "A hard edge selects nothing out here.")
+        XCTAssertGreaterThan(softCoverage, hardCoverage + 0.15,
+                             "Blur must carry partial selection past the hard boundary.")
+        XCTAssertLessThan(softCoverage, 0.95, "…but it must fade, not select fully.")
     }
 
     /// Blurring a cropped image without clamping pulls transparent black in
@@ -1509,7 +1511,7 @@ In `Tests/ToolActivationTests.swift`, `testBrushCreatesThenReusesOneMask` assert
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -6
 ```
 
-Expected: PASS, 225 tests total. Compiler errors here are the point of the atomic commit — work through them until the build is clean.
+Expected: PASS. 6 new tests in `MaskMigrationTests`, full suite green. Compiler errors here are the point of the atomic commit — work through them until the build is clean.
 
 - [ ] **Step 9: Commit**
 
@@ -1819,7 +1821,7 @@ In `Sources/Pipeline/MaskCompositor.swift`, wire the case in `componentMask`:
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 231 tests total.
+Expected: PASS. 5 new tests in `RangeMaskTests`, full suite green.
 
 - [ ] **Step 5: Commit**
 
@@ -2061,7 +2063,7 @@ In `Sources/Pipeline/MaskCompositor.swift`, wire the case:
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 235 tests total.
+Expected: PASS. 4 more tests in `RangeMaskTests`, full suite green.
 
 - [ ] **Step 5: Commit**
 
@@ -2245,7 +2247,7 @@ with:
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 238 tests total.
+Expected: PASS. 3 new tests in `MaskOverlayTests`, full suite green.
 
 - [ ] **Step 5: Commit**
 
@@ -2378,7 +2380,7 @@ In `Sources/Views/SliderPanel/LocalAdjustmentPanel.swift`, inside the block that
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 238 tests (UI adds no tests; existing ones must stay green).
+Expected: PASS. This task adds no tests; every existing one must stay green.
 
 - [ ] **Step 4: Launch and confirm visually**
 
@@ -2666,7 +2668,7 @@ In `LocalAdjustmentPanel.swift`, immediately after `MaskComponentList(...)`:
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 238 tests.
+Expected: PASS. This task adds no tests; every existing one must stay green.
 
 - [ ] **Step 5: Confirm sampling works in the app**
 
@@ -2820,7 +2822,7 @@ mask types, the combine modes, and the overlay shortcut.
 cd ~/Documents/totallynotanopensourcelightroom && xcodegen generate && xcodebuild test -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' 2>&1 | grep -E "error:|Executed [0-9]+ tests|TEST" | tail -4
 ```
 
-Expected: PASS, 238 tests.
+Expected: PASS. Full suite green (240 tests: 200 baseline + 40 added across tasks 1-8).
 
 Then verify against the real catalog — the migration's true test is a stack written by 1.2.x on disk:
 
@@ -2844,7 +2846,7 @@ git commit -m "1.3.0: composable masks with luminance and colour range selection
 
 At completion:
 
-- 238 tests green (200 baseline + 38 new).
+- 240 tests green (200 baseline + 40 new).
 - Every 1.2.x mask loads as a one-component selection with geometry intact, proven by `MaskMigrationTests` and confirmed against the real catalog.
 - Luminance and colour-range masks select by content, resolution independently.
 - Set algebra, refinement, and per-component invert all covered.

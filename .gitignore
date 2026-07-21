@@ -22,3 +22,6 @@ xcuserdata/
 # Signing material — private keys and certs never enter the repo
 signing/
 *.p8
+
+# SDD scratch
+.superpowers/
