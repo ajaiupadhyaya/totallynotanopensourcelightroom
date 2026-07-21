@@ -148,4 +148,95 @@ final class MaskCompositorTests: XCTestCase {
         XCTAssertGreaterThan(coverage(mask, at: leftPoint), 0.8)
         XCTAssertLessThan(coverage(mask, at: rightPoint), 0.1)
     }
+
+    // MARK: Refinement
+
+    /// A hard-edged disc for measuring what refinement does to a boundary.
+    private func hardDisc() -> MaskComponent {
+        var c = MaskComponent(shape: .radial)
+        c.center = CGPoint(x: 0.5, y: 0.5)
+        c.radiusX = 0.25
+        c.radiusY = 0.25
+        c.feather = 0.0
+        return c
+    }
+
+    func testBlurSoftensTheEdge() {
+        let edge = CGPoint(x: 100, y: 150)   // right at the disc's boundary
+
+        // 0.6 → a 12px blur radius on a 200px frame, comfortably wider than
+        // the 6px probe sits beyond the hard edge.
+        var soft = hardDisc()
+        soft.refine = MaskRefinement(blur: 0.6)
+
+        // Just outside the hard boundary, where only a softened edge reaches.
+        let outside = CGPoint(x: 100, y: 156)
+
+        let hardCoverage = coverage(
+            MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
+            at: outside)
+        let softCoverage = coverage(
+            MaskCompositor.composedMask([soft], source: source(), extent: extent),
+            at: outside)
+
+        XCTAssertLessThan(hardCoverage, 0.1, "A hard edge selects nothing out here.")
+        XCTAssertGreaterThan(softCoverage, hardCoverage + 0.10,
+                             "Blur must carry partial selection past the hard boundary.")
+        XCTAssertLessThan(softCoverage, 0.95, "…but it must fade, not select fully.")
+    }
+
+    /// Blurring a cropped image without clamping pulls transparent black in
+    /// from beyond the frame and eats the selection at the border.
+    func testBlurDoesNotEatTheSelectionAtTheFrameEdge() {
+        var wide = MaskComponent(shape: .radial)
+        wide.center = CGPoint(x: 0.5, y: 0.5)
+        wide.radiusX = 0.9
+        wide.radiusY = 0.9
+        wide.feather = 0.0
+        wide.refine = MaskRefinement(blur: 0.5)
+
+        let mask = MaskCompositor.composedMask([wide], source: source(), extent: extent)
+        XCTAssertGreaterThan(coverage(mask, at: CGPoint(x: 6, y: 100)), 0.5,
+                             "The frame edge must stay selected.")
+    }
+
+    func testPositiveShiftGrowsAndNegativeShrinks() {
+        // The disc's edge is 50px from centre on a 200px frame, and shift 0.8
+        // moves it 8px. Probe just past the original edge — far enough out that
+        // the unshifted disc reads zero, close enough that the growth reaches.
+        let justOutside = CGPoint(x: 100, y: 154)
+
+        var grown = hardDisc()
+        grown.refine = MaskRefinement(shift: 0.8)
+        var shrunk = hardDisc()
+        shrunk.refine = MaskRefinement(shift: -0.8)
+
+        let base = coverage(
+            MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
+            at: justOutside)
+        let grownCoverage = coverage(
+            MaskCompositor.composedMask([grown], source: source(), extent: extent),
+            at: justOutside)
+        let shrunkCoverage = coverage(
+            MaskCompositor.composedMask([shrunk], source: source(), extent: extent),
+            at: justOutside)
+
+        XCTAssertGreaterThan(grownCoverage, base + 0.3, "Expand must reach further out.")
+        XCTAssertLessThanOrEqual(shrunkCoverage, base + 0.01, "Contract must not grow.")
+    }
+
+    func testNeutralRefinementChangesNothing() {
+        let point = CGPoint(x: 100, y: 100)
+        var explicit = hardDisc()
+        explicit.refine = MaskRefinement(blur: 0, shift: 0)
+
+        let plain = coverage(
+            MaskCompositor.composedMask([hardDisc()], source: source(), extent: extent),
+            at: point)
+        let same = coverage(
+            MaskCompositor.composedMask([explicit], source: source(), extent: extent),
+            at: point)
+
+        XCTAssertEqual(plain, same, accuracy: 1e-6)
+    }
 }
