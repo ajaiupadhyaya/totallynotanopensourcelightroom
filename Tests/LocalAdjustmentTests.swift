@@ -290,4 +290,34 @@ final class LocalAdjustmentTests: XCTestCase {
         let stack = try JSONDecoder().decode(EditStack.self, from: legacy)
         XCTAssertTrue(stack.localAdjustments.isEmpty)
     }
+
+    // MARK: Mask source
+
+    /// Generated masks measure the frame as it entered the local-adjustment
+    /// stage, so editing one mask cannot move another one underneath it.
+    func testASecondMaskIsNotAffectedByTheFirstOnesCorrections() {
+        var darkener = LocalAdjustment(shape: .radial)
+        darkener.only.center = CGPoint(x: 0.25, y: 0.5)
+        darkener.only.radiusX = 0.2
+        darkener.only.radiusY = 0.2
+        darkener.exposure = -3.0
+
+        var second = LocalAdjustment(shape: .radial)
+        second.only.center = CGPoint(x: 0.75, y: 0.5)
+        second.only.radiusX = 0.2
+        second.only.radiusY = 0.2
+        second.exposure = 1.0
+
+        var withBoth = EditStack()
+        withBoth.localAdjustments = [darkener, second]
+        var secondOnly = EditStack()
+        secondOnly.localAdjustments = [second]
+
+        let probe = CGRect(x: 144, y: 94, width: 12, height: 12)
+        let both = brightness(renderer.render(source: frame(), stack: withBoth), at: probe)
+        let alone = brightness(renderer.render(source: frame(), stack: secondOnly), at: probe)
+
+        XCTAssertEqual(both, alone, accuracy: 0.01,
+                       "The first mask must not change what the second one selects or does.")
+    }
 }
