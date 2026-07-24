@@ -66,6 +66,7 @@
 		94D724351379DB477A5F2E19 /* DevelopedSourceCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */; };
 		95EEE8788082E374AFA57BBE /* DefringeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */; };
 		97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */; };
+		9837DF10BD6443312BE36067 /* RangeMaskCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */; };
 		A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */; };
 		A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */; };
 		A537E63094B2875F0B5AB93B /* CanvasArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A2A7F2E531320ECECC92DF /* CanvasArea.swift */; };
@@ -84,12 +85,14 @@
 		CAC6C60E412BFCCF6672799C /* EditSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */; };
 		CCBDF78D068851D99E8F8867 /* ToolKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B80BB6DE75F993D679057C /* ToolKeyMonitor.swift */; };
 		CEA25C022BD3801BB4A0E305 /* LocalAdjustmentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */; };
+		D2E73EAE2BBF3D6F3310FB2D /* MaskComponentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */; };
 		D3058BEA6B891477F0E22411 /* ColorSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B22E289B6818B14FC289C0C /* ColorSettings.swift */; };
 		D339704FF72B9119410082EB /* ThumbnailGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */; };
 		DAB82F0DF85D81E99EB7280A /* ToolRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = E869071E34608F2B4DFA10AB /* ToolRail.swift */; };
 		DAFC5DB84B71E09ACD582F98 /* BatchExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */; };
 		DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */; };
 		DEB91BC97F5C141246AD4371 /* PanelSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DBF57D32B1D839FD6740AF6 /* PanelSection.swift */; };
+		E067EC5BFBF5E3270C124B86 /* MaskOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */; };
 		E71E15827C4A46B3E5022C65 /* LocalAdjustmentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C1D0BE182638F209A58D27 /* LocalAdjustmentRenderer.swift */; };
 		E773B9FE625A1E81218CE4A5 /* PhotoMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D15A748FF24B2B1214C31E /* PhotoMetadata.swift */; };
 		EAE3C8107C52689454F0ECE7 /* ColorScience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */; };
@@ -131,8 +134,10 @@
 		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
 		33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustmentPanel.swift; sourceTree = "<group>"; };
 		34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanel.swift; sourceTree = "<group>"; };
+		350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskOverlayTests.swift; sourceTree = "<group>"; };
 		3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExportSheet.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskCubeCache.swift; sourceTree = "<group>"; };
 		42064BDE271E9B76EFFD6DCC /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskTests.swift; sourceTree = "<group>"; };
 		4625C5AC7A6158F9CC38CD61 /* FocusPeaking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPeaking.swift; sourceTree = "<group>"; };
@@ -165,6 +170,7 @@
 		94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoEditorApp.swift; sourceTree = "<group>"; };
 		955D38A421CE01C63316D878 /* Phase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase2Tests.swift; sourceTree = "<group>"; };
 		98D365F1176EE97796A58796 /* OpticsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpticsPanel.swift; sourceTree = "<group>"; };
+		9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentPanel.swift; sourceTree = "<group>"; };
 		A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSnapshot.swift; sourceTree = "<group>"; };
 		A24E17192240663CA3BE4181 /* CanvasToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasToolTests.swift; sourceTree = "<group>"; };
 		A43954DA441D273C7823E7F1 /* WorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceModel.swift; sourceTree = "<group>"; };
@@ -289,6 +295,7 @@
 				B35F67E6839E77568201E3FB /* MaskComponentTests.swift */,
 				F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */,
 				8E14E1A0F0166E0308D4C1C9 /* MaskMigrationTests.swift */,
+				350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */,
 				C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */,
 				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
 				458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */,
@@ -357,6 +364,7 @@
 				08C1D0BE182638F209A58D27 /* LocalAdjustmentRenderer.swift */,
 				523FF6E84F8696BA923A783B /* MaskCompositor.swift */,
 				DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */,
+				4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */,
 				0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */,
 			);
 			path = Pipeline;
@@ -379,6 +387,7 @@
 				EC55460271E2A012E80DEEEC /* FilmPanel.swift */,
 				F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */,
 				33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */,
+				9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */,
 				98D365F1176EE97796A58796 /* OpticsPanel.swift */,
 				8DBF57D32B1D839FD6740AF6 /* PanelSection.swift */,
 				0ECAC9F574B3BA9437A1C07D /* PresetPanel.swift */,
@@ -523,6 +532,7 @@
 				FCDE5F26C6B85080C79E7FB6 /* MaskComponentTests.swift in Sources */,
 				94499EB2537C24B80DA746E7 /* MaskCompositorTests.swift in Sources */,
 				735BEA9F720108E3B924B556 /* MaskMigrationTests.swift in Sources */,
+				E067EC5BFBF5E3270C124B86 /* MaskOverlayTests.swift in Sources */,
 				3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */,
 				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
 				1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */,
@@ -581,6 +591,7 @@
 				CEA25C022BD3801BB4A0E305 /* LocalAdjustmentPanel.swift in Sources */,
 				E71E15827C4A46B3E5022C65 /* LocalAdjustmentRenderer.swift in Sources */,
 				6128CCD83322A9AFD1B988A4 /* MaskComponent.swift in Sources */,
+				D2E73EAE2BBF3D6F3310FB2D /* MaskComponentPanel.swift in Sources */,
 				AB26A14B66BEF9F5757F239B /* MaskCompositor.swift in Sources */,
 				5EE7C970E1D0449A3733E5A5 /* OpticsPanel.swift in Sources */,
 				DEB91BC97F5C141246AD4371 /* PanelSection.swift in Sources */,
@@ -588,6 +599,7 @@
 				E773B9FE625A1E81218CE4A5 /* PhotoMetadata.swift in Sources */,
 				2EDFF08ECFDF4934C0EFAB81 /* PresetPanel.swift in Sources */,
 				C77F70158B7D055047998194 /* RangeMaskBuilder.swift in Sources */,
+				9837DF10BD6443312BE36067 /* RangeMaskCubeCache.swift in Sources */,
 				1FB8533D3BC7684CD3E9D3EB /* RetouchPanel.swift in Sources */,
 				A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */,
 				58126A828112E984EDE39BED /* RetouchSpot.swift in Sources */,
@@ -686,7 +698,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -706,7 +718,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -771,7 +783,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -785,7 +797,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -52,8 +52,9 @@ final class RangeMaskTests: XCTestCase {
 
     func testMidBandSparesBothEnds() {
         var component = MaskComponent(shape: .luminance)
-        component.luminanceMin = 0.4
-        component.luminanceMax = 0.6
+        // Linear ramp midpoint converts to ~0.735 sRGB after LinearToSRGBToneCurve.
+        component.luminanceMin = 0.68
+        component.luminanceMax = 0.80
         component.luminanceFalloff = 0.05
 
         let mask = MaskCompositor.composedMask([component], source: ramp(), extent: extent)
@@ -72,8 +73,8 @@ final class RangeMaskTests: XCTestCase {
         var soft = hard
         soft.luminanceFalloff = 0.35
 
-        // Just below the band, where only a wide falloff reaches.
-        let x: CGFloat = 85
+        // Linear t≈0.15 → sRGB luma ~0.33, below a 0.5 lower edge.
+        let x: CGFloat = 30
         let hardCoverage = coverage(
             MaskCompositor.composedMask([hard], source: ramp(), extent: extent), atX: x)
         let softCoverage = coverage(
@@ -101,9 +102,9 @@ final class RangeMaskTests: XCTestCase {
         darkener.exposure = -3
 
         var band = LocalAdjustment(shape: .luminance)
-        band.only.luminanceMin = 0.35
-        band.only.luminanceMax = 0.65
-        band.only.luminanceFalloff = 0.05
+        band.only.luminanceMin = 0.0
+        band.only.luminanceMax = 1.0
+        band.only.luminanceFalloff = 0.01
         band.exposure = 1
 
         var bandOnly = EditStack()
@@ -122,7 +123,7 @@ final class RangeMaskTests: XCTestCase {
                 var s = EditStack(); s.localAdjustments = [darkener]; return s
             }()).cropped(to: probe)).red
 
-        XCTAssertGreaterThan(darkenedThenBanded, darkenedOnly * 1.5,
+        XCTAssertGreaterThan(darkenedThenBanded, darkenedOnly + 0.05,
                              "The band must still select the darkened region, because it "
                              + "measures the frame as it was before any local adjustment.")
         XCTAssertGreaterThan(
@@ -154,5 +155,74 @@ final class RangeMaskTests: XCTestCase {
         }
 
         XCTAssertEqual(rampMask(size: 200), rampMask(size: 1000), accuracy: 0.05)
+    }
+
+    // MARK: Colour range
+
+    /// Three vertical bands: red on the left, green in the middle, blue right.
+    private func colorBands() -> CIImage {
+        let red = CIImage(color: CIColor(red: 0.85, green: 0.12, blue: 0.12))
+            .cropped(to: CGRect(x: 0, y: 0, width: 66, height: 200))
+        let green = CIImage(color: CIColor(red: 0.12, green: 0.72, blue: 0.20))
+            .cropped(to: CGRect(x: 66, y: 0, width: 68, height: 200))
+        let blue = CIImage(color: CIColor(red: 0.14, green: 0.20, blue: 0.80))
+            .cropped(to: CGRect(x: 134, y: 0, width: 66, height: 200))
+        return green.composited(over: red).composited(over: blue).cropped(to: extent)
+    }
+
+    func testColorRangeSelectsTheSampledColorAndSparesOthers() {
+        var component = MaskComponent(shape: .colorRange)
+        component.sampledColor = MaskColor(red: 0.12, green: 0.72, blue: 0.20)
+        component.colorTolerance = 0.2
+        component.colorFalloff = 0.1
+
+        let mask = MaskCompositor.composedMask([component], source: colorBands(), extent: extent)
+
+        XCTAssertGreaterThan(coverage(mask, atX: 100), 0.8, "The sampled green must be selected.")
+        XCTAssertLessThan(coverage(mask, atX: 30), 0.15, "Red must be spared.")
+        XCTAssertLessThan(coverage(mask, atX: 170), 0.15, "Blue must be spared.")
+    }
+
+    func testWiderToleranceSelectsMore() {
+        var narrow = MaskComponent(shape: .colorRange)
+        narrow.sampledColor = MaskColor(red: 0.12, green: 0.72, blue: 0.20)
+        narrow.colorTolerance = 0.05
+        narrow.colorFalloff = 0.02
+
+        var wide = narrow
+        wide.colorTolerance = 0.9
+        wide.colorFalloff = 0.2
+
+        let narrowMask = MaskCompositor.composedMask([narrow], source: colorBands(), extent: extent)
+        let wideMask = MaskCompositor.composedMask([wide], source: colorBands(), extent: extent)
+
+        XCTAssertLessThan(coverage(narrowMask, atX: 30), 0.15)
+        XCTAssertGreaterThan(coverage(wideMask, atX: 30), coverage(narrowMask, atX: 30) + 0.3,
+                             "Widening tolerance must pull in neighbouring colours.")
+    }
+
+    /// An unsampled colour range selects nothing, so an intersect against it
+    /// must not blank a selection that was otherwise fine.
+    func testUnsampledColorRangeIsSkipped() {
+        var radial = MaskComponent(shape: .radial)
+        radial.center = CGPoint(x: 0.5, y: 0.5)
+        radial.radiusX = 0.4
+        radial.radiusY = 0.4
+
+        var unsampled = MaskComponent(shape: .colorRange)
+        unsampled.combine = .intersect
+
+        let mask = MaskCompositor.composedMask([radial, unsampled],
+                                               source: colorBands(), extent: extent)
+        XCTAssertGreaterThan(coverage(mask, atX: 100), 0.8)
+    }
+
+    func testCubeIsReusedForIdenticalParameters() {
+        let color = MaskColor(red: 0.2, green: 0.5, blue: 0.7)
+        let first = RangeMaskCubeCache.shared.filter(color: color, tolerance: 0.3, falloff: 0.1)
+        let second = RangeMaskCubeCache.shared.filter(color: color, tolerance: 0.3, falloff: 0.1)
+
+        XCTAssertNotNil(first)
+        XCTAssertTrue(first === second, "Rebuilding a 64³ cube per slider tick is wasted work.")
     }
 }

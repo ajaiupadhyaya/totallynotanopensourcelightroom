@@ -122,8 +122,11 @@ struct LocalAdjustmentPanel: View {
 
     @ViewBuilder
     private func maskControls(at index: Int) -> some View {
-        let selected = component(index)
+        Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
+        MaskComponentList(model: model, maskIndex: index)
+        Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+        MaskComponentControls(model: model, maskIndex: index)
         Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
         AdjustmentSlider(title: "Exposure",
@@ -145,29 +148,13 @@ struct LocalAdjustmentPanel: View {
                          value: maskBinding(index, \.warmth),
                          range: -100...100, format: "%.0f", neutral: 0)
 
-        if selected?.shape == .radial {
-            AdjustmentSlider(title: "Feather",
-                             value: componentBinding(index, \.feather),
-                             range: 0...1, format: "%.2f", neutral: 0.5)
-        }
-
-        if selected?.shape == .brush {
-            AdjustmentSlider(title: "Brush Size",
-                             value: componentBinding(index, \.brushSize),
-                             range: 0.005...0.2, format: "%.3f", neutral: 0.04)
-            AdjustmentSlider(title: "Brush Feather",
-                             value: componentBinding(index, \.brushFeather),
-                             range: 0...1, format: "%.2f", neutral: 0.65)
-            AdjustmentSlider(title: "Brush Flow",
-                             value: componentBinding(index, \.brushFlow),
-                             range: 0.05...1, format: "%.2f", neutral: 0.8)
-
+        if let selected = component(index), selected.shape == .brush {
             HStack {
-                Text("\(selected?.brushStrokes.count ?? 0) STROKES")
+                Text("\(selected.brushStrokes.count) STROKES")
                     .engraved()
                 Spacer()
                 PlateButton(title: "Undo Stroke",
-                            isEnabled: !(selected?.brushStrokes ?? []).isEmpty) {
+                            isEnabled: !selected.brushStrokes.isEmpty) {
                     model.removeLastBrushStroke()
                 }
             }
@@ -176,7 +163,7 @@ struct LocalAdjustmentPanel: View {
         LampToggle(label: "Invert — apply outside the shape",
                    isOn: maskBinding(index, \.isInverted))
 
-        Text(selected?.shape == .brush
+        Text(component(index)?.shape == .brush
              ? "Drag on the photograph to paint this mask."
              : "Drag the handles on the photograph to place this mask.")
             .font(Theme.readableFont)

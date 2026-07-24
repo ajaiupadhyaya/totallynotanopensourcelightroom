@@ -256,6 +256,7 @@ private struct EditCanvas: View {
         case .whiteBalance: "Click something that should be neutral gray"
         case .filmBase: "Click a clear piece of film border"
         case .retouchPlace: "Click the defect to remove"
+        case .colorRangeSample: "Click the colour to select"
         case nil: nil
         }
     }

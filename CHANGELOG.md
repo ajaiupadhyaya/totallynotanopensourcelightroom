@@ -2,6 +2,30 @@
 
 All notable changes to PhotoEditor are documented here.
 
+## 1.3.0 — 2026-07-21
+
+### Added
+
+- Masks are now built from components combined with add, subtract, and
+  intersect, so a tonal range can be intersected with a gradient and a painted
+  area subtracted from the result.
+- Luminance range masks: select a band of tones with an adjustable falloff.
+- Colour range masks: sample a colour on the photograph and select everything
+  within a tolerance of it.
+- Per-component refinement — blur, and expand or contract — plus per-component
+  invert alongside the existing whole-mask invert.
+- A red mask overlay (⌘⇧M) for tuning a selection you would otherwise not be
+  able to see.
+
+### Changed
+
+- With a mask selected, the Brush and Gradient tools add a component to it
+  instead of always starting a new mask.
+
+### Notes
+
+- Masks from earlier versions load unchanged as single-component selections.
+
 ## 1.2.1 — 2026-07-21
 
 ### Fixed

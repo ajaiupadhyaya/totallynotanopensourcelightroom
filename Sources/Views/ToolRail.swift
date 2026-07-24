@@ -144,6 +144,9 @@ struct ToolOptionsBar: View {
                                     .components[componentIndex].brushStrokes.isEmpty) {
                         model.removeLastBrushStroke()
                     }
+                    PlateButton(title: model.isShowingMaskOverlay ? "Hide Mask" : "Show Mask") {
+                        model.isShowingMaskOverlay.toggle()
+                    }
                 }
             } else {
                 contextNote("Create or select a brush mask")
@@ -153,6 +156,9 @@ struct ToolOptionsBar: View {
                 contextNote("Drag the on-canvas handles to shape the mask")
                 PlateButton(title: "+ Linear") { model.addLocalAdjustment(.linear) }
                 PlateButton(title: "+ Radial") { model.addLocalAdjustment(.radial) }
+                PlateButton(title: model.isShowingMaskOverlay ? "Hide Mask" : "Show Mask") {
+                    model.isShowingMaskOverlay.toggle()
+                }
             }
         case .eyedropper:
             contextNote("Click something that should be neutral gray")

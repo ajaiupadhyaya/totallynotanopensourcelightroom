@@ -89,8 +89,7 @@ enum MaskCompositor {
         case .luminance:
             raw = RangeMaskBuilder.luminanceMask(component, source: source, extent: extent)
         case .colorRange:
-            // Supplied by RangeMaskBuilder in a later task.
-            raw = nil
+            raw = RangeMaskBuilder.colorRangeMask(component, source: source, extent: extent)
         }
         guard var mask = raw?.cropped(to: extent) else { return nil }
 
@@ -229,5 +228,36 @@ enum MaskCompositor {
             x: extent.origin.x + unit.x * extent.width,
             y: extent.origin.y + unit.y * extent.height
         )
+    }
+}
+
+/// Draws a selection on top of the preview so a generated mask can be tuned.
+///
+/// A luminance band is invisible on the photograph itself — you can only judge
+/// it by seeing the selection — so this is required for the feature to be
+/// usable, not a convenience. It is a viewing aid and never touches export.
+enum MaskOverlay {
+    static func tinted(_ image: CIImage, mask: CIImage, extent: CGRect) -> CIImage {
+        let red = CIImage(color: CIColor(red: 0.85, green: 0.12, blue: 0.15))
+            .cropped(to: extent)
+
+        // Half-strength so the photograph stays readable underneath.
+        let damped = CIFilter.colorMatrix()
+        damped.inputImage = mask
+        damped.rVector = CIVector(x: 0.55, y: 0, z: 0, w: 0)
+        damped.gVector = CIVector(x: 0, y: 0.55, z: 0, w: 0)
+        damped.bVector = CIVector(x: 0, y: 0, z: 0.55, w: 0)
+        damped.aVector = CIVector(x: 0, y: 0, z: 0, w: 1)
+        guard let scaled = damped.outputImage?.cropped(to: extent) else { return image }
+
+        let toAlpha = CIFilter.maskToAlpha()
+        toAlpha.inputImage = scaled
+        guard let alpha = toAlpha.outputImage else { return image }
+
+        let blend = CIFilter.blendWithMask()
+        blend.inputImage = red
+        blend.backgroundImage = image
+        blend.maskImage = alpha
+        return blend.outputImage?.cropped(to: extent) ?? image
     }
 }

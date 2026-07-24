@@ -70,3 +70,73 @@ enum RangeMaskBuilder {
         return c * c * (3 - 2 * c)
     }
 }
+
+extension RangeMaskBuilder {
+    /// Selects everything within `colorTolerance` of the sampled colour,
+    /// fading out across `colorFalloff`.
+    static func colorRangeMask(
+        _ component: MaskComponent, source: CIImage, extent: CGRect
+    ) -> CIImage? {
+        guard let color = component.sampledColor else { return nil }
+        guard let filter = RangeMaskCubeCache.shared.filter(
+            color: color,
+            tolerance: component.colorTolerance,
+            falloff: component.colorFalloff
+        ) else { return nil }
+
+        // Judge colour as displayed, matching what the eyedropper sampled.
+        let encoded = source
+            .clampedToExtent()
+            .applyingFilter("CILinearToSRGBToneCurve")
+            .cropped(to: extent)
+
+        filter.setValue(encoded, forKey: kCIInputImageKey)
+        return (filter.outputImage)?.cropped(to: extent)
+    }
+
+    /// A cube mapping every colour to its mask value.
+    ///
+    /// Distance weights chroma above luminance, so sampling a green leaf
+    /// selects greens across a range of brightness rather than only the leaves
+    /// at that exact exposure.
+    static func colorCubeData(
+        color: MaskColor, tolerance: Double, falloff: Double, dimension: Int = 64
+    ) -> Data {
+        let target = opponent(red: color.red, green: color.green, blue: color.blue)
+        let width = Swift.max(falloff, 0.0001)
+        var values = [Float]()
+        values.reserveCapacity(dimension * dimension * dimension * 4)
+
+        // Core Image expects red varying fastest, then green, then blue.
+        for blueIndex in 0..<dimension {
+            let blue = Double(blueIndex) / Double(dimension - 1)
+            for greenIndex in 0..<dimension {
+                let green = Double(greenIndex) / Double(dimension - 1)
+                for redIndex in 0..<dimension {
+                    let red = Double(redIndex) / Double(dimension - 1)
+                    let point = opponent(red: red, green: green, blue: blue)
+                    let distance = sqrt(
+                        pow((point.luma - target.luma) * 0.5, 2)
+                            + pow(point.cb - target.cb, 2)
+                            + pow(point.cr - target.cr, 2)
+                    )
+                    let value = Float(1 - smoothstep((distance - tolerance) / width))
+                    // Grey mask value, opaque. Alpha 1 makes premultiplication
+                    // an identity, which is what CIColorCube expects.
+                    values.append(value)
+                    values.append(value)
+                    values.append(value)
+                    values.append(1)
+                }
+            }
+        }
+        return values.withUnsafeBufferPointer { Data(buffer: $0) }
+    }
+
+    private static func opponent(
+        red: Double, green: Double, blue: Double
+    ) -> (luma: Double, cb: Double, cr: Double) {
+        let luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        return (luma, blue - luma, red - luma)
+    }
+}

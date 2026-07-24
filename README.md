@@ -73,15 +73,18 @@ is safe at any strength.
 solid circle (the repair) and the dashed circle (the source). Heal shifts the
 copied pixels to match the destination's local tone; clone copies verbatim.
 
-**Local adjustments:** resolution-independent painted brush masks plus linear
-and radial gradients — the graduated burn and the dodge, placed by hand on the
-canvas. A dedicated tool rail keeps crop, heal, clone, brush, gradient,
-eyedropper, and compare tools in stable positions, each on a single key —
-`H` hand, `C` crop, `J` heal, `S` clone, `B` brush, `G` gradient,
-`I` eyedropper, `\` before/after. The inspector separates
-global adjustments, masks, and a clickable history of committed edit states;
-clipping diagnostics, focus peaking, zoom to 200%, and before/after remain
-preview-only viewing aids.
+**Local adjustments:** masks built from composable components — linear and
+radial gradients, painted brush strokes, luminance range bands, and colour
+range selections sampled on the canvas — combined with add, subtract, and
+intersect. Per-component refinement (blur, expand/contract) and invert. A red
+mask overlay (⌘⇧M) shows the selection while tuning. A dedicated tool rail
+keeps crop, heal, clone, brush, gradient, eyedropper, and compare tools in
+stable positions, each on a single key — `H` hand, `C` crop, `J` heal, `S`
+clone, `B` brush, `G` gradient, `I` eyedropper, `\` before/after. With a
+mask selected, Brush and Gradient add components to it rather than starting
+new masks. The inspector separates global adjustments, masks, and a clickable
+history of committed edit states; clipping diagnostics, focus peaking, zoom to
+200%, and before/after remain preview-only viewing aids.
 
 **The library:** a filmstrip drawn as a film rebate with star ratings,
 pick/reject flags, color labels, filtering, and search over camera/lens/file.

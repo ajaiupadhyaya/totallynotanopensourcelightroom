@@ -112,6 +112,8 @@ final class EditorModel {
         case filmBase
         /// Click a defect; a retouch spot is placed there.
         case retouchPlace
+        /// Click a colour; the selected colour-range component samples it.
+        case colorRangeSample
     }
 
     /// The active canvas picker, or nil when clicks do nothing special.
@@ -130,6 +132,9 @@ final class EditorModel {
             ))
         case .retouchPlace:
             addRetouchSpot(atUnitPoint: point)
+        case .colorRangeSample:
+            sampleColorRange(at: point)
+            return
         case nil:
             return
         }
@@ -205,6 +210,35 @@ final class EditorModel {
 
         editStack.whiteBalanceTemp = wb.temperature
         editStack.whiteBalanceTint = wb.tint
+    }
+
+    /// Samples the photograph at `point` into the selected colour-range
+    /// component. Reads the developed image, so the sample matches the colour
+    /// the photographer actually clicked rather than the raw original.
+    func sampleColorRange(at point: CGPoint) {
+        guard let mask = selectedMaskIndex, let component = selectedComponentIndex,
+              editStack.localAdjustments[mask].components[component].shape == .colorRange,
+              let source else { return }
+
+        let developed = renderer.render(source: source, stack: editStack)
+        let extent = developed.extent
+        guard !extent.isInfinite else { return }
+
+        // FilmBaseSampler enforces a ≥4px integral sample: CIAreaAverage
+        // silently returns zeros for tiny non-integral extents.
+        let side = max(min(extent.width, extent.height) * 0.02, 4)
+        let rect = CGRect(
+            x: extent.origin.x + point.x * extent.width - side / 2,
+            y: extent.origin.y + point.y * extent.height - side / 2,
+            width: side, height: side
+        )
+        guard let sampled = FilmBaseSampler.sampleAverage(
+            from: developed, in: rect, context: renderer.context
+        ) else { return }
+
+        editStack.localAdjustments[mask].components[component].sampledColor =
+            MaskColor(red: sampled.red, green: sampled.green, blue: sampled.blue)
+        canvasPicker = nil
     }
 
     // MARK: Local adjustments
@@ -337,6 +371,12 @@ final class EditorModel {
     /// Tints the in-focus areas of the preview. A viewing aid only — it never
     /// affects the edit stack or what gets exported.
     var isFocusPeakingEnabled = false {
+        didSet { renderPreview() }
+    }
+
+    /// Tints the selected mask red over the preview. A viewing aid only — it
+    /// never affects the edit stack or what gets exported.
+    var isShowingMaskOverlay = false {
         didSet { renderPreview() }
     }
 
@@ -681,9 +721,20 @@ final class EditorModel {
         // peaking overlay — which is chrome, not image data.
         histogram = renderer.histogram(of: edited)
 
-        let shown = isFocusPeakingEnabled
+        var shown = isFocusPeakingEnabled
             ? FocusPeaking.overlay(on: edited)
             : edited
+
+        // Chrome, like peaking: drawn after the histogram is measured so it
+        // cannot pollute the reading, and never folded into the edit stack.
+        if isShowingMaskOverlay, let index = selectedMaskIndex,
+           let mask = LocalAdjustmentRenderer.grayscaleMask(
+               for: editStack.localAdjustments[index],
+               source: edited, extent: edited.extent
+           ) {
+            shown = MaskOverlay.tinted(shown, mask: mask, extent: edited.extent)
+        }
+
         displayImage = renderer.makeCGImage(shown)
     }
 

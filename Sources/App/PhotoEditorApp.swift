@@ -109,6 +109,8 @@ struct RootView: View {
                     .keyboardShortcut("1", modifiers: .command)
                 Button("") { editor.isFocusPeakingEnabled.toggle() }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
+                Button("") { editor.isShowingMaskOverlay.toggle() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
                 Button("") { app.copySettings(from: editor.entry) }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                 Button("") { app.isShowingExportSheet = true }

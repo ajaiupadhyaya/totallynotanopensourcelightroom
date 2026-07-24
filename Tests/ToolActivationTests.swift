@@ -49,21 +49,20 @@ final class ToolActivationTests: XCTestCase {
 
     // MARK: Activation
 
-    func testBrushCreatesThenReusesOneMask() throws {
+    func testBrushCreatesAMaskThenAddsComponentsToIt() throws {
         let (workspace, editor, url) = try makeWorkspace()
         defer { try? FileManager.default.removeItem(at: url) }
 
         workspace.activate(.brush, in: editor)
         XCTAssertEqual(editor.editStack.localAdjustments.count, 1)
-        XCTAssertEqual(editor.editStack.localAdjustments.first?.components.first?.shape, .brush)
+        XCTAssertEqual(editor.editStack.localAdjustments[0].components.first?.shape, .brush)
         XCTAssertEqual(workspace.inspectorMode, .masks)
-        let first = editor.selectedMaskID
 
-        workspace.activate(.hand, in: editor)
-        workspace.activate(.brush, in: editor)
+        workspace.activate(.gradient, in: editor)
         XCTAssertEqual(editor.editStack.localAdjustments.count, 1,
-                       "Returning to the brush must not pile up empty masks.")
-        XCTAssertEqual(editor.selectedMaskID, first)
+                       "With a mask selected, a tool adds to it rather than starting a new one.")
+        XCTAssertEqual(editor.editStack.localAdjustments[0].components.count, 2)
+        XCTAssertEqual(editor.editStack.localAdjustments[0].components[1].shape, .linear)
     }
 
     func testEyedropperAndHealArmTheirCanvasPickers() throws {

@@ -56,22 +56,23 @@ final class WorkspaceModel {
             model.canvasPicker = .retouchPlace
             inspectorMode = .adjust
         case .brush:
-            if let existing = model.editStack.localAdjustments.last(where: { adjustment in
-                adjustment.components.contains { $0.shape == .brush }
-            }) {
-                model.selectedMaskID = existing.id
-                model.selectedComponentID = existing.components.first { $0.shape == .brush }?.id
+            if model.selectedMaskID != nil {
+                if let existing = selectedComponent(in: model, shape: .brush) {
+                    model.selectedComponentID = existing
+                } else {
+                    model.addMaskComponent(.brush)
+                }
             } else {
                 model.addLocalAdjustment(.brush)
             }
             inspectorMode = .masks
         case .gradient:
-            if let existing = model.editStack.localAdjustments.last(where: { adjustment in
-                adjustment.components.contains { $0.shape == .linear || $0.shape == .radial }
-            }) {
-                model.selectedMaskID = existing.id
-                model.selectedComponentID = existing.components
-                    .first { $0.shape == .linear || $0.shape == .radial }?.id
+            if model.selectedMaskID != nil {
+                if let existing = selectedComponent(in: model, shapes: [.linear, .radial]) {
+                    model.selectedComponentID = existing
+                } else {
+                    model.addMaskComponent(.linear)
+                }
             } else {
                 model.addLocalAdjustment(.linear)
             }
@@ -82,5 +83,19 @@ final class WorkspaceModel {
         case .compare:
             break
         }
+    }
+
+    private func selectedComponent(
+        in model: EditorModel, shape: MaskComponent.Shape
+    ) -> UUID? {
+        selectedComponent(in: model, shapes: [shape])
+    }
+
+    private func selectedComponent(
+        in model: EditorModel, shapes: Set<MaskComponent.Shape>
+    ) -> UUID? {
+        guard let index = model.selectedMaskIndex else { return nil }
+        return model.editStack.localAdjustments[index]
+            .components.last { shapes.contains($0.shape) }?.id
     }
 }
