@@ -44,6 +44,7 @@
 		60A35DABA722DA72F962E386 /* FilmStock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C39D72A549DFE7D38FA03F /* FilmStock.swift */; };
 		6128CCD83322A9AFD1B988A4 /* MaskComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F44C12165E98D2652E57A3 /* MaskComponent.swift */; };
 		616756D288F64D368F8022C7 /* SnapshotPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A58C8023259214599AAA4498 /* SnapshotPanel.swift */; };
+		6CC19951ABC1EC858CC9A1A8 /* PatchMatchInpainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B5434BD549F9F325077FB3 /* PatchMatchInpainter.swift */; };
 		6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */; };
 		71F8DD407A0625EC745D4E3D /* WorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78988AE124F31D425DB32C2F /* WorkflowTests.swift */; };
 		7338731C6C7BD32B8F3190AE /* FilmNegativeConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */; };
@@ -139,6 +140,7 @@
 		33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustmentPanel.swift; sourceTree = "<group>"; };
 		34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanel.swift; sourceTree = "<group>"; };
 		350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskOverlayTests.swift; sourceTree = "<group>"; };
+		38B5434BD549F9F325077FB3 /* PatchMatchInpainter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchMatchInpainter.swift; sourceTree = "<group>"; };
 		3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExportSheet.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskCubeCache.swift; sourceTree = "<group>"; };
@@ -374,6 +376,7 @@
 				523FF6E84F8696BA923A783B /* MaskCompositor.swift */,
 				4A7EEB7632D72A68035D921B /* MLMaskCache.swift */,
 				6CBCC27BB747B5F27F8847EF /* MLMaskEnvironment.swift */,
+				38B5434BD549F9F325077FB3 /* PatchMatchInpainter.swift */,
 				DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */,
 				4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */,
 				0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */,
@@ -610,6 +613,7 @@
 				AB26A14B66BEF9F5757F239B /* MaskCompositor.swift in Sources */,
 				5EE7C970E1D0449A3733E5A5 /* OpticsPanel.swift in Sources */,
 				DEB91BC97F5C141246AD4371 /* PanelSection.swift in Sources */,
+				6CC19951ABC1EC858CC9A1A8 /* PatchMatchInpainter.swift in Sources */,
 				310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */,
 				E773B9FE625A1E81218CE4A5 /* PhotoMetadata.swift in Sources */,
 				2EDFF08ECFDF4934C0EFAB81 /* PresetPanel.swift in Sources */,

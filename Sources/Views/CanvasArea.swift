@@ -4,6 +4,7 @@ import SwiftUI
 /// handles, and eyedropper targeting — or an empty state.
 struct CanvasArea: View {
     @Bindable var app: AppModel
+    @Bindable var workspace: WorkspaceModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,7 +12,7 @@ struct CanvasArea: View {
                 Theme.canvas.ignoresSafeArea()
 
                 if let editor = app.editor {
-                    EditCanvas(editor: editor, app: app)
+                    EditCanvas(editor: editor, app: app, workspace: workspace)
                 } else {
                     placeholder
                 }
@@ -98,6 +99,9 @@ private struct CanvasStatusBar: View {
 private struct EditCanvas: View {
     @Bindable var editor: EditorModel
     @Bindable var app: AppModel
+    @Bindable var workspace: WorkspaceModel
+
+    @State private var isRetouchPainting = false
 
     var body: some View {
         Group {
@@ -154,6 +158,11 @@ private struct EditCanvas: View {
                     // without a bright border that would bias its own tones.
                     .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
                     .gesture(clickGesture(displaySize: displaySize))
+                    .overlay {
+                        if workspace.activeTool == .heal || workspace.activeTool == .clone {
+                            retouchPaintOverlay(displaySize: displaySize)
+                        }
+                    }
 
                 if editor.isCropping {
                     CropOverlay(cropRect: $editor.editStack.geometry.cropRect,
@@ -247,6 +256,31 @@ private struct EditCanvas: View {
                 editor.zoomLevel = editor.zoomLevel == nil ? 1.0 : nil
             }
         return toggleZoom.simultaneously(with: pick)
+    }
+
+    private func retouchPaintOverlay(displaySize: CGSize) -> some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let point = unitPoint(value.location, displaySize: displaySize)
+                        if !isRetouchPainting {
+                            isRetouchPainting = true
+                            editor.beginRetouchStroke(at: point)
+                        } else {
+                            editor.continueRetouchStroke(to: point)
+                        }
+                    }
+                    .onEnded { _ in isRetouchPainting = false }
+            )
+    }
+
+    private func unitPoint(_ view: CGPoint, displaySize: CGSize) -> CGPoint {
+        CGPoint(
+            x: min(max(view.x / displaySize.width, 0), 1),
+            y: min(max(1 - view.y / displaySize.height, 0), 1)
+        )
     }
 
     // MARK: Picker banner
@@ -664,12 +698,36 @@ private struct RetouchHandles: View {
     let displaySize: CGSize
 
     var body: some View {
+        if spot.kind == .stroke {
+            strokeOverlay
+        } else {
+            circleHandles
+        }
+    }
+
+    private var strokeOverlay: some View {
+        Path { path in
+            guard let first = spot.strokePoints.first else { return }
+            path.move(to: viewPoint(first))
+            for point in spot.strokePoints.dropFirst() {
+                path.addLine(to: viewPoint(point))
+            }
+        }
+        .stroke(.white.opacity(0.85),
+                style: StrokeStyle(
+                    lineWidth: max(spot.radius * displaySize.width * 2, 2),
+                    lineCap: .round,
+                    lineJoin: .round
+                ))
+    }
+
+    private var circleHandles: some View {
         let radius = spot.radius * displaySize.width
         let dest = viewPoint(spot.center)
         let source = viewPoint(CGPoint(x: spot.center.x + spot.sourceOffset.dx,
                                        y: spot.center.y + spot.sourceOffset.dy))
 
-        ZStack {
+        return ZStack {
             Path { path in
                 path.move(to: dest)
                 path.addLine(to: source)

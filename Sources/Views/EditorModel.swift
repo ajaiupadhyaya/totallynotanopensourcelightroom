@@ -166,12 +166,30 @@ final class EditorModel {
         var spot = RetouchSpot()
         spot.mode = retouchMode
         spot.center = point
-        // Default the source to the right unless that would leave the frame.
         spot.sourceOffset = point.x < 0.85
             ? CGVector(dx: 0.08, dy: 0)
             : CGVector(dx: -0.08, dy: 0)
         editStack.retouch.append(spot)
         selectedSpotID = spot.id
+    }
+
+    func beginRetouchStroke(at point: CGPoint) {
+        var spot = RetouchSpot()
+        spot.mode = retouchMode
+        spot.kind = .stroke
+        spot.center = point
+        spot.strokePoints = [point]
+        editStack.retouch.append(spot)
+        selectedSpotID = spot.id
+    }
+
+    func continueRetouchStroke(to point: CGPoint) {
+        guard let index = selectedSpotIndex,
+              editStack.retouch[index].kind == .stroke,
+              let previous = editStack.retouch[index].strokePoints.last else { return }
+        let minimum = max(editStack.retouch[index].radius * 0.12, 0.001)
+        guard hypot(point.x - previous.x, point.y - previous.y) >= minimum else { return }
+        editStack.retouch[index].strokePoints.append(point)
     }
 
     func removeRetouchSpot(id: UUID) {

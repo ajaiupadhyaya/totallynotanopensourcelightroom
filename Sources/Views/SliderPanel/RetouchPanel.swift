@@ -13,7 +13,11 @@ struct RetouchPanel: View {
         VStack(alignment: .leading, spacing: Theme.controlSpacing) {
             HStack(spacing: 12) {
                 TabStrip(
-                    options: [(RetouchSpot.Mode.heal, "Heal"), (.clone, "Clone")],
+                    options: [
+                        (RetouchSpot.Mode.heal, "Heal"),
+                        (.clone, "Clone"),
+                        (.remove, "Remove"),
+                    ],
                     selection: $model.retouchMode
                 )
                 Spacer()
@@ -49,7 +53,7 @@ struct RetouchPanel: View {
                         .font(Theme.indexFont)
                         .foregroundStyle(isSelected ? Theme.accent : Theme.tertiaryText)
 
-                    Text(spot.mode == .heal ? "HEAL" : "CLONE")
+                    Text(spotLabel(spot))
                         .font(Theme.plateFont)
                         .kerning(Theme.plateTracking)
                         .foregroundStyle(Theme.text.opacity(spot.isEnabled ? 0.9 : 0.4))
@@ -81,7 +85,11 @@ struct RetouchPanel: View {
         Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
         TabStrip(
-            options: [(RetouchSpot.Mode.heal, "Heal"), (.clone, "Clone")],
+            options: [
+                (RetouchSpot.Mode.heal, "Heal"),
+                (.clone, "Clone"),
+                (.remove, "Remove"),
+            ],
             selection: spotBinding(index, \.mode)
         )
 
@@ -91,11 +99,24 @@ struct RetouchPanel: View {
         AdjustmentSlider(title: "Feather",
                          value: spotBinding(index, \.feather),
                          range: 0...1, format: "%.2f", neutral: 0.5)
+        AdjustmentSlider(title: "Opacity",
+                         value: spotBinding(index, \.opacity),
+                         range: 0.05...1, format: "%.2f", neutral: 1)
 
-        Text("Drag the solid circle to move the repair; drag the dashed "
-             + "circle to choose where its pixels come from.")
+        Text(model.editStack.retouch[index].kind == .stroke
+             ? "Painted stroke — drag on the photo with the heal or clone tool."
+             : "Drag the solid circle to move the repair; drag the dashed "
+               + "circle to choose where its pixels come from.")
             .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(Theme.secondaryText)
+    }
+
+    private func spotLabel(_ spot: RetouchSpot) -> String {
+        switch spot.mode {
+        case .heal: spot.kind == .stroke ? "HEAL STROKE" : "HEAL"
+        case .clone: spot.kind == .stroke ? "CLONE STROKE" : "CLONE"
+        case .remove: "REMOVE"
+        }
     }
 
     // MARK: Bindings

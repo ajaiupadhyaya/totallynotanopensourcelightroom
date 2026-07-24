@@ -63,7 +63,7 @@ struct RootView: View {
                             Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
                         }
 
-                        CanvasArea(app: app)
+                        CanvasArea(app: app, workspace: workspace)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }

@@ -2,15 +2,7 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 
 /// Applies spot-removal corrections by compositing a shifted copy of the image
-/// over itself through a feathered circular mask.
-///
-/// Clone is exactly that composite. Heal additionally measures the average
-/// color around the destination and of the source patch, and biases the copied
-/// pixels by the difference — so a patch borrowed from a slightly darker piece
-/// of sky still disappears into its new surroundings.
-///
-/// Spots apply in order, each sampling the image as retouched so far, so a
-/// later spot can safely borrow from an area an earlier spot cleaned up.
+/// over itself through a feathered mask, or content-aware inpainting for remove.
 enum RetouchRenderer {
     static func apply(
         _ spots: [RetouchSpot], to image: CIImage, context: CIContext
@@ -28,19 +20,25 @@ enum RetouchRenderer {
         let extent = image.extent
         guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else { return image }
 
+        if spot.mode == .remove {
+            return PatchMatchInpainter.apply(spot, to: image, context: context)
+        }
+
+        let centerPoint = spot.effectiveCenter
         let radius = max(spot.radius * extent.width, 1)
         let center = CGPoint(
-            x: extent.origin.x + spot.center.x * extent.width,
-            y: extent.origin.y + spot.center.y * extent.height
+            x: extent.origin.x + centerPoint.x * extent.width,
+            y: extent.origin.y + centerPoint.y * extent.height
         )
-        let offset = CGVector(
+        var offset = CGVector(
             dx: spot.sourceOffset.dx * extent.width,
             dy: spot.sourceOffset.dy * extent.height
         )
 
-        // Shift the image so the source region lands on the destination: the
-        // pixel shown at p is image(p + offset). Clamping first keeps a source
-        // near the frame edge from dragging transparency in.
+        if spot.mode == .heal, offset == .zero {
+            offset = autoSourceOffset(for: spot, image: image, context: context)
+        }
+
         var patch = image
             .clampedToExtent()
             .transformed(by: CGAffineTransform(translationX: -offset.dx, y: -offset.dy))
@@ -55,9 +53,10 @@ enum RetouchRenderer {
                                  context: context)
         }
 
-        guard let mask = circularMask(center: center,
-                                      radius: radius,
-                                      feather: spot.feather) else { return image }
+        guard var mask = regionMask(for: spot, center: center, extent: extent) else { return image }
+        if spot.opacity < 0.999 {
+            mask = scaledMask(mask, opacity: spot.opacity, extent: extent)
+        }
 
         let blend = CIFilter.blendWithMask()
         blend.inputImage = patch
@@ -66,15 +65,90 @@ enum RetouchRenderer {
         return blend.outputImage?.cropped(to: extent) ?? image
     }
 
+    // MARK: Auto source
+
+    /// Finds the best-matching source patch in a ring around the destination.
+    static func autoSourceOffset(
+        for spot: RetouchSpot, image: CIImage, context: CIContext
+    ) -> CGVector {
+        let extent = image.extent
+        let center = spot.effectiveCenter
+        let patchRadius = max(spot.radius * extent.width, 4)
+        let destCenter = CGPoint(
+            x: extent.origin.x + center.x * extent.width,
+            y: extent.origin.y + center.y * extent.height
+        )
+        let sampleSize = patchRadius * 2
+        let destRect = CGRect(
+            x: destCenter.x - patchRadius, y: destCenter.y - patchRadius,
+            width: sampleSize, height: sampleSize
+        ).integral.intersection(extent)
+        guard let destPatch = cropBitmap(image, rect: destRect, context: context) else {
+            return CGVector(dx: patchRadius * 1.5, dy: 0)
+        }
+
+        var bestScore = Double.greatestFiniteMagnitude
+        var bestOffset = CGVector(dx: patchRadius * 1.5, dy: 0)
+        let searchRadius = patchRadius * 4
+        let step = max(patchRadius * 0.75, 6)
+
+        var dy = -searchRadius
+        while dy <= searchRadius {
+            var dx = -searchRadius
+            while dx <= searchRadius {
+                let distance = hypot(dx, dy)
+                if distance < patchRadius * 1.2 || distance > searchRadius { dx += step; continue }
+                let sourceRect = destRect.offsetBy(dx: dx, dy: dy).intersection(extent)
+                guard sourceRect.width >= sampleSize * 0.8, sourceRect.height >= sampleSize * 0.8,
+                      let sourcePatch = cropBitmap(image, rect: sourceRect, context: context)
+                else { dx += step; continue }
+                let score = patchDistance(destPatch, sourcePatch)
+                if score < bestScore {
+                    bestScore = score
+                    bestOffset = CGVector(dx: dx, dy: dy)
+                }
+                dx += step
+            }
+            dy += step
+        }
+        return bestOffset
+    }
+
+    private static func cropBitmap(
+        _ image: CIImage, rect: CGRect, context: CIContext
+    ) -> [Float]? {
+        let clamped = rect.intersection(image.extent).integral
+        guard clamped.width >= 2, clamped.height >= 2,
+              let cg = context.createCGImage(image, from: clamped) else { return nil }
+        let width = cg.width
+        let height = cg.height
+        var pixels = [Float](repeating: 0, count: width * height * 4)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: &pixels, width: width, height: height, bitsPerComponent: 32,
+            bytesPerRow: width * 4 * MemoryLayout<Float>.stride, space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.floatComponents.rawValue
+        ) else { return nil }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return pixels
+    }
+
+    private static func patchDistance(_ a: [Float], _ b: [Float]) -> Double {
+        let count = min(a.count, b.count) / 4
+        guard count > 0 else { return .greatestFiniteMagnitude }
+        var sum = 0.0
+        for index in 0..<count {
+            let base = index * 4
+            let dr = Double(a[base] - b[base])
+            let dg = Double(a[base + 1] - b[base + 1])
+            let db = Double(a[base + 2] - b[base + 2])
+            sum += dr * dr + dg * dg + db * db
+        }
+        return sum / Double(count)
+    }
+
     // MARK: Heal color matching
 
-    /// Shifts the patch by (destination-surround average − source average),
-    /// per channel, so the copied texture takes on the local tone it lands in.
-    ///
-    /// Averages are read back in the **linear working space** (`colorSpace:
-    /// nil`) because the bias is applied by `CIColorMatrix`, which operates on
-    /// working-space values — a bias measured in gamma-encoded sRGB would
-    /// over-correct shadows and under-correct highlights.
     private static func colorMatched(
         _ patch: CIImage,
         to image: CIImage,
@@ -83,9 +157,6 @@ enum RetouchRenderer {
         offset: CGVector,
         context: CIContext
     ) -> CIImage {
-        // The destination sample rect is twice the spot radius on every side,
-        // so the defect being removed is a minority of the average and the
-        // surrounding tone dominates.
         let surround = radius * 2
         let destRect = CGRect(
             x: center.x - surround, y: center.y - surround,
@@ -138,18 +209,37 @@ enum RetouchRenderer {
         return (Double(buffer[0]), Double(buffer[1]), Double(buffer[2]))
     }
 
-    // MARK: Mask
+    // MARK: Masks
 
-    /// A feathered white circle on black, converted to the alpha mask
-    /// `CIBlendWithMask` actually reads.
+    static func alphaMask(for spot: RetouchSpot, extent: CGRect) -> CIImage? {
+        let center = CGPoint(
+            x: extent.origin.x + spot.effectiveCenter.x * extent.width,
+            y: extent.origin.y + spot.effectiveCenter.y * extent.height
+        )
+        guard var mask = regionMask(for: spot, center: center, extent: extent) else { return nil }
+        if spot.opacity < 0.999 {
+            mask = scaledMask(mask, opacity: spot.opacity, extent: extent)
+        }
+        return mask
+    }
+
+    private static func regionMask(
+        for spot: RetouchSpot, center: CGPoint, extent: CGRect
+    ) -> CIImage? {
+        switch spot.kind {
+        case .circle:
+            return circularMask(center: center, radius: max(spot.radius * extent.width, 1),
+                                feather: spot.feather)
+        case .stroke:
+            return strokeMask(points: spot.strokePoints, radius: spot.radius,
+                              feather: spot.feather, extent: extent)
+        }
+    }
+
     private static func circularMask(
         center: CGPoint, radius: CGFloat, feather: Double
     ) -> CIImage? {
         let clampedFeather = min(max(feather, 0), 1)
-        // Never let the inner radius reach the outer one: CIRadialGradient
-        // with radius0 == radius1 does not draw a hard-edged circle, it
-        // degenerates into a soft falloff. Half a pixel of transition is
-        // visually hard and keeps the gradient well-defined.
         let inner = max(min(radius * (1 - clampedFeather), radius - 0.5), 0)
 
         let gradient = CIFilter.radialGradient()
@@ -163,5 +253,67 @@ enum RetouchRenderer {
         let toAlpha = CIFilter.maskToAlpha()
         toAlpha.inputImage = circle
         return toAlpha.outputImage
+    }
+
+    private static func strokeMask(
+        points: [CGPoint], radius: Double, feather: Double, extent: CGRect
+    ) -> CIImage? {
+        guard !points.isEmpty else { return nil }
+        var result = CIImage(color: .black).cropped(to: extent)
+        let brushRadius = max(radius * extent.width, 1)
+        let inner = max(min(brushRadius * (1 - feather), brushRadius - 0.5), 0)
+
+        for point in interpolatedPoints(points, unitStep: max(radius * 0.45, 0.002)) {
+            let center = CGPoint(
+                x: extent.origin.x + point.x * extent.width,
+                y: extent.origin.y + point.y * extent.height
+            )
+            let dab = CIFilter.radialGradient()
+            dab.center = center
+            dab.radius0 = Float(inner)
+            dab.radius1 = Float(brushRadius)
+            dab.color0 = .white
+            dab.color1 = .black
+            guard let image = dab.outputImage?.cropped(to: extent) else { continue }
+            let composite = CIFilter.maximumCompositing()
+            composite.inputImage = image
+            composite.backgroundImage = result
+            result = composite.outputImage?.cropped(to: extent) ?? result
+        }
+
+        let toAlpha = CIFilter.maskToAlpha()
+        toAlpha.inputImage = result
+        return toAlpha.outputImage
+    }
+
+    private static func interpolatedPoints(
+        _ points: [CGPoint], unitStep: Double
+    ) -> [CGPoint] {
+        guard var previous = points.first else { return [] }
+        var output = [previous]
+        for point in points.dropFirst() {
+            let distance = hypot(point.x - previous.x, point.y - previous.y)
+            let segments = max(Int(ceil(distance / unitStep)), 1)
+            for index in 1...segments {
+                let t = CGFloat(index) / CGFloat(segments)
+                output.append(CGPoint(
+                    x: previous.x + (point.x - previous.x) * t,
+                    y: previous.y + (point.y - previous.y) * t
+                ))
+            }
+            previous = point
+        }
+        return output
+    }
+
+    private static func scaledMask(_ mask: CIImage, opacity: Double, extent: CGRect) -> CIImage {
+        let matrix = CIFilter.colorMatrix()
+        matrix.inputImage = mask
+        let scale = CGFloat(opacity)
+        matrix.rVector = CIVector(x: scale, y: 0, z: 0, w: 0)
+        matrix.gVector = CIVector(x: 0, y: scale, z: 0, w: 0)
+        matrix.bVector = CIVector(x: 0, y: 0, z: scale, w: 0)
+        matrix.aVector = CIVector(x: 0, y: 0, z: 0, w: 1)
+        return matrix.outputImage?.cropped(to: extent) ?? mask
     }
 }

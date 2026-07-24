@@ -175,6 +175,51 @@ final class RetouchTests: XCTestCase {
         XCTAssertEqual(smallEdge.red, largeEdge.red, accuracy: 0.05)
     }
 
+    func testStrokeCloneCoversPaintedPath() {
+        let image = splitImage()
+        var spot = RetouchSpot()
+        spot.mode = .clone
+        spot.kind = .stroke
+        spot.radius = 0.04
+        spot.feather = 0
+        spot.strokePoints = [
+            CGPoint(x: 0.25, y: 0.5),
+            CGPoint(x: 0.35, y: 0.5),
+        ]
+        spot.sourceOffset = CGVector(dx: 0.5, dy: 0)
+
+        let result = RetouchRenderer.apply([spot], to: image, context: context)
+        let patched = color(of: result, atUnit: CGPoint(x: 0.30, y: 0.5))
+        XCTAssertGreaterThan(patched.green, 0.5)
+    }
+
+    func testOpacityReducesEffect() {
+        let image = splitImage()
+        var full = makeSpot(center: CGPoint(x: 0.25, y: 0.5),
+                            offset: CGVector(dx: 0.5, dy: 0))
+        var half = full
+        half.opacity = 0.5
+
+        let fullResult = color(of: RetouchRenderer.apply([full], to: image, context: context),
+                               atUnit: CGPoint(x: 0.25, y: 0.5))
+        let halfResult = color(of: RetouchRenderer.apply([half], to: image, context: context),
+                               atUnit: CGPoint(x: 0.25, y: 0.5))
+
+        XCTAssertGreaterThan(fullResult.green - halfResult.green, 0.15)
+    }
+
+    func testRetouchStrokeRoundTripsThroughJSON() throws {
+        var stack = EditStack()
+        var spot = RetouchSpot()
+        spot.kind = .stroke
+        spot.strokePoints = [CGPoint(x: 0.2, y: 0.3), CGPoint(x: 0.4, y: 0.5)]
+        spot.opacity = 0.75
+        stack.retouch = [spot]
+
+        let decoded = try JSONDecoder().decode(EditStack.self, from: JSONEncoder().encode(stack))
+        XCTAssertEqual(decoded, stack)
+    }
+
     // MARK: Persistence
 
     func testRetouchRoundTripsThroughJSON() throws {
