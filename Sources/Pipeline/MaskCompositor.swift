@@ -86,7 +86,9 @@ enum MaskCompositor {
             raw = radialGradient(component, extent: extent)
         case .brush:
             raw = brushMask(component, extent: extent)
-        case .luminance, .colorRange:
+        case .luminance:
+            raw = RangeMaskBuilder.luminanceMask(component, source: source, extent: extent)
+        case .colorRange:
             // Supplied by RangeMaskBuilder in a later task.
             raw = nil
         }

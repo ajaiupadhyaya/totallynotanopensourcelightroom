@@ -14,6 +14,7 @@
 		05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */; };
 		09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */; };
 		0E9C125BCDD2DD2C9B08B43A /* FilmPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC55460271E2A012E80DEEEC /* FilmPanel.swift */; };
+		1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */; };
 		1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD897D60EAA5BF2C6D21704E /* EditorModel.swift */; };
 		1D5A1CA413710403E332411D /* CurvePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADE0E7375015B3EDE0039A6 /* CurvePanel.swift */; };
 		1F2E47439F4A2C335ECEA0B2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42064BDE271E9B76EFFD6DCC /* Theme.swift */; };
@@ -78,6 +79,7 @@
 		BB4B230C9FB8D4D3EFF1A34A /* GeometryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */; };
 		BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C971C5547D7963F84FCD8C69 /* TestSupport.swift */; };
 		BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */; };
+		C77F70158B7D055047998194 /* RangeMaskBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */; };
 		C9314B0B31F82C1252544841 /* CanvasToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A24E17192240663CA3BE4181 /* CanvasToolTests.swift */; };
 		CAC6C60E412BFCCF6672799C /* EditSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */; };
 		CCBDF78D068851D99E8F8867 /* ToolKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B80BB6DE75F993D679057C /* ToolKeyMonitor.swift */; };
@@ -132,6 +134,7 @@
 		3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExportSheet.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		42064BDE271E9B76EFFD6DCC /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskTests.swift; sourceTree = "<group>"; };
 		4625C5AC7A6158F9CC38CD61 /* FocusPeaking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPeaking.swift; sourceTree = "<group>"; };
 		4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogEntry.swift; sourceTree = "<group>"; };
 		4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeCache.swift; sourceTree = "<group>"; };
@@ -186,6 +189,7 @@
 		D915C4CBA652F53BDCDD730E /* VirtualCopyAndSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualCopyAndSnapshotTests.swift; sourceTree = "<group>"; };
 		DAA4A8702F7807BAA87F5D7C /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetouchTests.swift; sourceTree = "<group>"; };
+		DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskBuilder.swift; sourceTree = "<group>"; };
 		E1B80BB6DE75F993D679057C /* ToolKeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolKeyMonitor.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 		E869071E34608F2B4DFA10AB /* ToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRail.swift; sourceTree = "<group>"; };
@@ -287,6 +291,7 @@
 				8E14E1A0F0166E0308D4C1C9 /* MaskMigrationTests.swift */,
 				C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */,
 				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
+				458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */,
 				DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */,
 				C971C5547D7963F84FCD8C69 /* TestSupport.swift */,
 				0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */,
@@ -351,6 +356,7 @@
 				798CF687AF441778F974D6E6 /* ImageDecoder.swift */,
 				08C1D0BE182638F209A58D27 /* LocalAdjustmentRenderer.swift */,
 				523FF6E84F8696BA923A783B /* MaskCompositor.swift */,
+				DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */,
 				0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */,
 			);
 			path = Pipeline;
@@ -519,6 +525,7 @@
 				735BEA9F720108E3B924B556 /* MaskMigrationTests.swift in Sources */,
 				3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */,
 				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
+				1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */,
 				91D2B5ADD90FF74D56FF5078 /* RetouchTests.swift in Sources */,
 				BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */,
 				A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */,
@@ -580,6 +587,7 @@
 				310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */,
 				E773B9FE625A1E81218CE4A5 /* PhotoMetadata.swift in Sources */,
 				2EDFF08ECFDF4934C0EFAB81 /* PresetPanel.swift in Sources */,
+				C77F70158B7D055047998194 /* RangeMaskBuilder.swift in Sources */,
 				1FB8533D3BC7684CD3E9D3EB /* RetouchPanel.swift in Sources */,
 				A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */,
 				58126A828112E984EDE39BED /* RetouchSpot.swift in Sources */,
