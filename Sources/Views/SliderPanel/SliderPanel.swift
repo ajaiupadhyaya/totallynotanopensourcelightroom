@@ -126,6 +126,15 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
+                    "Point Color",
+                    index: "09a",
+                    isModified: !model.editStack.color.pointColors.allSatisfy(\.isNeutral),
+                    onReset: { model.editStack.color.pointColors = [] }
+                ) {
+                    PointColorPanel(model: model)
+                }
+
+                PanelSection(
                     "Color Grade",
                     index: "09",
                     isModified: !model.editStack.color.grading.isNeutral,
@@ -138,10 +147,18 @@ struct SliderPanel: View {
                     "Tone Curve",
                     index: "10",
                     isModified: !model.editStack.toneCurvePoints.isEmpty
-                        || !model.editStack.color.channelCurves.isNeutral,
+                        || !model.editStack.color.channelCurves.isNeutral
+                        || model.editStack.toneCurveHighlights != 0
+                        || model.editStack.toneCurveLights != 0
+                        || model.editStack.toneCurveDarks != 0
+                        || model.editStack.toneCurveShadows != 0,
                     onReset: {
                         model.editStack.toneCurvePoints = []
                         model.editStack.color.channelCurves = ChannelCurves()
+                        model.editStack.toneCurveHighlights = 0
+                        model.editStack.toneCurveLights = 0
+                        model.editStack.toneCurveDarks = 0
+                        model.editStack.toneCurveShadows = 0
                     }
                 ) {
                     CurvePanel(model: model)

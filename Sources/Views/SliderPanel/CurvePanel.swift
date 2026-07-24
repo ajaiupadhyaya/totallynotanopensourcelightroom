@@ -39,6 +39,21 @@ struct CurvePanel: View {
         ToneCurveEditor(points: pointsBinding, lineColor: channel.color)
             .frame(height: 190)
 
+        if channel == .rgb {
+            AdjustmentSlider(title: "Highlights",
+                             value: $model.editStack.toneCurveHighlights,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Lights",
+                             value: $model.editStack.toneCurveLights,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Darks",
+                             value: $model.editStack.toneCurveDarks,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Shadows",
+                             value: $model.editStack.toneCurveShadows,
+                             range: -100...100, format: "%.0f", neutral: 0)
+        }
+
         Text("Drag a point vertically to reshape. Double-click to reset "
              + "this channel.")
             .font(.system(size: 10, design: .monospaced))

@@ -1,3 +1,5 @@
+import UniformTypeIdentifiers
+import AppKit
 import SwiftUI
 
 /// Black-and-white treatment plus the per-hue-band color mixer.
@@ -37,10 +39,28 @@ struct ColorMixerPanel: View {
                 AdjustmentSlider(title: "Luminance", value: bandBinding(\.luminance),
                                  range: -100...100, format: "%.0f", neutral: 0)
             }
+
+            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+
+            Text("CALIBRATION").engraved()
+            AdjustmentSlider(title: "Red Hue", value: calibrationBinding(\.redHue),
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Green Hue", value: calibrationBinding(\.greenHue),
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Blue Hue", value: calibrationBinding(\.blueHue),
+                             range: -100...100, format: "%.0f", neutral: 0)
+
+            HStack {
+                PlateButton(title: "Import LUT") { importLUT() }
+                if !model.editStack.color.creativeLUT.isNeutral {
+                    Text(model.editStack.color.creativeLUT.name.uppercased())
+                        .font(Theme.valueFont)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
         }
     }
 
-    /// Swatches for each band, marked when that band has been adjusted.
     private var bandPicker: some View {
         HStack(spacing: 4) {
             ForEach(HueBand.allCases) { band in
@@ -93,6 +113,31 @@ struct ColorMixerPanel: View {
             get: { model.editStack.color.mixer.blackAndWhiteWeight(selectedBand) },
             set: { model.editStack.color.mixer.setBlackAndWhiteWeight($0, for: selectedBand) }
         )
+    }
+
+    private func calibrationBinding(
+        _ keyPath: WritableKeyPath<ColorCalibration, Double>
+    ) -> Binding<Double> {
+        Binding(
+            get: { model.editStack.color.calibration[keyPath: keyPath] },
+            set: { model.editStack.color.calibration[keyPath: keyPath] = $0 }
+        )
+    }
+
+    private func importLUT() {
+        let panel = NSOpenPanel()
+        if let cube = UTType(filenameExtension: "cube") {
+            panel.allowedContentTypes = [cube]
+        }
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let parsed = try? LUTImporter.parse(url: url) else { return }
+        var lut = CreativeLUT()
+        lut.name = parsed.name
+        lut.dimension = parsed.dimension
+        lut.cubeData = parsed.cubeData
+        lut.intensity = 1
+        model.editStack.color.creativeLUT = lut
     }
 }
 

@@ -2,6 +2,40 @@
 
 All notable changes to PhotoEditor are documented here.
 
+## 2.0.0 — 2026-07-24
+
+### Added
+
+- **Metal preview canvas** — the develop view renders the Core Image graph
+  directly through `CIRenderDestination` into a Metal layer, eliminating the
+  CGImage round-trip and enabling smoother slider scrubbing on ProMotion displays.
+- **Full-resolution zoom** — at 100%+ zoom the preview renders from the
+  original file in 512 px tiles instead of the 1600 px proxy.
+- **EDR display** — extended-linear working space with
+  `wantsExtendedDynamicRangeContent` on the Metal layer for HDR-capable displays.
+- **Render scheduling** — preview renders coalesce during rapid slider bursts so
+  stale frames are dropped instead of queued.
+- **Point Color** — sample colours on the photograph and shift their hue,
+  saturation, and luminance within a chosen range, folded into the LUT pipeline.
+- **Parametric tone curve** — region sliders for highlights, lights, darks, and
+  shadows alongside the point curve.
+- **Color calibration** — primary hue and saturation sliders for red, green, and
+  blue primaries, applied before the mixer.
+- **Creative LUT import** — load Adobe `.cube` files as a look stage with
+  adjustable intensity.
+- **Local colour tools** — masked regions now support grading, mixer bands, and
+  per-channel curves through the local colour LUT.
+- **ML masking** — on-device Vision subject, person, background, and sky masks
+  as composable components with disk cache.
+- **Stroke retouch** — brush-stroke heal, clone, and remove regions with
+  per-region opacity and feather; content-aware Remove via PatchMatch inpainting
+  with automatic source selection for heal.
+
+### Changed
+
+- Thumbnails and test fallbacks still rasterize through a 1600 px proxy; the
+  Metal canvas shows the full-res graph when zoomed.
+
 ## 1.3.0 — 2026-07-21
 
 ### Added

@@ -66,10 +66,14 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
     /// Warmth shift, `-100...100`. Positive warms the masked area.
     var warmth: Double = 0
 
+    /// Local colour tools applied inside the mask via the same LUT pipeline.
+    var color = ColorSettings()
+
     /// True when the corrections would change nothing.
     var isNeutral: Bool {
         exposure == 0 && contrast == 0 && highlights == 0
             && shadows == 0 && saturation == 0 && warmth == 0
+            && color.isNeutral
     }
 
     /// True when the selection cannot select anything.
@@ -89,7 +93,7 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
     // hand: legacy keys are read on the way in and never written back.
     enum CodingKeys: String, CodingKey {
         case id, isEnabled, isInverted, components
-        case exposure, contrast, highlights, shadows, saturation, warmth
+        case exposure, contrast, highlights, shadows, saturation, warmth, color
         case shape, startPoint, endPoint, center, radiusX, radiusY, feather
         case brushStrokes, brushSize, brushFeather, brushFlow
     }
@@ -116,6 +120,7 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
         shadows = c.lenient(.shadows, 0)
         saturation = c.lenient(.saturation, 0)
         warmth = c.lenient(.warmth, 0)
+        color = c.lenient(.color, ColorSettings())
     }
 
     func encode(to encoder: Encoder) throws {
@@ -130,6 +135,7 @@ struct LocalAdjustment: Codable, Equatable, Identifiable {
         try c.encode(shadows, forKey: .shadows)
         try c.encode(saturation, forKey: .saturation)
         try c.encode(warmth, forKey: .warmth)
+        try c.encode(color, forKey: .color)
     }
 
     /// Rebuilds the single component a pre-1.3 adjustment described with flat

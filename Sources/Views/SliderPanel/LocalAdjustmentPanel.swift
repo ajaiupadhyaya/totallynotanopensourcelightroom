@@ -160,6 +160,8 @@ struct LocalAdjustmentPanel: View {
                          value: maskBinding(index, \.warmth),
                          range: -100...100, format: "%.0f", neutral: 0)
 
+        localColorControls(at: index)
+
         if let selected = component(index), selected.shape == .brush {
             HStack {
                 Text("\(selected.brushStrokes.count) STROKES")
@@ -182,30 +184,18 @@ struct LocalAdjustmentPanel: View {
             .foregroundStyle(Theme.secondaryText)
     }
 
+    // MARK: Local color
+
+    @ViewBuilder
+    private func localColorControls(at index: Int) -> some View {
+        LocalMaskColorControls(model: model, maskIndex: index)
+    }
+
     // MARK: Bindings
 
     /// Addresses a property of the *selected component* of the mask at `index`.
     /// Distinct from ``maskBinding(_:_:)``, which addresses the adjustment's
     /// own corrections — the two live on different types now.
-    private func componentBinding(
-        _ index: Int, _ keyPath: WritableKeyPath<MaskComponent, Double>
-    ) -> Binding<Double> {
-        Binding(
-            get: {
-                guard let componentIndex = resolvedComponentIndex(index) else {
-                    return MaskComponent()[keyPath: keyPath]
-                }
-                return model.editStack.localAdjustments[index]
-                    .components[componentIndex][keyPath: keyPath]
-            },
-            set: {
-                guard let componentIndex = resolvedComponentIndex(index) else { return }
-                model.editStack.localAdjustments[index]
-                    .components[componentIndex][keyPath: keyPath] = $0
-            }
-        )
-    }
-
     private func maskBinding<T>(
         _ index: Int, _ keyPath: WritableKeyPath<LocalAdjustment, T>
     ) -> Binding<T> {
@@ -236,6 +226,105 @@ struct LocalAdjustmentPanel: View {
                 guard let index = model.editStack.localAdjustments.firstIndex(where: { $0.id == id })
                 else { return }
                 model.editStack.localAdjustments[index][keyPath: keyPath] = newValue
+            }
+        )
+    }
+}
+
+/// Grading, mixer, and curve controls for a masked local colour LUT.
+private struct LocalMaskColorControls: View {
+    @Bindable var model: EditorModel
+    let maskIndex: Int
+
+    @State private var gradingZone: ColorGradingPanel.Zone = .midtones
+    @State private var mixerBand: HueBand = .red
+    @State private var curveChannel: CurvePanel.Channel = .red
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            Text("LOCAL COLOR").engraved()
+
+            TabStrip(
+                options: ColorGradingPanel.Zone.allCases.map { ($0, $0.displayName) },
+                selection: $gradingZone
+            )
+            AdjustmentSlider(title: "Grade Hue",
+                             value: localGradeBinding(\.hue),
+                             range: 0...360, format: "%.0f°", neutral: 0)
+            AdjustmentSlider(title: "Grade Sat",
+                             value: localGradeBinding(\.saturation),
+                             range: 0...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Grade Lum",
+                             value: localGradeBinding(\.luminance),
+                             range: -100...100, format: "%.0f", neutral: 0)
+
+            TabStrip(
+                options: HueBand.allCases.map { ($0, $0.displayName) },
+                selection: $mixerBand
+            )
+            AdjustmentSlider(title: "Mixer Hue",
+                             value: localMixerBinding(\.hue),
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Mixer Sat",
+                             value: localMixerBinding(\.saturation),
+                             range: -100...100, format: "%.0f", neutral: 0)
+
+            TabStrip(
+                options: [CurvePanel.Channel.red, .green, .blue].map { ($0, $0.rawValue) },
+                selection: $curveChannel
+            )
+            ToneCurveEditor(points: localCurveBinding, lineColor: curveChannel.color)
+                .frame(height: 120)
+        }
+    }
+
+    private var localCurveBinding: Binding<[CGPoint]> {
+        switch curveChannel {
+        case .rgb, .red:
+            return Binding(
+                get: { model.editStack.localAdjustments[maskIndex].color.channelCurves.red },
+                set: { model.editStack.localAdjustments[maskIndex].color.channelCurves.red = $0 }
+            )
+        case .green:
+            return Binding(
+                get: { model.editStack.localAdjustments[maskIndex].color.channelCurves.green },
+                set: { model.editStack.localAdjustments[maskIndex].color.channelCurves.green = $0 }
+            )
+        case .blue:
+            return Binding(
+                get: { model.editStack.localAdjustments[maskIndex].color.channelCurves.blue },
+                set: { model.editStack.localAdjustments[maskIndex].color.channelCurves.blue = $0 }
+            )
+        }
+    }
+
+    private func localGradeBinding(
+        _ keyPath: WritableKeyPath<ColorGradeZone, Double>
+    ) -> Binding<Double> {
+        let zonePath: WritableKeyPath<ColorGrading, ColorGradeZone> = switch gradingZone {
+        case .shadows: \.shadows
+        case .midtones: \.midtones
+        case .highlights: \.highlights
+        }
+        return Binding(
+            get: {
+                model.editStack.localAdjustments[maskIndex].color.grading[keyPath: zonePath][keyPath: keyPath]
+            },
+            set: {
+                model.editStack.localAdjustments[maskIndex].color.grading[keyPath: zonePath][keyPath: keyPath] = $0
+            }
+        )
+    }
+
+    private func localMixerBinding(
+        _ keyPath: WritableKeyPath<HSLAdjustment, Double>
+    ) -> Binding<Double> {
+        Binding(
+            get: {
+                model.editStack.localAdjustments[maskIndex].color.mixer[mixerBand][keyPath: keyPath]
+            },
+            set: {
+                model.editStack.localAdjustments[maskIndex].color.mixer[mixerBand][keyPath: keyPath] = $0
             }
         )
     }

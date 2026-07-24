@@ -104,6 +104,12 @@ struct EditStack: Codable, Equatable {
     /// change). When set, it holds exactly five points to feed `CIToneCurve`.
     var toneCurvePoints: [CGPoint] = []
 
+    /// Parametric tone-curve regions, `-100...100`.
+    var toneCurveHighlights: Double = 0
+    var toneCurveLights: Double = 0
+    var toneCurveDarks: Double = 0
+    var toneCurveShadows: Double = 0
+
     // MARK: Color mixer, grading, and per-channel curves
 
     /// Everything rendered through the color LUT: black-and-white treatment,
@@ -173,6 +179,10 @@ extension EditStack {
         grainSize = c.lenient(.grainSize, 25)
 
         toneCurvePoints = c.lenient(.toneCurvePoints, [])
+        toneCurveHighlights = c.lenient(.toneCurveHighlights, 0)
+        toneCurveLights = c.lenient(.toneCurveLights, 0)
+        toneCurveDarks = c.lenient(.toneCurveDarks, 0)
+        toneCurveShadows = c.lenient(.toneCurveShadows, 0)
         color = c.lenient(.color, ColorSettings())
         localAdjustments = c.lenient(.localAdjustments, [])
         retouch = c.lenient(.retouch, [])

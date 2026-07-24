@@ -92,6 +92,12 @@ enum LocalAdjustmentRenderer {
             result = controls.outputImage ?? result
         }
 
+        if !adjustment.color.isNeutral,
+           let filter = ColorCubeBuilder.makeFilter(for: adjustment.color) {
+            filter.setValue(result, forKey: kCIInputImageKey)
+            result = filter.outputImage ?? result
+        }
+
         return result
     }
 

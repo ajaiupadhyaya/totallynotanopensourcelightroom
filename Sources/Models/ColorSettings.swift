@@ -192,20 +192,106 @@ struct ChannelCurves: Codable, Equatable {
     }
 }
 
+/// A targeted adjustment sampled from one colour on the photograph.
+struct PointColorTarget: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var red = 0.5
+    var green = 0.5
+    var blue = 0.5
+    var hue = 0.0
+    var saturation = 0.0
+    var luminance = 0.0
+    var range = 0.15
+    var falloff = 0.10
+
+    var isNeutral: Bool { hue == 0 && saturation == 0 && luminance == 0 }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(.id, UUID())
+        red = c.lenient(.red, 0.5)
+        green = c.lenient(.green, 0.5)
+        blue = c.lenient(.blue, 0.5)
+        hue = c.lenient(.hue, 0)
+        saturation = c.lenient(.saturation, 0)
+        luminance = c.lenient(.luminance, 0)
+        range = c.lenient(.range, 0.15)
+        falloff = c.lenient(.falloff, 0.10)
+    }
+}
+
+/// Primary hue/saturation calibration applied before the mixer.
+struct ColorCalibration: Codable, Equatable {
+    var redHue = 0.0
+    var redSaturation = 0.0
+    var greenHue = 0.0
+    var greenSaturation = 0.0
+    var blueHue = 0.0
+    var blueSaturation = 0.0
+
+    var isNeutral: Bool {
+        redHue == 0 && redSaturation == 0 && greenHue == 0 && greenSaturation == 0
+            && blueHue == 0 && blueSaturation == 0
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        redHue = c.lenient(.redHue, 0)
+        redSaturation = c.lenient(.redSaturation, 0)
+        greenHue = c.lenient(.greenHue, 0)
+        greenSaturation = c.lenient(.greenSaturation, 0)
+        blueHue = c.lenient(.blueHue, 0)
+        blueSaturation = c.lenient(.blueSaturation, 0)
+    }
+}
+
+/// Imported `.cube` look stored alongside custom film stocks.
+struct CreativeLUT: Codable, Equatable {
+    var name = "Imported LUT"
+    var dimension = 32
+    var cubeData = Data()
+    var intensity: Double = 1.0
+
+    var isNeutral: Bool { cubeData.isEmpty || intensity == 0 }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = c.lenient(.name, "Imported LUT")
+        dimension = c.lenient(.dimension, 32)
+        cubeData = c.lenient(.cubeData, Data())
+        intensity = c.lenient(.intensity, 1.0)
+    }
+}
+
 /// Everything the color LUT is built from, grouped so the renderer can cache
 /// on a single `Equatable` value rather than comparing a dozen fields.
 struct ColorSettings: Codable, Equatable {
     var treatment: Treatment = .color
+    var calibration = ColorCalibration()
     var mixer = ColorMixer()
     var grading = ColorGrading()
     var channelCurves = ChannelCurves()
+    var pointColors: [PointColorTarget] = []
+    var creativeLUT = CreativeLUT()
 
     /// True when the LUT would be the identity and can be skipped entirely.
     var isNeutral: Bool {
         treatment == .color
+            && calibration.isNeutral
             && mixer.isNeutral
             && grading.isNeutral
             && channelCurves.isNeutral
+            && pointColors.allSatisfy(\.isNeutral)
+            && creativeLUT.isNeutral
     }
 
     init() {}
@@ -214,8 +300,11 @@ struct ColorSettings: Codable, Equatable {
         self.init()
         let c = try decoder.container(keyedBy: CodingKeys.self)
         treatment = c.lenient(.treatment, Treatment.color)
+        calibration = c.lenient(.calibration, ColorCalibration())
         mixer = c.lenient(.mixer, ColorMixer())
         grading = c.lenient(.grading, ColorGrading())
         channelCurves = c.lenient(.channelCurves, ChannelCurves())
+        pointColors = c.lenient(.pointColors, [])
+        creativeLUT = c.lenient(.creativeLUT, CreativeLUT())
     }
 }

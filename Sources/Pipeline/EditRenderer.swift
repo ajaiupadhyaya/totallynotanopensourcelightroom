@@ -65,6 +65,7 @@ struct EditRenderer {
         image = applyPresence(image, stack: stack)
         image = applyColor(image, stack: stack)
         image = applyColorLUT(image, stack: stack)
+        image = applyCreativeLUT(image, stack: stack)
         image = applyToneCurve(image, stack: stack)
         // Local adjustments ride on top of the finished global look, but
         // before detail and effects so grain and vignette stay uniform.
@@ -243,15 +244,55 @@ struct EditRenderer {
         return filter.outputImage ?? image
     }
 
+    private func applyCreativeLUT(_ image: CIImage, stack: EditStack) -> CIImage {
+        let lut = stack.color.creativeLUT
+        guard !lut.isNeutral,
+              let filter = CIFilter(name: "CIColorCubeWithColorSpace") else { return image }
+        filter.setValue(lut.dimension, forKey: "inputCubeDimension")
+        filter.setValue(lut.cubeData, forKey: "inputCubeData")
+        filter.setValue(CGColorSpace(name: CGColorSpace.sRGB), forKey: "inputColorSpace")
+        filter.setValue(image, forKey: kCIInputImageKey)
+        guard let output = filter.outputImage else { return image }
+        guard lut.intensity < 0.999 else { return output }
+        let dissolve = CIFilter(name: "CIDissolveTransition")!
+        dissolve.setValue(image, forKey: kCIInputImageKey)
+        dissolve.setValue(output, forKey: "inputTargetImage")
+        dissolve.setValue(Float(lut.intensity), forKey: "inputTime")
+        return dissolve.outputImage ?? output
+    }
+
     private func applyToneCurve(_ image: CIImage, stack: EditStack) -> CIImage {
-        guard stack.toneCurvePoints.count == 5 else { return image }
+        var result = image
+        if hasParametricToneCurve(stack) {
+            result = applyParametricToneCurve(result, stack: stack)
+        }
+        guard stack.toneCurvePoints.count == 5 else { return result }
         let curve = CIFilter.toneCurve()
-        curve.inputImage = image
+        curve.inputImage = result
         curve.point0 = stack.toneCurvePoints[0]
         curve.point1 = stack.toneCurvePoints[1]
         curve.point2 = stack.toneCurvePoints[2]
         curve.point3 = stack.toneCurvePoints[3]
         curve.point4 = stack.toneCurvePoints[4]
+        return curve.outputImage ?? result
+    }
+
+    private func hasParametricToneCurve(_ stack: EditStack) -> Bool {
+        stack.toneCurveHighlights != 0 || stack.toneCurveLights != 0
+            || stack.toneCurveDarks != 0 || stack.toneCurveShadows != 0
+    }
+
+    private func applyParametricToneCurve(_ image: CIImage, stack: EditStack) -> CIImage {
+        func lift(_ value: Double, amount: Double) -> Double {
+            ColorScience.clamp(value + amount / 100 * 0.25)
+        }
+        let curve = CIFilter.toneCurve()
+        curve.inputImage = image
+        curve.point0 = CGPoint(x: 0, y: lift(0, amount: stack.toneCurveShadows))
+        curve.point1 = CGPoint(x: 0.25, y: lift(0.25, amount: stack.toneCurveDarks))
+        curve.point2 = CGPoint(x: 0.5, y: 0.5)
+        curve.point3 = CGPoint(x: 0.75, y: lift(0.75, amount: stack.toneCurveLights))
+        curve.point4 = CGPoint(x: 1, y: lift(1, amount: stack.toneCurveHighlights))
         return curve.outputImage ?? image
     }
 

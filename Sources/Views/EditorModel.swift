@@ -36,6 +36,14 @@ final class EditorModel {
     /// The rendered preview currently shown on screen.
     private(set) var displayImage: CGImage?
 
+    /// Pixel dimensions of the image used for the live preview (full-res when zoomed).
+    private(set) var previewPixelSize: CGSize?
+
+    /// The live Core Image graph for the Metal canvas path.
+    private(set) var previewCIImage: CIImage?
+
+    var renderContext: CIContext { renderer.context }
+
     /// A per-channel histogram of the current preview.
     private(set) var histogram: Histogram = .empty
 
@@ -43,10 +51,12 @@ final class EditorModel {
     private(set) var isMissingFile = false
 
     private var source: CIImage?
+    private var fullSource: CIImage?
     private let renderer = EditRenderer()
     private let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
     private let onPersist: () -> Void
+    private let renderScheduler = RenderScheduler()
 
     // Undo/redo, captured at debounced commit boundaries.
     private var lastCommittedStack: EditStack
@@ -61,6 +71,7 @@ final class EditorModel {
 
     private var commitWorkItem: DispatchWorkItem?
     private let commitDelay: TimeInterval
+    private let renderSynchronously: Bool
 
     var fileName: String { entry.fileURL.lastPathComponent }
 
@@ -80,6 +91,7 @@ final class EditorModel {
         catalog: CatalogStore,
         thumbnails: ThumbnailGenerator,
         commitDelay: TimeInterval = 0.4,
+        renderSynchronously: Bool = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil,
         onPersist: @escaping () -> Void = {}
     ) {
         self.entry = entry
@@ -89,6 +101,7 @@ final class EditorModel {
         self.catalog = catalog
         self.thumbnails = thumbnails
         self.commitDelay = commitDelay
+        self.renderSynchronously = renderSynchronously
         self.onPersist = onPersist
         loadSource()
         renderPreview()
@@ -114,7 +127,12 @@ final class EditorModel {
         case retouchPlace
         /// Click a colour; the selected colour-range component samples it.
         case colorRangeSample
+        /// Click a colour; the selected point-colour target samples it.
+        case pointColorSample
     }
+
+    /// Index of the point-colour target awaiting a canvas sample.
+    var pointColorSampleIndex: Int?
 
     /// The active canvas picker, or nil when clicks do nothing special.
     var canvasPicker: CanvasPicker?
@@ -135,6 +153,9 @@ final class EditorModel {
         case .colorRangeSample:
             sampleColorRange(at: point)
             return
+        case .pointColorSample:
+            samplePointColor(at: point)
+            return
         case nil:
             return
         }
@@ -145,7 +166,12 @@ final class EditorModel {
 
     /// Zoom factor over image pixels; nil fits the frame to the viewport.
     /// Owned here so the top bar and the canvas share one value.
-    var zoomLevel: Double?
+    var zoomLevel: Double? {
+        didSet {
+            guard zoomLevel != oldValue else { return }
+            renderPreview()
+        }
+    }
 
     // MARK: Retouch
 
@@ -236,9 +262,9 @@ final class EditorModel {
     func sampleColorRange(at point: CGPoint) {
         guard let mask = selectedMaskIndex, let component = selectedComponentIndex,
               editStack.localAdjustments[mask].components[component].shape == .colorRange,
-              let source else { return }
+              let renderSource = activeRenderSource() else { return }
 
-        let developed = renderer.render(source: source, stack: editStack)
+        let developed = renderer.render(source: renderSource, stack: editStack)
         let extent = developed.extent
         guard !extent.isInfinite else { return }
 
@@ -256,6 +282,33 @@ final class EditorModel {
 
         editStack.localAdjustments[mask].components[component].sampledColor =
             MaskColor(red: sampled.red, green: sampled.green, blue: sampled.blue)
+        canvasPicker = nil
+    }
+
+    /// Samples the developed image into the selected point-colour target.
+    func samplePointColor(at point: CGPoint) {
+        guard let index = pointColorSampleIndex,
+              editStack.color.pointColors.indices.contains(index),
+              let renderSource = activeRenderSource() else { return }
+
+        let developed = renderer.render(source: renderSource, stack: editStack)
+        let extent = developed.extent
+        guard !extent.isInfinite else { return }
+
+        let side = max(min(extent.width, extent.height) * 0.02, 4)
+        let rect = CGRect(
+            x: extent.origin.x + point.x * extent.width - side / 2,
+            y: extent.origin.y + point.y * extent.height - side / 2,
+            width: side, height: side
+        )
+        guard let sampled = FilmBaseSampler.sampleAverage(
+            from: developed, in: rect, context: renderer.context
+        ) else { return }
+
+        editStack.color.pointColors[index].red = sampled.red
+        editStack.color.pointColors[index].green = sampled.green
+        editStack.color.pointColors[index].blue = sampled.blue
+        pointColorSampleIndex = nil
         canvasPicker = nil
     }
 
@@ -718,14 +771,54 @@ final class EditorModel {
         guard let image = ImageDecoder.loadPreviewImage(from: entry.fileURL) else {
             isMissingFile = true
             source = nil
+            fullSource = nil
             return
         }
         source = image
+        fullSource = nil
+    }
+
+    private func activeRenderSource() -> CIImage? {
+        guard let source else { return nil }
+        if (zoomLevel ?? 0) >= 1.0 {
+            if fullSource == nil {
+                fullSource = ImageDecoder.loadFullImage(from: entry.fileURL)
+            }
+            return fullSource ?? source
+        }
+        return source
+    }
+
+    private func renderEditedImage(
+        from renderSource: CIImage, stack: EditStack
+    ) -> CIImage {
+        let mlEnvironment = MLMaskEnvironment(entryID: entry.id, geometry: stack.geometry)
+        if PreviewTileRenderer.shouldTile(renderSource) {
+            return PreviewTileRenderer.render(
+                source: renderSource, stack: stack, renderer: renderer,
+                mlEnvironment: mlEnvironment
+            )
+        }
+        return renderer.render(
+            source: renderSource, stack: stack, mlEnvironment: mlEnvironment
+        )
     }
 
     private func renderPreview() {
+        if renderSynchronously {
+            renderPreviewNow()
+            return
+        }
+        renderScheduler.schedule { [self] in
+            renderPreviewNow()
+        }
+    }
+
+    private func renderPreviewNow() {
         guard let source else {
             displayImage = nil
+            previewCIImage = nil
+            previewPixelSize = nil
             histogram = .empty
             return
         }
@@ -734,8 +827,20 @@ final class EditorModel {
             // Show the full frame while composing the crop.
             stack.geometry.cropRect = .unitFrame
         }
-        let mlEnvironment = MLMaskEnvironment(entryID: entry.id, geometry: stack.geometry)
-        let edited = renderer.render(source: source, stack: stack, mlEnvironment: mlEnvironment)
+        guard let renderSource = activeRenderSource() else {
+            displayImage = nil
+            previewCIImage = nil
+            previewPixelSize = nil
+            histogram = .empty
+            return
+        }
+
+        previewPixelSize = CGSize(
+            width: renderSource.extent.width,
+            height: renderSource.extent.height
+        )
+
+        let edited = renderEditedImage(from: renderSource, stack: stack)
 
         // The histogram describes the photo, so it is measured before the
         // peaking overlay — which is chrome, not image data.
@@ -757,7 +862,10 @@ final class EditorModel {
             shown = MaskOverlay.tinted(shown, mask: mask, extent: edited.extent)
         }
 
-        displayImage = renderer.makeCGImage(shown)
+        displayImage = renderer.makeCGImage(
+            ImageDecoder.downsampled(shown, maxDimension: 1600)
+        )
+        previewCIImage = shown
     }
 
     private func persist() {

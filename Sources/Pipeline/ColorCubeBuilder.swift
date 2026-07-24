@@ -81,6 +81,10 @@ enum ColorCubeBuilder {
     ) -> (red: Double, green: Double, blue: Double) {
         var color = (red: red, green: green, blue: blue)
 
+        if !settings.calibration.isNeutral {
+            color = applyCalibration(color, calibration: settings.calibration)
+        }
+
         switch settings.treatment {
         case .color:
             color = applyMixer(color, mixer: settings.mixer)
@@ -90,6 +94,10 @@ enum ColorCubeBuilder {
 
         if !settings.grading.isNeutral {
             color = applyGrading(color, grading: settings.grading)
+        }
+
+        if settings.pointColors.contains(where: { !$0.isNeutral }) {
+            color = applyPointColors(color, targets: settings.pointColors)
         }
 
         if !settings.channelCurves.isNeutral {
@@ -286,5 +294,54 @@ enum ColorCubeBuilder {
         let total = shadows + midtones + highlights
         guard total > 1e-9 else { return (0, 1, 0) }
         return (shadows / total, midtones / total, highlights / total)
+    }
+
+    // MARK: Calibration
+
+    private static func applyCalibration(
+        _ color: (red: Double, green: Double, blue: Double),
+        calibration: ColorCalibration
+    ) -> (red: Double, green: Double, blue: Double) {
+        func shift(primary: Double, hue: Double, saturation: Double) -> Double {
+            let amount = primary * (1 + saturation / 100)
+            return ColorScience.clamp(amount + hue / 300 * 0.05)
+        }
+        return (
+            shift(primary: color.red, hue: calibration.redHue, saturation: calibration.redSaturation),
+            shift(primary: color.green, hue: calibration.greenHue, saturation: calibration.greenSaturation),
+            shift(primary: color.blue, hue: calibration.blueHue, saturation: calibration.blueSaturation)
+        )
+    }
+
+    // MARK: Point color
+
+    private static func applyPointColors(
+        _ color: (red: Double, green: Double, blue: Double),
+        targets: [PointColorTarget]
+    ) -> (red: Double, green: Double, blue: Double) {
+        var result = color
+        for target in targets where !target.isNeutral {
+            let distance = sqrt(
+                pow(result.red - target.red, 2)
+                    + pow(result.green - target.green, 2)
+                    + pow(result.blue - target.blue, 2)
+            )
+            let width = max(target.falloff, 0.0001)
+            let weight = 1 - smoothstep((distance - target.range) / width)
+            guard weight > 1e-6 else { continue }
+
+            var (hue, saturation, lightness) =
+                ColorScience.rgbToHSL(result.red, result.green, result.blue)
+            hue = ColorScience.wrapHue(hue + target.hue / 100 * 30 * weight)
+            saturation = ColorScience.clamp(saturation * (1 + target.saturation / 100 * weight))
+            lightness = ColorScience.clamp(lightness + target.luminance / 100 * 0.3 * weight)
+            let adjusted = ColorScience.hslToRGB(hue, saturation, lightness)
+            result = (
+                result.red + (adjusted.red - result.red) * weight,
+                result.green + (adjusted.green - result.green) * weight,
+                result.blue + (adjusted.blue - result.blue) * weight
+            )
+        }
+        return result
     }
 }

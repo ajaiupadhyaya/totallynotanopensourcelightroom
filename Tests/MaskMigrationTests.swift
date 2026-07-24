@@ -129,7 +129,7 @@ final class MaskMigrationTests: XCTestCase {
         XCTAssertEqual(
             Set(object.keys),
             ["id", "isEnabled", "isInverted", "components",
-             "exposure", "contrast", "highlights", "shadows", "saturation", "warmth"],
+             "exposure", "contrast", "highlights", "shadows", "saturation", "warmth", "color"],
             "Legacy keys are read on the way in and never written back."
         )
         XCTAssertEqual((object["components"] as? [Any])?.count, 1)

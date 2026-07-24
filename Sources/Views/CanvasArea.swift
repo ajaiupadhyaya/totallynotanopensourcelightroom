@@ -136,8 +136,9 @@ private struct EditCanvas: View {
 
     @ViewBuilder
     private func canvasContent(viewportSize: CGSize) -> some View {
-        if let cgImage = editor.displayImage {
-            let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
+        if let imageSize = editor.previewPixelSize ?? editor.displayImage.map({
+            CGSize(width: $0.width, height: $0.height)
+        }) {
             let inset: CGFloat = 24
             let available = CGSize(width: max(viewportSize.width - inset * 2, 50),
                                    height: max(viewportSize.height - inset * 2, 50))
@@ -150,19 +151,29 @@ private struct EditCanvas: View {
                                      height: max(displaySize.height + inset * 2, viewportSize.height))
 
             ZStack {
-                Image(decorative: cgImage, scale: 1.0)
-                    .resizable()
-                    .interpolation(scale >= 1.0 ? .none : .high)
-                    .frame(width: displaySize.width, height: displaySize.height)
-                    // A soft edge separates the photo from the surround
-                    // without a bright border that would bias its own tones.
-                    .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
-                    .gesture(clickGesture(displaySize: displaySize))
-                    .overlay {
-                        if workspace.activeTool == .heal || workspace.activeTool == .clone {
-                            retouchPaintOverlay(displaySize: displaySize)
+                if let preview = editor.previewCIImage {
+                    MetalCanvasView(image: preview, context: editor.renderContext)
+                        .frame(width: displaySize.width, height: displaySize.height)
+                        .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
+                        .gesture(clickGesture(displaySize: displaySize))
+                        .overlay {
+                            if workspace.activeTool == .heal || workspace.activeTool == .clone {
+                                retouchPaintOverlay(displaySize: displaySize)
+                            }
                         }
-                    }
+                } else if let cgImage = editor.displayImage {
+                    Image(decorative: cgImage, scale: 1.0)
+                        .resizable()
+                        .interpolation(scale >= 1.0 ? .none : .high)
+                        .frame(width: displaySize.width, height: displaySize.height)
+                        .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
+                        .gesture(clickGesture(displaySize: displaySize))
+                        .overlay {
+                            if workspace.activeTool == .heal || workspace.activeTool == .clone {
+                                retouchPaintOverlay(displaySize: displaySize)
+                            }
+                        }
+                }
 
                 if editor.isCropping {
                     CropOverlay(cropRect: $editor.editStack.geometry.cropRect,
@@ -291,6 +302,7 @@ private struct EditCanvas: View {
         case .filmBase: "Click a clear piece of film border"
         case .retouchPlace: "Click the defect to remove"
         case .colorRangeSample: "Click the colour to select"
+        case .pointColorSample: "Click the colour to target"
         case nil: nil
         }
     }
