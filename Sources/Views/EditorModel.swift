@@ -602,7 +602,8 @@ final class EditorModel {
             sourceURL: entry.fileURL,
             stack: editStack,
             settings: settings,
-            to: url
+            to: url,
+            entryID: entry.id
         )
     }
 
@@ -715,7 +716,8 @@ final class EditorModel {
             // Show the full frame while composing the crop.
             stack.geometry.cropRect = .unitFrame
         }
-        let edited = renderer.render(source: source, stack: stack)
+        let mlEnvironment = MLMaskEnvironment(entryID: entry.id, geometry: stack.geometry)
+        let edited = renderer.render(source: source, stack: stack, mlEnvironment: mlEnvironment)
 
         // The histogram describes the photo, so it is measured before the
         // peaking overlay — which is chrome, not image data.
@@ -730,7 +732,9 @@ final class EditorModel {
         if isShowingMaskOverlay, let index = selectedMaskIndex,
            let mask = LocalAdjustmentRenderer.grayscaleMask(
                for: editStack.localAdjustments[index],
-               source: edited, extent: edited.extent
+               source: edited, extent: edited.extent,
+               mlEnvironment: MLMaskEnvironment(entryID: entry.id, geometry: editStack.geometry),
+               context: renderer.context
            ) {
             shown = MaskOverlay.tinted(shown, mask: mask, extent: edited.extent)
         }

@@ -15,13 +15,17 @@ enum MaskCompositor {
     /// `source` is the image the generated components measure. Spatial
     /// components ignore it.
     static func composedMask(
-        _ components: [MaskComponent], source: CIImage, extent: CGRect
+        _ components: [MaskComponent], source: CIImage, extent: CGRect,
+        mlEnvironment: MLMaskEnvironment? = nil, context: CIContext? = nil
     ) -> CIImage? {
         guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else { return nil }
 
         var result: CIImage?
         for component in components where component.isContributing {
-            guard let piece = componentMask(component, source: source, extent: extent) else {
+            guard let piece = componentMask(
+                component, source: source, extent: extent,
+                mlEnvironment: mlEnvironment, context: context
+            ) else {
                 continue
             }
             guard let current = result else {
@@ -76,7 +80,8 @@ enum MaskCompositor {
     // MARK: One component
 
     private static func componentMask(
-        _ component: MaskComponent, source: CIImage, extent: CGRect
+        _ component: MaskComponent, source: CIImage, extent: CGRect,
+        mlEnvironment: MLMaskEnvironment?, context: CIContext?
     ) -> CIImage? {
         let raw: CIImage?
         switch component.shape {
@@ -90,6 +95,18 @@ enum MaskCompositor {
             raw = RangeMaskBuilder.luminanceMask(component, source: source, extent: extent)
         case .colorRange:
             raw = RangeMaskBuilder.colorRangeMask(component, source: source, extent: extent)
+        case .subject:
+            raw = mlMask(.subject, source: source, extent: extent,
+                         mlEnvironment: mlEnvironment, context: context)
+        case .person:
+            raw = mlMask(.person, source: source, extent: extent,
+                         mlEnvironment: mlEnvironment, context: context)
+        case .background:
+            raw = mlMask(.background, source: source, extent: extent,
+                         mlEnvironment: mlEnvironment, context: context)
+        case .sky:
+            raw = mlMask(.sky, source: source, extent: extent,
+                         mlEnvironment: mlEnvironment, context: context)
         }
         guard var mask = raw?.cropped(to: extent) else { return nil }
 
@@ -221,6 +238,18 @@ enum MaskCompositor {
             previous = point
         }
         return output
+    }
+
+    private static func mlMask(
+        _ kind: SubjectMaskProvider.Kind,
+        source: CIImage, extent: CGRect,
+        mlEnvironment: MLMaskEnvironment?, context: CIContext?
+    ) -> CIImage? {
+        guard let context else { return nil }
+        return SubjectMaskProvider.mask(
+            kind: kind, source: source, extent: extent,
+            environment: mlEnvironment, context: context
+        )
     }
 
     static func pixelPoint(_ unit: CGPoint, in extent: CGRect) -> CGPoint {

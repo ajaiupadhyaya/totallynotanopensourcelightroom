@@ -18,24 +18,28 @@ enum LocalAdjustmentRenderer {
     /// entered this stage, *not* the running result, so masks do not cascade
     /// into one another.
     static func apply(
-        _ adjustments: [LocalAdjustment], to image: CIImage, maskSource: CIImage
+        _ adjustments: [LocalAdjustment], to image: CIImage, maskSource: CIImage,
+        mlEnvironment: MLMaskEnvironment? = nil, context: CIContext? = nil
     ) -> CIImage {
         var result = image
         for adjustment in adjustments
         where adjustment.isEnabled && !adjustment.isNeutral && !adjustment.isEmpty {
-            result = apply(adjustment, to: result, maskSource: maskSource)
+            result = apply(adjustment, to: result, maskSource: maskSource,
+                           mlEnvironment: mlEnvironment, context: context)
         }
         return result
     }
 
     static func apply(
-        _ adjustment: LocalAdjustment, to image: CIImage, maskSource: CIImage
+        _ adjustment: LocalAdjustment, to image: CIImage, maskSource: CIImage,
+        mlEnvironment: MLMaskEnvironment? = nil, context: CIContext? = nil
     ) -> CIImage {
         let extent = image.extent
         guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else { return image }
 
         let corrected = corrections(of: adjustment, applied: image)
-        guard let mask = mask(for: adjustment, source: maskSource, extent: extent) else {
+        guard let mask = mask(for: adjustment, source: maskSource, extent: extent,
+                              mlEnvironment: mlEnvironment, context: context) else {
             return image
         }
 
@@ -96,10 +100,12 @@ enum LocalAdjustmentRenderer {
     /// The adjustment's composed mask as **grayscale**, with the whole-mask
     /// invert applied. The overlay draws this directly; the blend converts it.
     static func grayscaleMask(
-        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect
+        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect,
+        mlEnvironment: MLMaskEnvironment? = nil, context: CIContext? = nil
     ) -> CIImage? {
         guard var grayscale = MaskCompositor.composedMask(
-            adjustment.components, source: source, extent: extent
+            adjustment.components, source: source, extent: extent,
+            mlEnvironment: mlEnvironment, context: context
         ) else { return nil }
 
         if adjustment.isInverted {
@@ -112,9 +118,13 @@ enum LocalAdjustmentRenderer {
 
     /// The composed mask as **alpha**, which is what `CIBlendWithMask` reads.
     static func mask(
-        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect
+        for adjustment: LocalAdjustment, source: CIImage, extent: CGRect,
+        mlEnvironment: MLMaskEnvironment? = nil, context: CIContext? = nil
     ) -> CIImage? {
-        guard let grayscale = grayscaleMask(for: adjustment, source: source, extent: extent)
+        guard let grayscale = grayscaleMask(
+            for: adjustment, source: source, extent: extent,
+            mlEnvironment: mlEnvironment, context: context
+        )
         else { return nil }
         let toAlpha = CIFilter.maskToAlpha()
         toAlpha.inputImage = grayscale

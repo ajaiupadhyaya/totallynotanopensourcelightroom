@@ -70,6 +70,14 @@ struct MaskComponent: Codable, Equatable, Identifiable {
         case luminance
         /// Everything within a colour distance of a sampled colour.
         case colorRange
+        /// On-device Vision foreground instance mask.
+        case subject
+        /// On-device Vision person segmentation.
+        case person
+        /// Inverted subject mask.
+        case background
+        /// Top-seeded colour heuristic for sky regions.
+        case sky
     }
 
     /// How this component folds into the components before it.
@@ -134,6 +142,10 @@ struct MaskComponent: Codable, Equatable, Identifiable {
         case .brush: "Brush"
         case .luminance: "Luminance"
         case .colorRange: "Colour Range"
+        case .subject: "Subject"
+        case .person: "Person"
+        case .background: "Background"
+        case .sky: "Sky"
         }
     }
 
@@ -146,7 +158,7 @@ struct MaskComponent: Codable, Equatable, Identifiable {
         switch shape {
         case .brush: return !brushStrokes.isEmpty
         case .colorRange: return sampledColor != nil
-        case .linear, .radial, .luminance: return true
+        case .linear, .radial, .luminance, .subject, .person, .background, .sky: return true
         }
     }
 

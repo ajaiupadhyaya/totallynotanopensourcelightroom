@@ -48,7 +48,7 @@ struct EditRenderer {
     /// Builds the edit filter chain. No rasterization happens here — filters
     /// that would leave the image unchanged (a value at its neutral point) are
     /// skipped, so the identity edit returns the source untouched.
-    func render(source: CIImage, stack: EditStack) -> CIImage {
+    func render(source: CIImage, stack: EditStack, mlEnvironment: MLMaskEnvironment? = nil) -> CIImage {
         var image = source
 
         image = developedCache.developed(from: image,
@@ -70,7 +70,9 @@ struct EditRenderer {
         // before detail and effects so grain and vignette stay uniform.
         let maskSource = image
         image = LocalAdjustmentRenderer.apply(stack.localAdjustments, to: image,
-                                              maskSource: maskSource)
+                                              maskSource: maskSource,
+                                              mlEnvironment: mlEnvironment,
+                                              context: context)
         image = applyDetail(image, stack: stack)
         image = applyEffects(image, stack: stack)
 

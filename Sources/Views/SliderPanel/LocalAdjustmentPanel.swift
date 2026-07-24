@@ -61,6 +61,18 @@ struct LocalAdjustmentPanel: View {
                         case .colorRange:
                             Image(systemName: "eyedropper")
                                 .font(.system(size: 10, weight: .medium))
+                        case .subject:
+                            Image(systemName: "person.crop.rectangle")
+                                .font(.system(size: 10, weight: .medium))
+                        case .person:
+                            Image(systemName: "figure.stand")
+                                .font(.system(size: 10, weight: .medium))
+                        case .background:
+                            Image(systemName: "square.dashed")
+                                .font(.system(size: 10, weight: .medium))
+                        case .sky:
+                            Image(systemName: "cloud")
+                                .font(.system(size: 10, weight: .medium))
                         case nil:
                             Rectangle()
                                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [2, 2]))

@@ -328,7 +328,8 @@ final class AppModel {
                     // for full-resolution work balloons its memory.
                     let service = ExportService(renderer: EditRenderer(context: CIContext()))
                     try service.export(sourceURL: sourceURL, stack: stack,
-                                       settings: settings, to: destination)
+                                       settings: settings, to: destination,
+                                       entryID: target.id)
                 }.value
                 written.append(destination)
             } catch {

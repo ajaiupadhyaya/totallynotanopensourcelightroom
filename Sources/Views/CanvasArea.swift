@@ -516,7 +516,7 @@ private struct MaskHandles: View {
             case .linear: linearHandles
             case .radial: radialHandles
             case .brush: brushOverlay
-            case .luminance, .colorRange: EmptyView()
+            case .luminance, .colorRange, .subject, .person, .background, .sky: EmptyView()
             }
         }
         .allowsHitTesting(true)

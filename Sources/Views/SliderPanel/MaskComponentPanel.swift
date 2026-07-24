@@ -71,6 +71,8 @@ struct MaskComponentList: View {
             PlateButton(title: "Grad") { model.addMaskComponent(.linear) }
             PlateButton(title: "Rad") { model.addMaskComponent(.radial) }
             PlateButton(title: "Brush") { model.addMaskComponent(.brush) }
+            PlateButton(title: "Subj") { model.addMaskComponent(.subject) }
+            PlateButton(title: "Sky") { model.addMaskComponent(.sky) }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -167,6 +169,10 @@ struct MaskComponentControls: View {
                              range: 0.01...1, format: "%.2f", neutral: 0.25)
             AdjustmentSlider(title: "Falloff", value: binding(index, \.colorFalloff),
                              range: 0.01...0.5, format: "%.2f", neutral: 0.15)
+        case .subject, .person, .background, .sky:
+            Text("Generated on-device from the photograph. Refine with blur and expand.")
+                .font(Theme.readableFont)
+                .foregroundStyle(Theme.secondaryText)
         case .radial:
             AdjustmentSlider(title: "Feather", value: binding(index, \.feather),
                              range: 0...1, format: "%.2f", neutral: 0.5)

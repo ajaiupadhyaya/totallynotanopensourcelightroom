@@ -158,13 +158,17 @@ struct ExportService {
         sourceURL: URL,
         stack: EditStack,
         settings: ExportSettings,
-        to destination: URL
+        to destination: URL,
+        entryID: UUID? = nil
     ) throws {
         guard let source = ImageDecoder.loadFullImage(from: sourceURL) else {
             throw ExportError.sourceUnreadable(sourceURL)
         }
 
-        var image = renderer.render(source: source, stack: stack)
+        let mlEnvironment = entryID.map {
+            MLMaskEnvironment(entryID: $0, geometry: stack.geometry)
+        }
+        var image = renderer.render(source: source, stack: stack, mlEnvironment: mlEnvironment)
         if let maxDimension = settings.maxDimension, maxDimension > 0 {
             image = ImageDecoder.downsampled(image, maxDimension: CGFloat(maxDimension))
         }
