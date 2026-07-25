@@ -19,6 +19,8 @@ struct SliderPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                PanelGroupHeading(title: "The frame")
+
                 PanelSection(
                     "Film",
                     index: "01",
@@ -57,6 +59,8 @@ struct SliderPanel: View {
                 ) {
                     RetouchPanel(model: model)
                 }
+
+                PanelGroupHeading(title: "Tone")
 
                 PanelSection(
                     "White Balance",
@@ -112,6 +116,8 @@ struct SliderPanel: View {
                                      range: -100...100, format: "%.0f", neutral: 0)
                 }
 
+                PanelGroupHeading(title: "Colour")
+
                 PanelSection(
                     "Color Mixer",
                     index: "08",
@@ -126,15 +132,6 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
-                    "Point Color",
-                    index: "09a",
-                    isModified: !model.editStack.color.pointColors.allSatisfy(\.isNeutral),
-                    onReset: { model.editStack.color.pointColors = [] }
-                ) {
-                    PointColorPanel(model: model)
-                }
-
-                PanelSection(
                     "Color Grade",
                     index: "09",
                     isModified: !model.editStack.color.grading.isNeutral,
@@ -144,8 +141,17 @@ struct SliderPanel: View {
                 }
 
                 PanelSection(
-                    "Tone Curve",
+                    "Point Color",
                     index: "10",
+                    isModified: !model.editStack.color.pointColors.allSatisfy(\.isNeutral),
+                    onReset: { model.editStack.color.pointColors = [] }
+                ) {
+                    PointColorPanel(model: model)
+                }
+
+                PanelSection(
+                    "Tone Curve",
+                    index: "11",
                     isModified: !model.editStack.toneCurvePoints.isEmpty
                         || !model.editStack.color.channelCurves.isNeutral
                         || model.editStack.toneCurveHighlights != 0
@@ -164,16 +170,18 @@ struct SliderPanel: View {
                     CurvePanel(model: model)
                 }
 
+                PanelGroupHeading(title: "Local & finish")
+
                 PanelSection(
                     "Local Masks",
-                    index: "11",
+                    index: "12",
                     isModified: !model.editStack.localAdjustments.isEmpty,
                     onReset: { model.editStack.localAdjustments = [] }
                 ) {
                     LocalAdjustmentPanel(model: model)
                 }
 
-                PanelSection("Detail", index: "12",
+                PanelSection("Detail", index: "13",
                              isModified: isDetailModified, onReset: resetDetail) {
                     AdjustmentSlider(title: "Sharpening",
                                      value: $model.editStack.sharpenAmount,
@@ -189,7 +197,7 @@ struct SliderPanel: View {
                                      range: 0...100, format: "%.0f", neutral: 0)
                 }
 
-                PanelSection("Effects", index: "13",
+                PanelSection("Effects", index: "14",
                              isModified: isEffectsModified, onReset: resetEffects) {
                     AdjustmentSlider(title: "Vignette",
                                      value: $model.editStack.vignetteAmount,
@@ -205,6 +213,10 @@ struct SliderPanel: View {
                                      range: 0...100, format: "%.0f", neutral: 25)
                 }
 
+                // Below the chain: things about this frame in the catalog,
+                // deliberately unnumbered because they are not pipeline stages.
+                PanelGroupHeading(title: "This frame")
+
                 PanelSection("Snapshots") {
                     SnapshotPanel(model: model)
                 }
@@ -217,15 +229,17 @@ struct SliderPanel: View {
                     MetadataPanel(metadata: model.metadata, fileName: model.fileName)
                 }
 
-                PlateButton(title: "Reset All Adjustments",
+                PlateButton(title: "Reset all adjustments",
                             isEnabled: model.editStack != EditStack(),
                             fillsWidth: true) {
                     model.resetAdjustments()
                 }
                 .padding(.horizontal, Theme.panelInset)
-                .padding(.vertical, 14)
+                .padding(.top, Theme.space5)
+                .padding(.bottom, Theme.space6)
             }
         }
+        .scrollIndicators(.automatic)
         .background(Theme.surface)
     }
 

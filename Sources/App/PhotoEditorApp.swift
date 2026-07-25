@@ -1,11 +1,19 @@
 import SwiftUI
 
 /// Entry point for the editor.
+///
+/// The models are owned here rather than inside ``RootView`` because the menu
+/// bar needs them: a command in the File menu and a button in the top bar have
+/// to act on one editor, not on two copies that drift apart.
 @main
 struct PhotoEditorApp: App {
+    @State private var app = AppModel()
+    @State private var workspace = WorkspaceModel()
+    @State private var panels = PanelVisibility()
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(app: app, workspace: workspace, panels: panels)
                 .preferredColorScheme(.dark)
         }
         // The system title bar is hidden: the window chrome is drawn by the
@@ -13,10 +21,17 @@ struct PhotoEditorApp: App {
         // rather than a Mac document window with panels bolted on.
         .windowStyle(.hiddenTitleBar)
         .commands {
-            // No document model, so drop the default "New" menu item.
-            CommandGroup(replacing: .newItem) {}
+            EditorCommands(app: app, workspace: workspace, panels: panels)
         }
     }
+}
+
+/// Which side panels are showing. A tiny model rather than two `@State` flags
+/// so the menu bar and the top bar's lamps drive the same switch.
+@Observable
+final class PanelVisibility {
+    var isShowingLibrary = true
+    var isShowingDevelop = true
 }
 
 /// The single application window: a drawn top bar over three panes — the
@@ -31,25 +46,24 @@ struct PhotoEditorApp: App {
 /// - `⌘B` toggles the library panel
 /// - `⌘D` toggles the develop panel
 struct RootView: View {
-    @State private var app = AppModel()
-    @State private var isShowingLibrary = true
-    @State private var isShowingDevelop = true
-    @State private var workspace = WorkspaceModel()
+    @Bindable var app: AppModel
+    @Bindable var workspace: WorkspaceModel
+    @Bindable var panels: PanelVisibility
 
     var body: some View {
         VStack(spacing: 0) {
             TopBar(app: app,
-                   isShowingLibrary: $isShowingLibrary,
-                   isShowingDevelop: $isShowingDevelop)
+                   isShowingLibrary: $panels.isShowingLibrary,
+                   isShowingDevelop: $panels.isShowingDevelop)
 
-            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+            Rule()
 
             HStack(spacing: 0) {
-                if isShowingLibrary {
+                if panels.isShowingLibrary {
                     LibrarySidebar(app: app)
                         .frame(width: Theme.libraryWidth)
                         .transition(.move(edge: .leading))
-                    Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
+                    Rule(axis: .vertical)
                 }
 
                 VStack(spacing: 0) {
@@ -60,7 +74,7 @@ struct RootView: View {
                     HStack(spacing: 0) {
                         if let editor = app.editor {
                             ToolRail(model: editor, workspace: workspace)
-                            Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
+                            Rule(axis: .vertical)
                         }
 
                         CanvasArea(app: app, workspace: workspace)
@@ -68,19 +82,19 @@ struct RootView: View {
                     }
                 }
 
-                if isShowingDevelop, let editor = app.editor {
-                    Rectangle().fill(Theme.separator).frame(width: Theme.hairline)
+                if panels.isShowingDevelop, let editor = app.editor {
+                    Rule(axis: .vertical)
                     InspectorPanel(model: editor, app: app, mode: $workspace.inspectorMode)
                         .frame(width: Theme.inspectorWidth)
                         .transition(.move(edge: .trailing))
                 }
             }
-            .animation(.easeOut(duration: 0.18), value: isShowingDevelop)
-            .animation(.easeOut(duration: 0.18), value: isShowingLibrary)
+            .animation(Theme.standard, value: panels.isShowingDevelop)
+            .animation(Theme.standard, value: panels.isShowingLibrary)
+            .animation(Theme.standard, value: workspace.activeTool)
         }
         .background(Theme.background)
         .frame(minWidth: 1180, minHeight: 720)
-        .background { keyboardShortcuts }
         .toolKeyShortcuts(app: app, workspace: workspace)
         .onChange(of: app.editor?.entry.id) { workspace.resetForNewPhoto() }
         .sheet(isPresented: $app.isShowingExportSheet) {
@@ -88,42 +102,6 @@ struct RootView: View {
                 BatchExportSheet(app: app, entries: [editor.entry])
             }
         }
-    }
-
-    /// Menu-less keyboard shortcuts, active regardless of focus.
-    private var keyboardShortcuts: some View {
-        Group {
-            Button("") { isShowingLibrary.toggle() }
-                .keyboardShortcut("b", modifiers: .command)
-            Button("") { isShowingDevelop.toggle() }
-                .keyboardShortcut("d", modifiers: .command)
-
-            if let editor = app.editor {
-                Button("") { editor.undo() }
-                    .keyboardShortcut("z", modifiers: .command)
-                Button("") { editor.redo() }
-                    .keyboardShortcut("z", modifiers: [.command, .shift])
-                Button("") { editor.zoomLevel = nil }
-                    .keyboardShortcut("0", modifiers: .command)
-                Button("") { editor.zoomLevel = 1.0 }
-                    .keyboardShortcut("1", modifiers: .command)
-                Button("") { editor.isFocusPeakingEnabled.toggle() }
-                    .keyboardShortcut("f", modifiers: [.command, .shift])
-                Button("") { editor.isShowingMaskOverlay.toggle() }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
-                Button("") { app.copySettings(from: editor.entry) }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
-                Button("") { app.isShowingExportSheet = true }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
-                Button("") { workspace.inspectorMode = .adjust }
-                    .keyboardShortcut("1", modifiers: [.command, .option])
-                Button("") { workspace.inspectorMode = .masks }
-                    .keyboardShortcut("2", modifiers: [.command, .option])
-                Button("") { workspace.inspectorMode = .history }
-                    .keyboardShortcut("3", modifiers: [.command, .option])
-            }
-        }
-        .opacity(0)
     }
 }
 
@@ -139,61 +117,81 @@ private struct TopBar: View {
     @Binding var isShowingDevelop: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Theme.space4) {
             // Traffic-light inset.
-            Spacer().frame(width: 66)
+            Spacer().frame(width: 68)
 
-            Text("PHOTOEDITOR")
-                .font(Theme.wordmarkFont)
-                .kerning(3)
-                .foregroundStyle(Theme.text.opacity(0.9))
+            identity
 
-            if let editor = app.editor {
-                Rectangle()
-                    .fill(Theme.separator)
-                    .frame(width: Theme.hairline, height: 16)
-
-                Text(designation(for: editor))
-                    .font(Theme.valueFont)
-                    .foregroundStyle(Theme.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.space4)
 
             if let editor = app.editor {
                 editingControls(editor)
             }
 
+            Rule(axis: .vertical).frame(height: 16)
+
             // Panel toggles live at the far edge, nearest the panels they fold.
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.space3) {
                 LampToggle(label: "Roll", isOn: $isShowingLibrary)
                 LampToggle(label: "Develop", isOn: $isShowingDevelop)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Theme.panelInset)
         .frame(height: Theme.topBarHeight)
         .background(Theme.surface)
     }
 
-    /// "frame 03 · file.tiff · 3000×2000", like a sleeve label.
-    private func designation(for editor: EditorModel) -> String {
-        var parts: [String] = []
-        if let index = app.entries.firstIndex(where: { $0.id == editor.entry.id }) {
-            var frame = String(format: "FRAME %02d", index + 1)
-            if editor.entry.isVirtualCopy { frame += " · COPY \(editor.entry.copyNumber)" }
-            parts.append(frame)
+    /// Wordmark, then what is open — read left to right the way a drawing's
+    /// title block does: whose instrument, then which subject.
+    private var identity: some View {
+        HStack(spacing: Theme.space3) {
+            Text("PHOTOEDITOR")
+                .font(Theme.wordmarkFont)
+                .kerning(2.6)
+                .foregroundStyle(Theme.text)
+
+            if let editor = app.editor {
+                Rule(axis: .vertical).frame(height: 16)
+
+                HStack(spacing: 7) {
+                    if let number = frameNumber(for: editor) {
+                        Text(number)
+                            .font(Theme.indexFont)
+                            .foregroundStyle(Theme.filmEdge)
+                    }
+
+                    Text(editor.fileName)
+                        .font(Theme.body)
+                        .foregroundStyle(Theme.text.opacity(0.9))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    if editor.entry.isVirtualCopy {
+                        Text("COPY \(editor.entry.copyNumber)")
+                            .font(.system(size: 9, weight: .medium))
+                            .kerning(0.6)
+                            .foregroundStyle(Theme.secondaryText)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Theme.control, in: Capsule())
+                    }
+                }
+                .layoutPriority(1)
+            }
         }
-        parts.append(editor.fileName)
-        if let dimensions = editor.metadata.dimensions { parts.append(dimensions) }
-        return parts.joined(separator: "  ·  ")
+    }
+
+    /// "FRAME 03", the way a frame is numbered on a contact sheet.
+    private func frameNumber(for editor: EditorModel) -> String? {
+        guard let index = app.entries.firstIndex(where: { $0.id == editor.entry.id })
+        else { return nil }
+        return String(format: "FRAME %02d", index + 1)
     }
 
     @ViewBuilder
     private func editingControls(_ editor: EditorModel) -> some View {
-        HStack(spacing: 14) {
-            // Zoom.
+        HStack(spacing: Theme.space4) {
             TabStrip(
                 options: [
                     (Optional<Double>.none, "Fit"),
@@ -207,7 +205,7 @@ private struct TopBar: View {
                 )
             )
 
-            Rectangle().fill(Theme.separator).frame(width: Theme.hairline, height: 16)
+            Rule(axis: .vertical).frame(height: 16)
 
             // Viewing aids.
             LampToggle(label: "Peak", isOn: Binding(
@@ -219,11 +217,25 @@ private struct TopBar: View {
                 set: { editor.isShowingBefore = $0 }
             ))
 
-            Rectangle().fill(Theme.separator).frame(width: Theme.hairline, height: 16)
+            Rule(axis: .vertical).frame(height: 16)
 
-            PlateButton(title: "Undo", isEnabled: editor.canUndo) { editor.undo() }
-            PlateButton(title: "Redo", isEnabled: editor.canRedo) { editor.redo() }
-            PlateButton(title: "Export") { app.isShowingExportSheet = true }
+            HStack(spacing: Theme.space1) {
+                IconButton(icon: .undo, label: "Undo",
+                           tint: editor.canUndo ? Theme.secondaryText : Theme.disabledText) {
+                    editor.undo()
+                }
+                .disabled(!editor.canUndo)
+
+                IconButton(icon: .redo, label: "Redo",
+                           tint: editor.canRedo ? Theme.secondaryText : Theme.disabledText) {
+                    editor.redo()
+                }
+                .disabled(!editor.canRedo)
+            }
+
+            PlateButton(title: "Export", emphasis: .prominent) {
+                app.isShowingExportSheet = true
+            }
         }
     }
 }

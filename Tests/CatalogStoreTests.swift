@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import XCTest
 @testable import PhotoEditor
@@ -80,5 +81,88 @@ final class CatalogStoreTests: XCTestCase {
         let reopened = try CatalogStore(path: path)
         XCTAssertNotNil(try reopened.entry(id: id),
                         "Entries should survive closing and reopening the on-disk catalog.")
+    }
+}
+
+// MARK: - Thumbnail repair
+
+/// The library must never be permanently stuck showing the empty-frame
+/// placeholder. A thumbnail can go missing for reasons that have nothing to do
+/// with the photograph — an unmounted volume at import, a cleared cache — and
+/// the catalog has to be able to recover on its own.
+final class ThumbnailRepairTests: XCTestCase {
+    private func makeApp() throws -> (app: AppModel, thumbs: ThumbnailGenerator) {
+        let thumbs = TestSupport.tempThumbnails()
+        let app = AppModel(catalog: try TestSupport.inMemoryCatalog(), thumbnails: thumbs)
+        return (app, thumbs)
+    }
+
+    func testImportWritesAThumbnailAndRecordsItsPath() throws {
+        let (app, thumbs) = try makeApp()
+        let url = try TestSupport.makeTempPNG(gray: 90, size: 700)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let entry = try XCTUnwrap(app.importPhoto(from: url))
+        let path = try XCTUnwrap(entry.thumbnailPath, "Import must record the thumbnail path.")
+        XCTAssertEqual(path, thumbs.url(for: entry.id))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: path.path))
+    }
+
+    func testARepairRebuildsAThumbnailDeletedFromDisk() throws {
+        let (app, thumbs) = try makeApp()
+        let url = try TestSupport.makeTempPNG(gray: 90, size: 700)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let entry = try XCTUnwrap(app.importPhoto(from: url))
+
+        // Simulate a cleared cache.
+        try FileManager.default.removeItem(at: thumbs.url(for: entry.id))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: thumbs.url(for: entry.id).path))
+
+        app.refreshThumbnail(for: entry)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: thumbs.url(for: entry.id).path),
+                      "A missing thumbnail must be rebuilt, not left as a placeholder.")
+    }
+
+    /// The regression that shipped: the thumbnail file was rewritten but its
+    /// location was never saved, so an entry that imported without one kept
+    /// drawing the placeholder forever.
+    func testRefreshRecordsThePathForAnEntryThatNeverHadOne() throws {
+        let (app, _) = try makeApp()
+        let url = try TestSupport.makeTempPNG(gray: 120, size: 700)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let imported = try XCTUnwrap(app.importPhoto(from: url))
+
+        var orphan = imported
+        orphan.thumbnailPath = nil
+
+        let repaired = app.refreshThumbnail(for: orphan)
+
+        XCTAssertNotNil(repaired.thumbnailPath,
+                        "Refreshing must record where the thumbnail was written.")
+        XCTAssertEqual(app.entries.first { $0.id == orphan.id }?.thumbnailPath,
+                       repaired.thumbnailPath,
+                       "The in-memory library must see the repaired path too.")
+    }
+
+    func testAppliedEditsAreVisibleInTheThumbnail() throws {
+        let (app, thumbs) = try makeApp()
+        let url = try TestSupport.makeTempPNG(gray: 120, size: 700)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let entry = try XCTUnwrap(app.importPhoto(from: url))
+
+        func brightness() throws -> Double {
+            let image = try XCTUnwrap(NSImage(contentsOf: thumbs.url(for: entry.id)))
+            let cg = try XCTUnwrap(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+            return TestSupport.averageBrightness(cg)
+        }
+
+        let before = try brightness()
+        var brighter = EditStack()
+        brighter.exposure = 2.0
+        XCTAssertEqual(app.apply(brighter, to: [entry]), 1)
+
+        XCTAssertGreaterThan(try brightness(), before + 0.05,
+                             "The library thumbnail must reflect the edit that was applied.")
     }
 }

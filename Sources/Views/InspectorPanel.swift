@@ -19,9 +19,9 @@ struct InspectorPanel: View {
 
             ClippingDiagnostics(model: model)
                 .padding(.horizontal, Theme.panelInset)
-                .padding(.bottom, 11)
+                .padding(.bottom, Theme.space3)
 
-            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+            Rule()
 
             switch mode {
             case .adjust:
@@ -46,20 +46,29 @@ struct InspectorPanel: View {
         .padding(.horizontal, Theme.panelInset)
         .frame(height: Theme.contextBarHeight)
         .background(Theme.background)
+        .overlay(alignment: .bottom) { Rule() }
     }
 
     private var maskWorkspace: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                InspectorHeading(index: "M", title: "Local Masks",
-                                 detail: "Paint, graduate, and feather corrections directly on the frame.")
+            VStack(alignment: .leading, spacing: Theme.space4) {
+                InspectorHeading(
+                    title: "Masks",
+                    detail: model.editStack.localAdjustments.isEmpty
+                        ? "Take the Brush or Gradient from the rail to correct part of the frame."
+                        : "Corrections that apply to part of the frame only."
+                )
 
                 LocalAdjustmentPanel(model: model)
 
-                Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+                Rule()
 
-                Text("REPAIR TOOLS")
-                    .engraved()
+                InspectorHeading(
+                    title: "Repair",
+                    detail: model.editStack.retouch.isEmpty
+                        ? "Take Heal or Clone from the rail to remove a mark."
+                        : "Heal, clone, and content-aware removals on this frame."
+                )
                 RetouchPanel(model: model)
             }
             .padding(Theme.panelInset)
@@ -69,9 +78,11 @@ struct InspectorPanel: View {
     private var historyWorkspace: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                InspectorHeading(index: "H", title: "History",
-                                 detail: "Every committed state is addressable. Select a row to return to it.")
-                    .padding(Theme.panelInset)
+                InspectorHeading(
+                    title: "History",
+                    detail: "Every committed state is still here. Select one to return to it."
+                )
+                .padding(Theme.panelInset)
 
                 HStack(spacing: 8) {
                     PlateButton(title: "Undo \(model.undoDepth)", isEnabled: model.canUndo) {
@@ -101,7 +112,7 @@ struct InspectorPanel: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(event.title)
-                                    .font(Theme.readableFont)
+                                    .font(Theme.body)
                                     .foregroundStyle(isCurrent ? Theme.text
                                                                : Theme.text.opacity(0.78))
                                 Text(event.timestamp.formatted(date: .omitted, time: .shortened))
@@ -128,7 +139,7 @@ struct InspectorPanel: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("NAMED STATES").engraved()
+                    Text("NAMED STATES").sectionLabel()
                     SnapshotPanel(model: model)
                 }
                 .padding(Theme.panelInset)
@@ -141,80 +152,95 @@ private struct ClippingDiagnostics: View {
     @Bindable var model: EditorModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text("CLIPPING").engraved()
-                Spacer()
-                Text("VIEW AID")
-                    .font(Theme.plateFont)
-                    .kerning(Theme.plateTracking)
-                    .foregroundStyle(Theme.tertiaryText)
-            }
-
-            HStack(spacing: 12) {
-                diagnosticToggle(
-                    "SHADOWS",
-                    fraction: model.histogram.shadowClippedFraction,
-                    isClipping: model.histogram.isClippingShadows,
-                    isOn: $model.showsShadowClipping
-                )
-                diagnosticToggle(
-                    "HIGHLIGHTS",
-                    fraction: model.histogram.highlightClippedFraction,
-                    isClipping: model.histogram.isClippingHighlights,
-                    isOn: $model.showsHighlightClipping
-                )
-            }
+        HStack(spacing: Theme.space2) {
+            diagnosticToggle(
+                "Shadows",
+                fraction: model.histogram.shadowClippedFraction,
+                isClipping: model.histogram.isClippingShadows,
+                isOn: $model.showsShadowClipping
+            )
+            diagnosticToggle(
+                "Highlights",
+                fraction: model.histogram.highlightClippedFraction,
+                isClipping: model.histogram.isClippingHighlights,
+                isOn: $model.showsHighlightClipping
+            )
         }
     }
 
+    /// One clipping readout, which is also the switch for its overlay.
+    ///
+    /// The number is always shown; the warning colour appears only when the
+    /// reading actually matters. Combining the readout and the control is
+    /// deliberate — noticing a clipped highlight and wanting to see *where* is
+    /// one thought, and it should be one click.
     private func diagnosticToggle(
         _ label: String, fraction: Double, isClipping: Bool, isOn: Binding<Bool>
     ) -> some View {
         Button { isOn.wrappedValue.toggle() } label: {
             HStack(spacing: 6) {
-                Image(systemName: isClipping ? "exclamationmark.triangle.fill" : "triangle")
+                if isClipping {
+                    Icon.Filled(kind: .warningTriangle, size: 8)
+                        .foregroundStyle(Theme.warning)
+                }
+
+                Text(label.uppercased())
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(isClipping ? Theme.warning : Theme.tertiaryText)
-                Text(label)
-                    .font(Theme.plateFont)
-                    .kerning(Theme.plateTracking)
+                    .kerning(0.7)
+                    .foregroundStyle(isOn.wrappedValue ? Theme.text : Theme.tertiaryText)
+
+                Spacer(minLength: 2)
+
                 Text(fraction.formatted(.percent.precision(.fractionLength(1))))
                     .font(Theme.valueFont)
+                    .monospacedDigit()
                     .foregroundStyle(isClipping ? Theme.warning : Theme.secondaryText)
             }
-            .foregroundStyle(isOn.wrappedValue ? Theme.text : Theme.secondaryText)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 7)
-            .background(isOn.wrappedValue ? Theme.control : .clear)
-            .overlay(Rectangle().stroke(isOn.wrappedValue ? Theme.strongSeparator
-                                                          : Theme.separator,
-                                        lineWidth: Theme.hairline))
+            .padding(.horizontal, Theme.space2)
+            .frame(maxWidth: .infinity)
+            .frame(height: 26)
+            .background(
+                isOn.wrappedValue ? Theme.controlActive : Theme.control.opacity(0.5),
+                in: RoundedRectangle(cornerRadius: Theme.radius)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.radius)
+                    .strokeBorder(isOn.wrappedValue ? Theme.accent.opacity(0.6) : Theme.separator,
+                                  lineWidth: Theme.hairline)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .animation(Theme.quick, value: isOn.wrappedValue)
+        .help(isOn.wrappedValue
+              ? "Hide the \(label.lowercased()) clipping overlay"
+              : "Show where \(label.lowercased()) are clipping")
+        .accessibilityLabel("\(label) clipping")
+        .accessibilityValue(fraction.formatted(.percent.precision(.fractionLength(1))))
+        .accessibilityAddTraits(isOn.wrappedValue ? [.isSelected] : [])
     }
 }
 
+/// A workspace heading: what this pane is, then what to do with it.
+///
+/// The previous version put a large accent letter beside each title — "M" for
+/// masks, "H" for history. It looked like structure but encoded nothing: the
+/// letters were the first letter of the word already printed next to them. The
+/// space goes to the sentence instead, which in an empty pane is the only
+/// instruction on screen.
 private struct InspectorHeading: View {
-    let index: String
     let title: String
     let detail: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(index)
-                .font(.system(size: 24, weight: .light, design: .monospaced))
-                .foregroundStyle(Theme.accent)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title.uppercased())
-                    .font(Theme.engravedLabel)
-                    .kerning(Theme.engravedTracking)
-                Text(detail)
-                    .font(Theme.readableFont)
-                    .foregroundStyle(Theme.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(Theme.heading)
+                .foregroundStyle(Theme.text)
+            Text(detail)
+                .font(Theme.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -18,7 +18,7 @@ struct PresetPanel: View {
             } else {
                 ForEach(groupedPresets, id: \.0) { group, presets in
                     Text(group.uppercased())
-                        .engraved()
+                        .sectionLabel()
                     ForEach(presets) { preset in
                         PresetRow(preset: preset, app: app, model: model)
                     }
@@ -67,7 +67,7 @@ private struct PresetRow: View {
                 model.applyPreset(preset)
             } label: {
                 Text(preset.name)
-                    .font(Theme.controlFont)
+                    .font(Theme.controlLabel)
                     .foregroundStyle(Theme.text.opacity(0.9))
                     .contentShape(Rectangle())
             }
@@ -76,7 +76,7 @@ private struct PresetRow: View {
             Spacer()
 
             if isHovering {
-                GlyphButton(kind: .cross, label: "Delete preset") {
+                IconButton(icon: .cross, label: "Delete preset") {
                     app.deletePreset(preset)
                 }
             }

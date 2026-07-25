@@ -423,6 +423,10 @@ struct EditRenderer {
         makeCGImage(render(source: source, stack: stack))
     }
 
+    /// The space histograms and clipping diagnostics are measured in — the
+    /// space the photograph is shown in, not the space it is computed in.
+    private static let displaySpace = CGColorSpace(name: CGColorSpace.sRGB)!
+
     /// Computes a per-channel histogram of an image via `CIAreaHistogram`
     /// (a single GPU pass), read back into plain float arrays.
     ///
@@ -433,8 +437,19 @@ struct EditRenderer {
             return .empty
         }
 
+        // Measure in display space, not the working space.
+        //
+        // Core Image works in linear light, where the tones a photographer
+        // thinks of as midtones sit far down the scale — sRGB 50% grey is 0.21
+        // linear, about a fifth of the way up. Histogramming the working image
+        // therefore crushes an ordinary exposure into the left of the graph and
+        // reports heavy shadow clipping on a frame that has none. A histogram
+        // is a reading instrument for a person, so it has to describe the
+        // photograph as displayed.
+        let measured = image.matchedFromWorkingSpace(to: Self.displaySpace) ?? image
+
         let filter = CIFilter.areaHistogram()
-        filter.inputImage = image
+        filter.inputImage = measured
         filter.extent = extent
         filter.count = binCount
         filter.scale = 20 // amplify counts into a visible range; we normalize by peak on display

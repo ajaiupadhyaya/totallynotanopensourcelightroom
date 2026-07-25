@@ -9,12 +9,12 @@ struct CanvasArea: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                Theme.canvas.ignoresSafeArea()
+                Theme.canvas
 
                 if let editor = app.editor {
                     EditCanvas(editor: editor, app: app, workspace: workspace)
                 } else {
-                    placeholder
+                    EmptyCanvas(app: app)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -24,30 +24,81 @@ struct CanvasArea: View {
             }
         }
     }
+}
 
-    private var placeholder: some View {
-        VStack(spacing: 14) {
-            // An empty film frame, drawn — the shape of what belongs here.
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(Theme.tertiaryText, lineWidth: 1.2)
-                .frame(width: 64, height: 44)
-                .overlay(alignment: .top) {
-                    Text("00")
-                        .font(Theme.filmEdgeFont)
-                        .foregroundStyle(Theme.filmEdge.opacity(0.7))
-                        .offset(y: -14)
+/// What the canvas says when there is nothing open.
+///
+/// An empty screen is an invitation to act, so this one names the two ways in
+/// and draws the shape of what belongs here — an empty frame on a rebate,
+/// which is exactly what an unexposed negative looks like.
+private struct EmptyCanvas: View {
+    @Bindable var app: AppModel
+
+    @State private var isTargeted = false
+
+    private var hasLibrary: Bool { !app.entries.isEmpty }
+
+    var body: some View {
+        VStack(spacing: Theme.space5) {
+            emptyFrame
+
+            VStack(spacing: Theme.space2) {
+                Text(hasLibrary ? "No frame open" : "The roll is empty")
+                    .font(Theme.heading)
+                    .foregroundStyle(Theme.text)
+
+                Text(hasLibrary
+                     ? "Choose a frame in the roll, or drop more scans anywhere here."
+                     : "Drop scans and photographs here, or import them from disk.")
+                    .font(Theme.body)
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 320)
+            }
+
+            if !hasLibrary {
+                PlateButton(title: "Import photographs", emphasis: .prominent) {
+                    app.isShowingImporter = true
                 }
-            Text(app.entries.isEmpty
-                 ? "Import a photo, or drop scans here"
-                 : "Select a frame in the library")
-                .font(Theme.controlFont)
-                .foregroundStyle(Theme.secondaryText)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+        .background {
+            if isTargeted {
+                RoundedRectangle(cornerRadius: Theme.largeRadius)
+                    .strokeBorder(Theme.accent, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                    .padding(Theme.space6)
+            }
+        }
+        .animation(Theme.standard, value: isTargeted)
         .dropDestination(for: URL.self) { urls, _ in
             !app.importDropped(urls).isEmpty
-        }
+        } isTargeted: { isTargeted = $0 }
+    }
+
+    private var emptyFrame: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .strokeBorder(Theme.strongSeparator, lineWidth: 1.5)
+            .frame(width: 96, height: 66)
+            .overlay(alignment: .top) {
+                Text("00")
+                    .font(Theme.filmEdgeFont)
+                    .foregroundStyle(Theme.filmEdge.opacity(0.7))
+                    .offset(y: -15)
+            }
+            .overlay {
+                // Sprocket holes, so the mark reads as film rather than as a
+                // generic "no content" rectangle.
+                HStack(spacing: 7) {
+                    ForEach(0..<7, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Theme.separator)
+                            .frame(width: 5, height: 4)
+                    }
+                }
+                .offset(y: 46)
+            }
     }
 }
 
@@ -57,40 +108,53 @@ private struct CanvasStatusBar: View {
     @Bindable var editor: EditorModel
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "viewfinder")
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(Theme.secondaryText)
+        HStack(spacing: Theme.space3) {
+            reading("Zoom", editor.zoomLevel.map { "\(Int($0 * 100))%" } ?? "FIT",
+                    emphasis: Theme.text)
 
-            Text(editor.zoomLevel.map { "\(Int($0 * 100))%" } ?? "FIT")
-                .font(Theme.valueFont)
-                .foregroundStyle(Theme.text)
-
-            Rectangle().fill(Theme.separator).frame(width: Theme.hairline, height: 14)
-
-            Text(editor.metadata.colorProfile ?? "sRGB")
-                .font(Theme.valueFont)
-                .foregroundStyle(Theme.secondaryText)
-                .lineLimit(1)
+            Rule(axis: .vertical).frame(height: 14)
 
             if let dimensions = editor.metadata.dimensions {
-                Text(dimensions)
-                    .font(Theme.valueFont)
-                    .foregroundStyle(Theme.tertiaryText)
+                reading("Size", dimensions)
             }
 
-            Spacer()
+            Rule(axis: .vertical).frame(height: 14)
 
-            Text(editor.isShowingBefore ? "BEFORE" : "DEVELOPED")
-                .font(Theme.plateFont)
-                .kerning(Theme.plateTracking)
-                .foregroundStyle(editor.isShowingBefore ? Theme.warning : Theme.secondaryText)
+            reading("Profile", editor.metadata.colorProfile ?? "sRGB")
+
+            Spacer(minLength: Theme.space3)
+
+            // What you are looking at, said plainly. This is the one thing on
+            // the bar that can be wrong in a way that costs you an edit.
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(editor.isShowingBefore ? Theme.warning : Theme.accent)
+                    .frame(width: 5, height: 5)
+                Text(editor.isShowingBefore ? "Original" : "Developed")
+                    .plateLabel()
+                    .foregroundStyle(editor.isShowingBefore ? Theme.warning : Theme.secondaryText)
+            }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 32)
+        .padding(.horizontal, Theme.space3)
+        .frame(height: Theme.statusBarHeight)
         .background(Theme.background)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+        .overlay(alignment: .top) { Rule() }
+    }
+
+    /// A labelled instrument reading: quiet caps label, monospaced value.
+    private func reading(
+        _ label: String, _ value: String, emphasis: Color = Theme.secondaryText
+    ) -> some View {
+        HStack(spacing: 5) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .medium))
+                .kerning(0.7)
+                .foregroundStyle(Theme.tertiaryText)
+            Text(value)
+                .font(Theme.valueFont)
+                .monospacedDigit()
+                .foregroundStyle(emphasis)
+                .lineLimit(1)
         }
     }
 }
@@ -102,6 +166,7 @@ private struct EditCanvas: View {
     @Bindable var workspace: WorkspaceModel
 
     @State private var isRetouchPainting = false
+    @State private var panAtDragStart: CGSize?
 
     var body: some View {
         Group {
@@ -115,109 +180,152 @@ private struct EditCanvas: View {
 
     // MARK: Viewport
 
+    /// The canvas proper.
+    ///
+    /// One rectangle governs everything here: `imageRect`, the photograph's
+    /// place in the viewport. The Metal view renders into it and every overlay
+    /// is positioned onto it, so pixels and handles are incapable of
+    /// disagreeing about where the photograph is — which is the bug class this
+    /// layout exists to make impossible.
     private var viewport: some View {
-        GeometryReader { outer in
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                canvasContent(viewportSize: outer.size)
+        GeometryReader { proxy in
+            let viewportSize = proxy.size
+            let rect = imageRect(in: viewportSize)
+
+            ZStack {
+                MetalCanvasView(image: editor.previewCIImage,
+                                context: editor.renderContext,
+                                imageRect: rect)
+                    .allowsHitTesting(false)
+
+                // A dropped shadow under the frame, so the photograph sits on
+                // the canvas rather than being a hole cut in it.
+                Rectangle()
+                    .fill(.clear)
+                    .frame(width: rect.width, height: rect.height)
+                    .shadow(color: .black.opacity(0.6), radius: 18, y: 6)
+                    .background(Color.black.opacity(0.001))
+                    .position(x: rect.midX, y: rect.midY)
+                    .allowsHitTesting(false)
+
+                overlays(in: rect)
+
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(clickGesture(rect: rect))
+                    .gesture(panGesture)
             }
-            .defaultScrollAnchor(.center)
+            .frame(width: viewportSize.width, height: viewportSize.height)
+            .clipped()
         }
         .overlay(alignment: .top) {
-            if let prompt = pickerPrompt {
-                pickerBanner(prompt)
-            }
+            if let prompt = pickerPrompt { pickerBanner(prompt) }
         }
         .overlay(alignment: .bottom) {
-            if editor.isCropping {
-                cropBar
+            if editor.isCropping { cropBar }
+        }
+        .overlay(alignment: .topLeading) {
+            if editor.isShowingBefore { beforeBadge }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if editor.showsShadowClipping || editor.showsHighlightClipping {
+                clippingReadout.padding(Theme.space3).allowsHitTesting(false)
             }
         }
     }
 
-    @ViewBuilder
-    private func canvasContent(viewportSize: CGSize) -> some View {
-        if let imageSize = editor.previewPixelSize ?? editor.displayImage.map({
-            CGSize(width: $0.width, height: $0.height)
-        }) {
-            let inset: CGFloat = 24
-            let available = CGSize(width: max(viewportSize.width - inset * 2, 50),
-                                   height: max(viewportSize.height - inset * 2, 50))
-            let fitScale = min(available.width / imageSize.width,
-                               available.height / imageSize.height)
-            let scale = editor.zoomLevel.map { CGFloat($0) } ?? min(fitScale, 1.0)
-            let displaySize = CGSize(width: imageSize.width * scale,
-                                     height: imageSize.height * scale)
-            let contentSize = CGSize(width: max(displaySize.width + inset * 2, viewportSize.width),
-                                     height: max(displaySize.height + inset * 2, viewportSize.height))
+    /// Margin kept between the photograph and the edge of the canvas at Fit, so
+    /// the frame is never flush against the chrome.
+    private let fitInset: CGFloat = 28
 
-            ZStack {
-                if let preview = editor.previewCIImage {
-                    MetalCanvasView(image: preview, context: editor.renderContext)
-                        .frame(width: displaySize.width, height: displaySize.height)
-                        .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
-                        .gesture(clickGesture(displaySize: displaySize))
-                        .overlay {
-                            if workspace.activeTool == .heal || workspace.activeTool == .clone {
-                                retouchPaintOverlay(displaySize: displaySize)
-                            }
-                        }
-                } else if let cgImage = editor.displayImage {
-                    Image(decorative: cgImage, scale: 1.0)
-                        .resizable()
-                        .interpolation(scale >= 1.0 ? .none : .high)
-                        .frame(width: displaySize.width, height: displaySize.height)
-                        .shadow(color: .black.opacity(0.55), radius: 16, y: 5)
-                        .gesture(clickGesture(displaySize: displaySize))
-                        .overlay {
-                            if workspace.activeTool == .heal || workspace.activeTool == .clone {
-                                retouchPaintOverlay(displaySize: displaySize)
-                            }
-                        }
-                }
-
-                if editor.isCropping {
-                    CropOverlay(cropRect: $editor.editStack.geometry.cropRect,
-                                displaySize: displaySize)
-                        .frame(width: displaySize.width, height: displaySize.height)
-                } else if let index = editor.selectedSpotIndex {
-                    RetouchHandles(
-                        spot: $editor.editStack.retouch[index],
-                        displaySize: displaySize
-                    )
-                    .frame(width: displaySize.width, height: displaySize.height)
-                } else if let maskIndex = editor.selectedMaskIndex,
-                          let componentIndex = editor.selectedComponentIndex {
-                    MaskHandles(
-                        component: $editor.editStack
-                            .localAdjustments[maskIndex].components[componentIndex],
-                        displaySize: displaySize
-                    )
-                    .frame(width: displaySize.width, height: displaySize.height)
-                }
-
-                if editor.isShowingBefore {
-                    Text("BEFORE")
-                        .font(Theme.plateFont)
-                        .kerning(Theme.plateTracking)
-                        .foregroundStyle(Theme.text)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
-                        .frame(width: displaySize.width, height: displaySize.height,
-                               alignment: .topLeading)
-                        .padding(12)
-                }
-
-                if editor.showsShadowClipping || editor.showsHighlightClipping {
-                    clippingReadout
-                        .frame(width: displaySize.width, height: displaySize.height,
-                               alignment: .bottomLeading)
-                        .padding(12)
-                        .allowsHitTesting(false)
-                }
-            }
-            .frame(width: contentSize.width, height: contentSize.height)
+    /// Where the photograph sits in the viewport, at the current zoom and pan.
+    private func imageRect(in viewport: CGSize) -> CGRect {
+        guard let size = editor.previewPixelSize, size.width > 0, size.height > 0,
+              viewport.width > 0, viewport.height > 0 else {
+            return CGRect(origin: .zero, size: viewport)
         }
+
+        let available = CGSize(width: max(viewport.width - fitInset * 2, 40),
+                               height: max(viewport.height - fitInset * 2, 40))
+        // Fit never enlarges: a frame smaller than the window is shown at its
+        // own size rather than interpolated up to fill space.
+        let fit = min(available.width / size.width, available.height / size.height, 1)
+        let scale = editor.zoomLevel.map { CGFloat($0) } ?? fit
+
+        let drawn = CGSize(width: size.width * scale, height: size.height * scale)
+        let offset = clampedPan(for: drawn, in: viewport)
+
+        return CGRect(
+            x: (viewport.width - drawn.width) / 2 + offset.width,
+            y: (viewport.height - drawn.height) / 2 + offset.height,
+            width: drawn.width, height: drawn.height
+        )
+    }
+
+    /// Keeps a pan from throwing the photograph off the canvas.
+    ///
+    /// On an axis where the frame already fits, it stays centred and the pan is
+    /// ignored; on an axis where it overflows, travel stops once that edge
+    /// reaches the edge of the viewport.
+    private func clampedPan(for drawn: CGSize, in viewport: CGSize) -> CGSize {
+        func limit(_ drawnLength: CGFloat, _ viewportLength: CGFloat) -> CGFloat {
+            max((drawnLength - viewportLength) / 2, 0)
+        }
+        let maxX = limit(drawn.width, viewport.width)
+        let maxY = limit(drawn.height, viewport.height)
+        return CGSize(
+            width: min(max(editor.panOffset.width, -maxX), maxX),
+            height: min(max(editor.panOffset.height, -maxY), maxY)
+        )
+    }
+
+    @ViewBuilder
+    private func overlays(in rect: CGRect) -> some View {
+        Group {
+            if editor.isCropping {
+                CropOverlay(cropRect: $editor.editStack.geometry.cropRect,
+                            displaySize: rect.size)
+            } else if let index = editor.selectedSpotIndex {
+                RetouchHandles(spot: $editor.editStack.retouch[index], displaySize: rect.size)
+            } else if let maskIndex = editor.selectedMaskIndex,
+                      let componentIndex = editor.selectedComponentIndex {
+                MaskHandles(
+                    component: $editor.editStack
+                        .localAdjustments[maskIndex].components[componentIndex],
+                    displaySize: rect.size
+                )
+            } else if workspace.activeTool == .heal || workspace.activeTool == .clone {
+                retouchPaintOverlay(displaySize: rect.size)
+            }
+        }
+        .frame(width: rect.width, height: rect.height)
+        .position(x: rect.midX, y: rect.midY)
+    }
+
+    private var beforeBadge: some View {
+        Text("BEFORE")
+            .plateLabel()
+            .foregroundStyle(Theme.text)
+            .padding(.horizontal, Theme.space3)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.68), in: Capsule())
+            .overlay { Capsule().strokeBorder(Theme.warning.opacity(0.5), lineWidth: Theme.hairline) }
+            .padding(Theme.space3)
+    }
+
+    /// Dragging the canvas moves the photograph under the window when it is
+    /// magnified past fitting. `panOffset` is absolute, so each drag starts
+    /// from where the last one left off.
+    private var panGesture: some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                guard editor.canPan, workspace.activeTool == .hand else { return }
+                if panAtDragStart == nil { panAtDragStart = editor.panOffset }
+                let start = panAtDragStart ?? .zero
+                editor.panOffset = CGSize(width: start.width + value.translation.width,
+                                          height: start.height + value.translation.height)
+            }
+            .onEnded { _ in panAtDragStart = nil }
     }
 
     private var clippingReadout: some View {
@@ -252,13 +360,13 @@ private struct EditCanvas: View {
     /// Single click drives the active eyedropper; double click toggles
     /// fit ↔ 100%. The single-tap recognizer only *acts* in picker mode, so
     /// the two never fight.
-    private func clickGesture(displaySize: CGSize) -> some Gesture {
+    private func clickGesture(rect: CGRect) -> some Gesture {
         let pick = SpatialTapGesture(count: 1)
             .onEnded { value in
                 guard editor.canvasPicker != nil else { return }
                 let unit = CGPoint(
-                    x: min(max(value.location.x / displaySize.width, 0), 1),
-                    y: min(max(1 - value.location.y / displaySize.height, 0), 1)
+                    x: min(max((value.location.x - rect.minX) / rect.width, 0), 1),
+                    y: min(max(1 - (value.location.y - rect.minY) / rect.height, 0), 1)
                 )
                 editor.handleCanvasClick(atUnitPoint: unit)
             }
@@ -313,7 +421,7 @@ private struct EditCanvas: View {
                 .fill(Theme.accent)
                 .frame(width: 5, height: 5)
             Text(prompt)
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
             Button {
                 editor.canvasPicker = nil
             } label: {
@@ -336,7 +444,7 @@ private struct EditCanvas: View {
     private var cropBar: some View {
         HStack(spacing: 12) {
             Text("Recompose the frame")
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
                 .foregroundStyle(Theme.secondaryText)
             PlateButton(title: "Cancel") { editor.cancelCrop() }
             PlateButton(title: "Done") { editor.finishCrop() }
@@ -361,7 +469,7 @@ private struct EditCanvas: View {
                 .font(.system(size: 40, weight: .thin, design: .monospaced))
                 .foregroundStyle(Theme.secondaryText)
             Text("This photo's file could not be found.")
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
             Text(editor.fileName)
                 .font(Theme.valueFont)
                 .foregroundStyle(Theme.secondaryText)

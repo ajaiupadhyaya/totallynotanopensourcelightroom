@@ -67,18 +67,62 @@ final class ColorSuiteTests: XCTestCase {
         XCTAssertGreaterThan(abs(center.green - center.red), abs(edge.green - edge.red) + 0.02)
     }
 
-    func testPreviewTileRendererMatchesSinglePass() {
-        let source = TestSupport.solidImage(red: 0.3, green: 0.5, blue: 0.7, size: 1200)
+    /// A large frame must develop to exactly the same picture as a small one.
+    ///
+    /// This is the contract a tiled preview path broke: splitting the frame and
+    /// replaying the whole stack per tile makes every extent-dependent stage —
+    /// crop, straighten, vignette, grain, masks — measure the tile instead of
+    /// the photograph, so the tiles land in the wrong place and composite as
+    /// offset bands. Per-pixel stages like exposure tile harmlessly, which is
+    /// why this test exercises geometry and a vignette instead.
+    func testLargeFrameDevelopsIdenticallyToSmallOne() {
         var stack = EditStack()
+        stack.geometry.cropRect = CGRect(x: 0, y: 0, width: 0.5, height: 1)
+        stack.vignetteAmount = -80
         stack.exposure = 0.4
-        let ml = MLMaskEnvironment(entryID: UUID(), geometry: stack.geometry)
-        let single = renderer.render(source: source, stack: stack, mlEnvironment: ml)
-        let tiled = PreviewTileRenderer.render(
-            source: source, stack: stack, renderer: renderer, mlEnvironment: ml
-        )
-        let a = TestSupport.readColor(single.cropped(to: CGRect(x: 600, y: 600, width: 8, height: 8)))
-        let b = TestSupport.readColor(tiled.cropped(to: CGRect(x: 600, y: 600, width: 8, height: 8)))
-        XCTAssertEqual(a.red, b.red, accuracy: 0.02)
-        XCTAssertEqual(a.green, b.green, accuracy: 0.02)
+
+        for size in [512.0, 2048.0] as [CGFloat] {
+            let source = TestSupport.solidImage(red: 0.3, green: 0.5, blue: 0.7, size: size)
+            let rendered = renderer.render(source: source, stack: stack)
+
+            XCTAssertEqual(rendered.extent.width, size / 2, accuracy: 1,
+                           "A half-width crop of a \(Int(size))px frame must be \(Int(size / 2))px wide.")
+            XCTAssertEqual(rendered.extent.height, size, accuracy: 1)
+            XCTAssertEqual(rendered.extent.origin.x, 0, accuracy: 1)
+
+            // The vignette darkens the corner relative to the centre of the
+            // *cropped* frame. Tiling breaks this because each tile vignettes
+            // about its own centre.
+            let inset = size * 0.04
+            let centre = TestSupport.readColor(rendered.cropped(to: CGRect(
+                x: size / 4 - inset, y: size / 2 - inset, width: inset * 2, height: inset * 2
+            )))
+            let corner = TestSupport.readColor(rendered.cropped(to: CGRect(
+                x: 0, y: 0, width: inset, height: inset
+            )))
+            XCTAssertGreaterThan(centre.green, corner.green + 0.05,
+                                 "The vignette must darken the corner of the cropped frame.")
+        }
+    }
+
+    /// The live preview is what the develop stack says it is — no separate
+    /// preview-only render path may disagree with `EditRenderer`.
+    func testPreviewMatchesTheDevelopStackOnALargeFrame() throws {
+        // Large enough that any size-triggered preview path would engage.
+        let url = try TestSupport.makeTempPNG(gray: 160, size: 1400)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(fileURL: url)
+        try catalog.save(entry)
+        let editor = EditorModel(entry: entry, catalog: catalog,
+                                 thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+
+        editor.editStack.geometry.cropRect = CGRect(x: 0, y: 0, width: 0.5, height: 1)
+
+        let preview = try XCTUnwrap(editor.previewCIImage)
+        XCTAssertEqual(preview.extent.width, 700, accuracy: 2,
+                       "Cropping to half must halve the preview, not composite offset tiles.")
+        XCTAssertEqual(preview.extent.height, 1400, accuracy: 2)
     }
 }

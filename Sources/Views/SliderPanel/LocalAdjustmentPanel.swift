@@ -20,7 +20,7 @@ struct LocalAdjustmentPanel: View {
             if model.editStack.localAdjustments.isEmpty {
                 Text("Paint a correction directly, burn a sky with a linear "
                      + "gradient, or dodge a face with a radial mask.")
-                    .font(Theme.readableFont)
+                    .font(Theme.body)
                     .foregroundStyle(Theme.secondaryText)
             } else {
                 maskList
@@ -83,14 +83,14 @@ struct LocalAdjustmentPanel: View {
                     .frame(width: 12, height: 12)
 
                     Text(adjustment.displayName)
-                        .font(Theme.controlFont)
+                        .font(Theme.controlLabel)
                         .foregroundStyle(Theme.text.opacity(adjustment.isEnabled ? 0.9 : 0.4))
 
                     Spacer()
 
                     LampToggle(label: "", isOn: binding(for: adjustment.id, \.isEnabled))
 
-                    GlyphButton(kind: .cross, label: "Delete mask") {
+                    IconButton(icon: .cross, label: "Delete mask") {
                         model.removeLocalAdjustment(id: adjustment.id)
                     }
                 }
@@ -165,7 +165,7 @@ struct LocalAdjustmentPanel: View {
         if let selected = component(index), selected.shape == .brush {
             HStack {
                 Text("\(selected.brushStrokes.count) STROKES")
-                    .engraved()
+                    .sectionLabel()
                 Spacer()
                 PlateButton(title: "Undo Stroke",
                             isEnabled: !selected.brushStrokes.isEmpty) {
@@ -180,7 +180,7 @@ struct LocalAdjustmentPanel: View {
         Text(component(index)?.shape == .brush
              ? "Drag on the photograph to paint this mask."
              : "Drag the handles on the photograph to place this mask.")
-            .font(Theme.readableFont)
+            .font(Theme.body)
             .foregroundStyle(Theme.secondaryText)
     }
 
@@ -242,7 +242,7 @@ private struct LocalMaskColorControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.controlSpacing) {
-            Text("LOCAL COLOR").engraved()
+            Text("LOCAL COLOR").sectionLabel()
 
             TabStrip(
                 options: ColorGradingPanel.Zone.allCases.map { ($0, $0.displayName) },

@@ -42,7 +42,7 @@ struct ColorMixerPanel: View {
 
             Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
 
-            Text("CALIBRATION").engraved()
+            Text("CALIBRATION").sectionLabel()
             AdjustmentSlider(title: "Red Hue", value: calibrationBinding(\.redHue),
                              range: -100...100, format: "%.0f", neutral: 0)
             AdjustmentSlider(title: "Green Hue", value: calibrationBinding(\.greenHue),

@@ -24,6 +24,11 @@ final class AppModel {
     /// the top bar, keyboard shortcut, and sheet share one source of truth.
     var isShowingExportSheet = false
 
+    /// Whether the import panel is showing. Lives here so the roll's button,
+    /// the empty canvas, and the File menu all raise the same one panel rather
+    /// than each owning a private copy that the others cannot open.
+    var isShowingImporter = false
+
     private let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
     private let renderer = EditRenderer()
@@ -45,6 +50,7 @@ final class AppModel {
         reload()
         reloadPresets()
         restoreLastSession()
+        repairMissingThumbnails()
     }
 
     /// Injectable seam for tests: the real model against an isolated store,
@@ -78,7 +84,7 @@ final class AppModel {
             thumbnailPath: nil
         )
         entry.applyMetadata(PhotoMetadata.read(from: url))
-        if let cgImage = ThumbnailGenerator.thumbnailCGImage(for: url),
+        if let cgImage = makeThumbnailImage(for: entry),
            let thumbnailURL = thumbnails.write(cgImage, id: entry.id) {
             entry.thumbnailPath = thumbnailURL
         }
@@ -89,6 +95,75 @@ final class AppModel {
         } catch {
             errorMessage = "Import failed: \(error.localizedDescription)"
             return nil
+        }
+    }
+
+    // MARK: Thumbnails
+
+    /// True when the entry's thumbnail is a file we can actually read.
+    ///
+    /// A recorded path is not proof of a thumbnail: the file may never have
+    /// been written, or may have been cleared out from under the catalog.
+    private func thumbnailIsReadable(_ entry: CatalogEntry) -> Bool {
+        guard let path = entry.thumbnailPath else { return false }
+        return FileManager.default.fileExists(atPath: path.path)
+    }
+
+    /// Builds a thumbnail image for an entry.
+    ///
+    /// An unedited frame goes through ImageIO, which is far cheaper than the
+    /// develop chain and uses the embedded preview when the format has one. An
+    /// edited frame has to be rendered, or the library would show a picture the
+    /// photograph no longer is. ImageIO failing is not fatal — some sources it
+    /// declines are still decodable — so the render path is also the fallback.
+    private func makeThumbnailImage(for entry: CatalogEntry) -> CGImage? {
+        if entry.editStack == EditStack(),
+           let image = ThumbnailGenerator.thumbnailCGImage(for: entry.fileURL) {
+            return image
+        }
+        guard let source = ImageDecoder.loadPreviewImage(from: entry.fileURL,
+                                                         maxDimension: 640) else { return nil }
+        return renderer.makeCGImage(renderer.render(source: source, stack: entry.editStack))
+    }
+
+    /// Re-renders an entry's thumbnail from its current edit stack **and
+    /// records where it went**.
+    ///
+    /// Storing the path is the half that used to be missing: writing the file
+    /// without saving its location leaves the library drawing the empty-frame
+    /// placeholder over a thumbnail that exists on disk.
+    @discardableResult
+    func refreshThumbnail(for entry: CatalogEntry) -> CatalogEntry {
+        guard let cgImage = makeThumbnailImage(for: entry),
+              let url = thumbnails.write(cgImage, id: entry.id) else { return entry }
+
+        var updated = entry
+        updated.thumbnailPath = url
+        try? catalog.save(updated)
+        if let index = entries.firstIndex(where: { $0.id == entry.id }) {
+            entries[index] = updated
+        }
+        return updated
+    }
+
+    /// Rebuilds every thumbnail that is missing from disk.
+    ///
+    /// Import can fail to produce one — the original may be briefly unreadable,
+    /// on a volume that is not mounted yet, or the thumbnail may be deleted
+    /// later. Without a repair pass that frame shows an empty placeholder for
+    /// the rest of the library's life, because nothing ever tries again.
+    ///
+    /// Runs one frame at a time, yielding between each, so a library with a lot
+    /// of repairs to do never blocks the window.
+    func repairMissingThumbnails() {
+        let broken = entries.filter { !thumbnailIsReadable($0) }
+        guard !broken.isEmpty else { return }
+        Task { @MainActor [weak self] in
+            for entry in broken {
+                guard let self else { return }
+                self.refreshThumbnail(for: entry)
+                await Task.yield()
+            }
         }
     }
 
@@ -144,7 +219,7 @@ final class AppModel {
         copy.copyNumber = number
         do {
             try catalog.save(copy)
-            regenerateThumbnail(for: copy)
+            refreshThumbnail(for: copy)
             reload()
             return entries.first { $0.id == copy.id } ?? copy
         } catch {
@@ -234,10 +309,10 @@ final class AppModel {
             guard updated != target else { continue }
             do {
                 try catalog.save(updated)
-                regenerateThumbnail(for: updated)
                 if let index = entries.firstIndex(where: { $0.id == target.id }) {
                     entries[index] = updated
                 }
+                refreshThumbnail(for: updated)
                 applied += 1
             } catch {
                 errorMessage = "Could not update \(target.fileName): \(error.localizedDescription)"
@@ -248,15 +323,6 @@ final class AppModel {
             open(entries.first { $0.id == editor.entry.id } ?? editor.entry)
         }
         return applied
-    }
-
-    /// Re-renders an entry's thumbnail from its current edit stack.
-    private func regenerateThumbnail(for entry: CatalogEntry) {
-        guard let source = ImageDecoder.loadPreviewImage(from: entry.fileURL,
-                                                         maxDimension: 640) else { return }
-        let rendered = renderer.render(source: source, stack: entry.editStack)
-        guard let cgImage = renderer.makeCGImage(rendered) else { return }
-        _ = thumbnails.write(cgImage, id: entry.id)
     }
 
     // MARK: Presets

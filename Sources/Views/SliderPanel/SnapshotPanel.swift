@@ -12,10 +12,10 @@ struct SnapshotPanel: View {
             HStack(spacing: 8) {
                 TextField("", text: $name,
                           prompt: Text("name this state…")
-                            .font(Theme.controlFont)
+                            .font(Theme.controlLabel)
                             .foregroundStyle(Theme.tertiaryText))
                     .textFieldStyle(.plain)
-                    .font(Theme.controlFont)
+                    .font(Theme.controlLabel)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Theme.control.opacity(0.6),
@@ -61,7 +61,7 @@ private struct SnapshotRow: View {
             } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(snapshot.name)
-                        .font(Theme.controlFont)
+                        .font(Theme.controlLabel)
                         .foregroundStyle(Theme.text.opacity(0.9))
                     Text(snapshot.dateCreated.formatted(date: .abbreviated, time: .shortened))
                         .font(.system(size: 9, design: .monospaced))
@@ -75,7 +75,7 @@ private struct SnapshotRow: View {
             Spacer()
 
             if isHovering {
-                GlyphButton(kind: .cross, label: "Delete snapshot") {
+                IconButton(icon: .cross, label: "Delete snapshot") {
                     model.deleteSnapshot(snapshot)
                 }
             }

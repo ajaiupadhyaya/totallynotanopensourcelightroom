@@ -36,7 +36,7 @@ struct GeometryPanel: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("RATIO")
-                    .engraved()
+                    .sectionLabel()
                 HStack(spacing: 6) {
                     ForEach(Self.aspectRatios, id: \.0) { label, ratio in
                         PlateButton(title: label) { model.setCropAspectRatio(ratio) }

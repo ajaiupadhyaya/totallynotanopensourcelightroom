@@ -8,55 +8,42 @@ struct ToolRail: View {
     @Bindable var workspace: WorkspaceModel
 
     var body: some View {
-        VStack(spacing: 2) {
-            ForEach(EditorTool.allCases) { tool in
-                ToolRailButton(tool: tool, isSelected: tool == workspace.activeTool) {
-                    workspace.activate(tool, in: model)
-                }
-            }
-            Spacer()
+        VStack(spacing: 3) {
+            railGroup(EditorTool.allCases.filter { !$0.isViewingAid })
 
-            Text("TOOLS")
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                .kerning(1.5)
-                .foregroundStyle(Theme.tertiaryText)
-                .rotationEffect(.degrees(-90))
-                .fixedSize()
-                .padding(.bottom, 24)
+            Rule(color: Theme.separator)
+                .padding(.horizontal, 12)
+                .padding(.vertical, Theme.space2)
+
+            railGroup(EditorTool.allCases.filter(\.isViewingAid))
+
+            Spacer(minLength: 0)
         }
-        .padding(.top, 7)
+        .padding(.vertical, Theme.space2)
         .frame(width: Theme.toolRailWidth)
-        .background(Color(white: 0.065))
+        .background(Theme.canvas)
+        .accessibilityLabel("Tools")
     }
-}
 
-private struct ToolRailButton: View {
-    let tool: EditorTool
-    let isSelected: Bool
-    let action: () -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: tool.symbolName)
-                .font(.system(size: 15, weight: .regular))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(isSelected ? Theme.text
-                                             : (isHovering ? Theme.text : Theme.secondaryText))
-                .frame(width: Theme.toolRailWidth, height: 40)
-                .background(isSelected ? Theme.control : .clear)
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(isSelected ? Theme.accent : .clear)
-                        .frame(width: 2)
-                }
-                .contentShape(Rectangle())
+    private func railGroup(_ tools: [EditorTool]) -> some View {
+        ForEach(tools) { tool in
+            ToolButton(
+                symbol: tool.symbolName,
+                label: tool.label,
+                shortcut: tool.shortcutHint ?? "",
+                isSelected: isLit(tool)
+            ) {
+                workspace.activate(tool, in: model)
+            }
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .help(tool.shortcutHint.map { "\(tool.label)  ·  \($0)" } ?? tool.label)
-        .accessibilityLabel(tool.label)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    /// Compare is a momentary look rather than a mode, so it never becomes the
+    /// active tool. It still has to *look* engaged while it is showing the
+    /// original, or the rail would claim nothing is happening while the canvas
+    /// plainly disagrees.
+    private func isLit(_ tool: EditorTool) -> Bool {
+        tool == .compare ? model.isShowingBefore : tool == workspace.activeTool
     }
 }
 
@@ -66,25 +53,39 @@ struct ToolOptionsBar: View {
     @Bindable var model: EditorModel
     @Bindable var workspace: WorkspaceModel
 
+    /// The bar exists only when the tool in hand actually has options.
+    ///
+    /// The Hand tool has none, and a full-width bar carrying one sentence of
+    /// advice is worse than no bar: it takes a strip off the photograph to say
+    /// something a person reads once and never again. Collapsing gives the
+    /// space back to the image, which is what the window is for.
+    private var hasOptions: Bool {
+        workspace.activeTool != .hand
+    }
+
     var body: some View {
-        HStack(spacing: 16) {
-            Text(workspace.activeTool.label.uppercased())
-                .font(Theme.engravedLabel)
-                .kerning(Theme.engravedTracking)
-                .foregroundStyle(Theme.text)
-                .frame(width: 86, alignment: .leading)
+        if hasOptions {
+            HStack(spacing: Theme.space4) {
+                HStack(spacing: 7) {
+                    Image(systemName: workspace.activeTool.symbolName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                    Text(workspace.activeTool.label.uppercased())
+                        .sectionLabel(Theme.text)
+                }
+                .frame(width: 104, alignment: .leading)
 
-            Rectangle().fill(Theme.strongSeparator).frame(width: Theme.hairline, height: 18)
+                Rule(axis: .vertical, color: Theme.separator).frame(height: 18)
 
-            options
+                options
 
-            Spacer(minLength: 8)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: Theme.contextBarHeight)
-        .background(Theme.background)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
+                Spacer(minLength: Theme.space2)
+            }
+            .padding(.horizontal, Theme.panelInset)
+            .frame(height: Theme.contextBarHeight)
+            .background(Theme.background)
+            .overlay(alignment: .bottom) { Rule() }
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 
@@ -92,10 +93,10 @@ struct ToolOptionsBar: View {
     private var options: some View {
         switch workspace.activeTool {
         case .hand:
-            contextNote("Double-click the photograph to toggle Fit and 100%")
+            EmptyView()
         case .crop:
             HStack(spacing: 8) {
-                Text("RATIO").engraved()
+                Text("RATIO").sectionLabel()
                 ForEach(cropRatios, id: \.label) { item in
                     PlateButton(title: item.label) { model.setCropAspectRatio(item.ratio) }
                 }
@@ -179,7 +180,7 @@ struct ToolOptionsBar: View {
 
     private func contextNote(_ text: String) -> some View {
         Text(text)
-            .font(Theme.readableFont)
+            .font(Theme.body)
             .foregroundStyle(Theme.secondaryText)
             .lineLimit(1)
     }
@@ -233,29 +234,57 @@ private struct MiniContextFader: View {
     let range: ClosedRange<Double>
     let format: String
 
+    @State private var isHovering = false
+
     var body: some View {
-        HStack(spacing: 7) {
-            Text(label).engraved()
+        HStack(spacing: 8) {
+            Text(label).sectionLabel()
+
             GeometryReader { proxy in
-                let fraction = (value - range.lowerBound) / (range.upperBound - range.lowerBound)
-                ZStack(alignment: .leading) {
-                    Rectangle().fill(Theme.separator).frame(height: 1)
-                    Rectangle().fill(Theme.secondaryText)
-                        .frame(width: proxy.size.width * CGFloat(fraction), height: 2)
-                    Rectangle().fill(Theme.text).frame(width: 1, height: 11)
-                        .offset(x: proxy.size.width * CGFloat(fraction))
+                let fraction = CGFloat(
+                    (value - range.lowerBound) / (range.upperBound - range.lowerBound)
+                )
+                let x = proxy.size.width * min(max(fraction, 0), 1)
+                let midY = proxy.size.height / 2
+
+                ZStack(alignment: .topLeading) {
+                    // Same groove-and-thumb language as the panel faders, at
+                    // the size the bar allows. A control that behaves the same
+                    // should look the same.
+                    Capsule()
+                        .fill(Theme.canvas.opacity(0.75))
+                        .frame(width: proxy.size.width, height: 3)
+                        .offset(y: midY - 1.5)
+                    Capsule()
+                        .fill(Theme.secondaryText.opacity(0.85))
+                        .frame(width: x, height: 3)
+                        .offset(y: midY - 1.5)
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Theme.text)
+                        .frame(width: 5, height: 12)
+                        .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+                        .scaleEffect(x: isHovering ? 1.2 : 1)
+                        .offset(x: x - 2.5, y: midY - 6)
                 }
+                .frame(width: proxy.size.width, height: proxy.size.height)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { event in
                     let t = min(max(event.location.x / proxy.size.width, 0), 1)
                     value = range.lowerBound + Double(t) * (range.upperBound - range.lowerBound)
                 })
             }
-            .frame(width: 92, height: 14)
+            .frame(width: 92, height: 18)
+            .onHover { isHovering = $0 }
+            .animation(Theme.quick, value: isHovering)
+
             Text(String(format: format, value))
                 .font(Theme.valueFont)
+                .monospacedDigit()
                 .foregroundStyle(Theme.text)
-                .frame(width: 44, alignment: .trailing)
+                .frame(width: 46, alignment: .trailing)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(String(format: format, value))
     }
 }

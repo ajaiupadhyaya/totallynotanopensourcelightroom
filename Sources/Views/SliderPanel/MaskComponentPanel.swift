@@ -31,8 +31,8 @@ struct MaskComponentList: View {
                 .frame(width: 12)
 
             Text(component.displayName.uppercased())
-                .font(Theme.engravedLabel)
-                .kerning(Theme.engravedTracking)
+                .font(Theme.sectionTitle)
+                .kerning(Theme.sectionTracking)
                 .foregroundStyle(isSelected ? Theme.text : Theme.secondaryText)
 
             Spacer()
@@ -65,7 +65,7 @@ struct MaskComponentList: View {
 
     private var addRow: some View {
         HStack(spacing: 6) {
-            Text("ADD").engraved()
+            Text("ADD").sectionLabel()
             PlateButton(title: "Lum") { model.addMaskComponent(.luminance) }
             PlateButton(title: "Color") { model.addMaskComponent(.colorRange) }
             PlateButton(title: "Grad") { model.addMaskComponent(.linear) }
@@ -125,7 +125,7 @@ struct MaskComponentControls: View {
 
     private func combineRow(_ index: Int) -> some View {
         HStack(spacing: 6) {
-            Text("MODE").engraved()
+            Text("MODE").sectionLabel()
             ForEach(MaskComponent.Combine.allCases, id: \.self) { mode in
                 PlateButton(title: label(mode),
                             isEnabled: true) {
@@ -158,7 +158,7 @@ struct MaskComponentControls: View {
                              range: 0.01...0.5, format: "%.2f", neutral: 0.15)
         case .colorRange:
             HStack(spacing: 8) {
-                Text("SAMPLE").engraved()
+                Text("SAMPLE").sectionLabel()
                 swatch(index)
                 PlateButton(title: model.canvasPicker == .colorRangeSample
                             ? "Click the photo" : "Sample") {
@@ -171,7 +171,7 @@ struct MaskComponentControls: View {
                              range: 0.01...0.5, format: "%.2f", neutral: 0.15)
         case .subject, .person, .background, .sky:
             Text("Generated on-device from the photograph. Refine with blur and expand.")
-                .font(Theme.readableFont)
+                .font(Theme.body)
                 .foregroundStyle(Theme.secondaryText)
         case .radial:
             AdjustmentSlider(title: "Feather", value: binding(index, \.feather),
@@ -185,7 +185,7 @@ struct MaskComponentControls: View {
                              range: 0.05...1, format: "%.2f", neutral: 0.8)
         case .linear:
             Text("Drag the on-canvas pins to place the gradient")
-                .font(Theme.readableFont)
+                .font(Theme.body)
                 .foregroundStyle(Theme.secondaryText)
         }
     }

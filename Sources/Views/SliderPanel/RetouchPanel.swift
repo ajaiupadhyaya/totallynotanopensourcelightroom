@@ -62,7 +62,7 @@ struct RetouchPanel: View {
 
                     LampToggle(label: "", isOn: binding(for: spot.id, \.isEnabled))
 
-                    GlyphButton(kind: .cross, label: "Delete spot") {
+                    IconButton(icon: .cross, label: "Delete spot") {
                         model.removeRetouchSpot(id: spot.id)
                     }
                 }

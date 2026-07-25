@@ -70,7 +70,7 @@ struct FilmPanel: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Film Base")
-                        .font(Theme.controlFont)
+                        .font(Theme.controlLabel)
                     Text(model.hasSampledBase ? "sampled from this scan" : "assumed default")
                         .font(.system(size: 9.5, design: .monospaced))
                         .foregroundStyle(model.hasSampledBase
@@ -101,7 +101,7 @@ struct FilmPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("STOCK")
-                    .engraved()
+                    .sectionLabel()
                 Spacer()
                 PlateButton(title: "Calibrate") { isShowingCalibration = true }
             }
@@ -119,10 +119,10 @@ struct FilmPanel: View {
             } label: {
                 HStack {
                     Text(film.stockName ?? "None")
-                        .font(Theme.controlFont)
+                        .font(Theme.controlLabel)
                         .foregroundStyle(Theme.text.opacity(0.9))
                     Spacer()
-                    Glyph(kind: .chevronDown, size: 6, weight: 1.1)
+                    Icon(kind: .chevronDown, size: 9, weight: 1.3)
                         .foregroundStyle(Theme.tertiaryText)
                 }
                 .padding(.horizontal, 8)
@@ -145,7 +145,7 @@ struct FilmPanel: View {
     private var matchList: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("CLOSEST TO THIS SCAN'S BASE")
-                .engraved()
+                .sectionLabel()
 
             ForEach(model.stockMatches.prefix(3)) { match in
                 Button {
@@ -209,10 +209,10 @@ private struct CalibrateStockSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("CALIBRATE FILM STOCK")
-                .engraved()
+                .sectionLabel()
             Text("Saves this scan's film base and character as a profile you "
                  + "can apply to the rest of the roll.")
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
                 .foregroundStyle(Theme.secondaryText)
 
             VStack(spacing: 8) {
@@ -250,10 +250,10 @@ private struct CalibrateStockSheet: View {
                 .frame(width: 110, alignment: .leading)
             TextField("", text: text,
                       prompt: Text(prompt)
-                        .font(Theme.controlFont)
+                        .font(Theme.controlLabel)
                         .foregroundStyle(Theme.tertiaryText))
                 .textFieldStyle(.plain)
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background(Theme.control.opacity(0.6),

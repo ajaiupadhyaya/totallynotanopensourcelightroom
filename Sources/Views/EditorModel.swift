@@ -169,9 +169,23 @@ final class EditorModel {
     var zoomLevel: Double? {
         didSet {
             guard zoomLevel != oldValue else { return }
+            // Changing magnification re-centres. Keeping an old pan across a
+            // zoom change routinely lands you looking at empty canvas, and
+            // "where did my photograph go" is not a puzzle worth posing.
+            panOffset = .zero
             renderPreview()
         }
     }
+
+    /// How far the photograph is dragged from centre, in points.
+    ///
+    /// View state only — panning is about what you are looking at, not about
+    /// the photograph, so it is never persisted and never reaches the export.
+    var panOffset: CGSize = .zero
+
+    /// True when the frame is magnified past fitting the window, which is the
+    /// only time panning means anything.
+    var canPan: Bool { (zoomLevel ?? 0) > 0 }
 
     // MARK: Retouch
 
@@ -789,18 +803,21 @@ final class EditorModel {
         return source
     }
 
+    /// Builds the develop graph for the preview.
+    ///
+    /// There is deliberately **one** render path: whatever the frame's size,
+    /// the preview is the same chain the export replays. An earlier version
+    /// split large frames into tiles and replayed the whole stack per tile,
+    /// which silently broke every stage that measures the frame — crop,
+    /// straighten, perspective, vignette, grain, masks all resolved against a
+    /// 512 px tile instead of the photograph. Core Image already tiles
+    /// internally when it rasterizes, so the graph must never be tiled by hand.
     private func renderEditedImage(
         from renderSource: CIImage, stack: EditStack
     ) -> CIImage {
-        let mlEnvironment = MLMaskEnvironment(entryID: entry.id, geometry: stack.geometry)
-        if PreviewTileRenderer.shouldTile(renderSource) {
-            return PreviewTileRenderer.render(
-                source: renderSource, stack: stack, renderer: renderer,
-                mlEnvironment: mlEnvironment
-            )
-        }
-        return renderer.render(
-            source: renderSource, stack: stack, mlEnvironment: mlEnvironment
+        renderer.render(
+            source: renderSource, stack: stack,
+            mlEnvironment: MLMaskEnvironment(entryID: entry.id, geometry: stack.geometry)
         )
     }
 

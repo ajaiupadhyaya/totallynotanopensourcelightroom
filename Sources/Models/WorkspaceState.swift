@@ -38,18 +38,36 @@ enum EditorTool: String, CaseIterable, Identifiable {
         }
     }
 
-    /// SF Symbols are the platform's native, coherent icon library and match
-    /// the thin tool glyphs in the selected design direction.
+    /// The tool marks come from SF Symbols.
+    ///
+    /// The rest of the chrome draws its own glyphs, because a chevron or a plus
+    /// is two strokes and has to match the hairline weight of the faders beside
+    /// it. A hand, a plaster, a loaded brush are different work: they are real
+    /// pictograms that have to stay legible at 15 points, and hand-drawing them
+    /// produced marks that read as blobs at exactly the size they are used.
+    /// Apple's set is drawn and hinted for this size, so the tools use it and
+    /// the chrome does not.
     var symbolName: String {
         switch self {
-        case .hand: "hand.draw"
+        case .hand: "hand.raised"
         case .crop: "crop"
         case .heal: "bandage"
         case .clone: "stamp"
         case .brush: "paintbrush.pointed"
-        case .gradient: "square.lefthalf.filled"
-        case .eyedropper: "eyedropper"
+        case .gradient: "circle.righthalf.filled"
+        case .eyedropper: "eyedropper.halffull"
         case .compare: "rectangle.split.2x1"
+        }
+    }
+
+    /// Tools that act on the frame's geometry and content, versus tools that
+    /// only change what you are looking at. The rail groups them, because
+    /// reaching for "compare" is a different kind of act from reaching for
+    /// "brush", and a flat list of eight hides that.
+    var isViewingAid: Bool {
+        switch self {
+        case .hand, .compare: true
+        case .crop, .heal, .clone, .brush, .gradient, .eyedropper: false
         }
     }
 

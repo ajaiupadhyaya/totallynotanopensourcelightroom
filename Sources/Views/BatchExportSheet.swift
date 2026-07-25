@@ -24,7 +24,7 @@ struct BatchExportSheet: View {
             Text(entries.count == 1
                  ? "EXPORT PHOTO"
                  : "EXPORT \(entries.count) PHOTOS")
-                .engraved()
+                .sectionLabel()
 
             VStack(alignment: .leading, spacing: 14) {
                 labeled("Format") {

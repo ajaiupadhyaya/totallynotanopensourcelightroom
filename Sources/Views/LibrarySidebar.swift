@@ -10,7 +10,6 @@ import UniformTypeIdentifiers
 struct LibrarySidebar: View {
     @Bindable var app: AppModel
 
-    @State private var isImporting = false
     @State private var filter = LibraryFilter()
     @State private var searchText = ""
     @State private var isShowingBatchExport = false
@@ -42,7 +41,7 @@ struct LibrarySidebar: View {
             !app.importDropped(urls).isEmpty
         }
         .fileImporter(
-            isPresented: $isImporting,
+            isPresented: $app.isShowingImporter,
             allowedContentTypes: [.jpeg, .png, .heic, .tiff, .rawImage, .image],
             allowsMultipleSelection: true
         ) { result in
@@ -55,9 +54,9 @@ struct LibrarySidebar: View {
 
     /// "ROLL" + the working actions. The panel is the roll; the header says so.
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.space2) {
             Text("ROLL")
-                .engraved()
+                .sectionLabel(Theme.text)
 
             Spacer()
 
@@ -69,7 +68,7 @@ struct LibrarySidebar: View {
             PlateButton(title: "Export", isEnabled: !app.entries.isEmpty) {
                 isShowingBatchExport = true
             }
-            PlateButton(title: "Import") { isImporting = true }
+            PlateButton(title: "Import") { app.isShowingImporter = true }
         }
         .padding(.horizontal, Theme.panelInset)
         .padding(.vertical, 9)
@@ -209,12 +208,12 @@ struct LibrarySidebar: View {
                 .stroke(Theme.tertiaryText, lineWidth: 1.2)
                 .frame(width: 54, height: 38)
             Text("The roll is empty")
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
             Text("Import a JPEG, PNG, HEIC, TIFF, RAW, or a scanned negative.")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
-            PlateButton(title: "Import Photo") { isImporting = true }
+            PlateButton(title: "Import photographs", emphasis: .prominent) { app.isShowingImporter = true }
         }
         .padding(24)
         .frame(maxHeight: .infinity)
@@ -226,7 +225,7 @@ struct LibrarySidebar: View {
                 .font(Theme.valueFont)
                 .foregroundStyle(Theme.secondaryText)
             Text("Nothing matches")
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
             PlateButton(title: "Clear Filter") {
                 filter = LibraryFilter()
                 searchText = ""
@@ -425,11 +424,13 @@ private struct LibraryFilterBar: View {
     let visibleCount: Int
     let totalCount: Int
 
+    @FocusState private var isSearchFocused: Bool
+
     var body: some View {
         VStack(spacing: 9) {
             searchField
 
-            HStack(spacing: 2) {
+            HStack(spacing: 1) {
                 ForEach(1...5, id: \.self) { star in
                     Button {
                         filter.minimumRating = filter.minimumRating == star ? 0 : star
@@ -441,23 +442,52 @@ private struct LibraryFilterBar: View {
                             .overlay {
                                 StarShape()
                                     .stroke(star <= filter.minimumRating
-                                            ? Theme.accent : Theme.secondaryText,
+                                            ? Theme.accent : Theme.tertiaryText,
                                             lineWidth: 1)
                             }
                             .frame(width: 11, height: 11)
+                            .frame(width: 18, height: 20)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Show \(star)+ stars")
+                    .help(filter.minimumRating == star
+                          ? "Show every rating" : "Show \(star) stars and above")
                 }
+
                 Spacer()
-                Text(filter.isActive || !searchText.isEmpty
-                     ? "\(visibleCount)/\(totalCount)" : "\(totalCount)")
-                    .font(Theme.valueFont)
-                    .foregroundStyle(Theme.secondaryText)
+
+                // The count is the answer to "is a filter hiding something?",
+                // so it says so in words rather than making a bare fraction
+                // carry the meaning.
+                Group {
+                    if filter.isActive || !searchText.isEmpty {
+                        HStack(spacing: 5) {
+                            Text("\(visibleCount) of \(totalCount)")
+                                .font(Theme.valueFont)
+                                .monospacedDigit()
+                                .foregroundStyle(Theme.text)
+                            Button {
+                                filter = LibraryFilter()
+                                searchText = ""
+                            } label: {
+                                Text("CLEAR")
+                                    .plateLabel()
+                                    .foregroundStyle(Theme.accent)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help("Show every frame")
+                        }
+                    } else {
+                        Text("\(totalCount) frames")
+                            .font(Theme.valueFont)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.tertiaryText)
+                    }
+                }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.space2) {
                 TabStrip(
                     options: [
                         (PickFlag?.none, "All"),
@@ -465,26 +495,31 @@ private struct LibraryFilterBar: View {
                         (PickFlag?.some(.rejected), "Rej"),
                         (PickFlag?.some(.unflagged), "None"),
                     ],
-                    selection: $filter.flag
+                    selection: $filter.flag,
+                    spacing: 11
                 )
+                .fixedSize()
 
                 Spacer()
 
                 // Color labels as their own colors — data, not chrome.
-                HStack(spacing: 4) {
+                HStack(spacing: 0) {
                     ForEach(ColorLabel.allCases.filter { $0 != .none }) { label in
                         let isActive = filter.colorLabel == label
                         Button {
                             filter.colorLabel = isActive ? nil : label
                         } label: {
                             Circle()
-                                .fill(color(for: label).opacity(isActive ? 1 : 0.45))
+                                .fill(color(for: label).opacity(isActive ? 1 : 0.4))
                                 .frame(width: 9, height: 9)
                                 .overlay {
                                     if isActive {
-                                        Circle().stroke(Theme.text, lineWidth: 1)
+                                        Circle()
+                                            .stroke(Theme.text, lineWidth: 1)
+                                            .padding(-2.5)
                                     }
                                 }
+                                .frame(width: 15, height: 20)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -499,25 +534,39 @@ private struct LibraryFilterBar: View {
 
     private var searchField: some View {
         HStack(spacing: 6) {
-            Text("⌕")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(Theme.tertiaryText)
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isSearchFocused ? Theme.accent : Theme.tertiaryText)
+
             TextField("", text: $searchText,
-                      prompt: Text("camera, lens, file…")
-                        .font(Theme.controlFont)
+                      prompt: Text("Camera, lens, file…")
+                        .font(Theme.controlLabel)
                         .foregroundStyle(Theme.tertiaryText))
                 .textFieldStyle(.plain)
-                .font(Theme.controlFont)
+                .font(Theme.controlLabel)
                 .foregroundStyle(Theme.text)
+                .focused($isSearchFocused)
+
             if !searchText.isEmpty {
-                GlyphButton(kind: .cross, label: "Clear search") { searchText = "" }
+                Button { searchText = "" } label: {
+                    Icon(kind: .cross, size: 8)
+                        .foregroundStyle(Theme.tertiaryText)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Clear search")
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Theme.control.opacity(0.6), in: RoundedRectangle(cornerRadius: 2))
-        .overlay(RoundedRectangle(cornerRadius: 2)
-            .stroke(Theme.separator, lineWidth: Theme.hairline))
+        .padding(.horizontal, Theme.space2)
+        .frame(height: 26)
+        .background(Theme.canvas.opacity(0.7), in: RoundedRectangle(cornerRadius: Theme.radius))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.radius)
+                .strokeBorder(isSearchFocused ? Theme.accent.opacity(0.7) : Theme.separator,
+                              lineWidth: Theme.hairline)
+        }
+        .animation(Theme.quick, value: isSearchFocused)
     }
 
     private func color(for label: ColorLabel) -> Color {

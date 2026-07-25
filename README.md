@@ -10,7 +10,7 @@
 
 Non-destructive from the ground up: originals are never modified. Every edit is a small JSON description replayed through a GPU filter chain — from the live Metal preview to the final export. Built with SwiftUI and Core Image, with a GRDB/SQLite catalog you can open in `sqlite3`.
 
-[Download 2.0.0](https://github.com/ajaiupadhyaya/totallynotanopensourcelightroom/releases/latest) · macOS 14+ · Developer ID signed & notarized
+[Download 2.1.0](https://github.com/ajaiupadhyaya/totallynotanopensourcelightroom/releases/latest) · macOS 14+ · Developer ID signed & notarized
 
 ---
 
@@ -21,7 +21,7 @@ Non-destructive from the ground up: originals are never modified. Every edit is 
 ## See it
 
 <p align="center">
-  <img src="docs/media/figures/hero.jpg" alt="PhotoEditor develop workspace with architectural photograph" width="100%">
+  <img src="docs/media/figures/hero.jpg" alt="PhotoEditor develop workspace with a scanned negative open" width="100%">
 </p>
 
 <p align="center"><em>The photograph is the only picture on screen. Everything else is annotation.</em></p>
@@ -38,12 +38,13 @@ Non-destructive from the ground up: originals are never modified. Every edit is 
 
 ## The design
 
-The interface is drawn from scratch — no stock macOS controls in the editor. One monospaced voice, like the title block of an architectural drawing or the engraved fascia of a darkroom instrument:
+The interface is drawn from scratch — no stock macOS controls in the editor. It is a develop desk: something you sit at for hours judging colour, drawn like the engraved fascia of a darkroom instrument.
 
-- **Faders, not sliders** — a hairline baseline, a tick at neutral, a quiet bar to the needle. What you have done to a photo is visible as a length. Drag the track; hold **⌥** for 10× finer motion; drag the readout to scrub; double-click to reset.
-- **A numbered signal chain** — sections are numbered in the order the render pipeline actually runs (`01 FILM` … `13 EFFECTS`). The numbers are a legend, not decoration.
+- **Faders, not sliders** — a groove, a tick at neutral, and a lit bar running from that tick to the current value. Filling from *neutral* rather than from the left end means an untouched frame shows a column of bare grooves, and one glance says which stages you have touched and how hard. Drag the groove; hold **⌥** for 10× finer motion; drag the readout to scrub; arrow keys nudge; double-click resets.
+- **A numbered signal chain, with a spine** — sections are numbered in the order the renderer actually runs (`01 FILM` … `14 EFFECTS`), and a hairline runs down the index gutter connecting them. It lights beside any stage carrying edits, so *what have I done to this frame* is answerable without opening anything.
+- **Monospace means data** — anything measured (a value, a dimension, a frame number, an exposure in stops) is monospaced so digits hold their column; everything a person reads is set in the system text face. The split carries meaning rather than style.
 - **The filmstrip is a film rebate** — frame numbers and stock names edge-printed in dim amber, the way a negative carries its own provenance.
-- **Achromatic chrome** — every interface gray has R = G = B exactly, so the surround never shifts perceived white balance. Color appears only where it carries photographic meaning.
+- **Achromatic chrome** — every interface grey has R = G = B exactly, so the surround never shifts perceived white balance. Colour appears only where it carries photographic meaning: the histogram's channels, a film base swatch, a label dot, a clipping warning.
 
 ---
 
@@ -74,7 +75,7 @@ Scanned negatives are a first-class subject, not a plugin afterthought. Film con
 
 **Masks** — composable components: brush, linear / radial gradients, luminance and colour range, on-device Vision subject / person / background / sky. Combine with add, subtract, intersect. Refine, invert, and show the selection with a red overlay (`⌘⇧M`).
 
-**Preview** — Metal canvas with EDR on capable displays, frame coalescing while you scrub, and tiled full-resolution rendering at 100%+ zoom.
+**Preview** — Metal canvas with EDR on capable displays, frame coalescing while you scrub, and full-resolution rendering at 100%+ zoom. The drawable is always the size of the window, so zooming a 60-megapixel frame costs what zooming a small one does.
 
 <p align="center">
   <img src="docs/media/figures/color.jpg" alt="Develop column with light and color tools" width="100%">
@@ -82,13 +83,13 @@ Scanned negatives are a first-class subject, not a plugin afterthought. Film con
 
 **Library** — filmstrip culling with ratings, pick / reject, colour labels, search; virtual copies; snapshots; presets; batch export from the full-resolution original.
 
-Tool rail shortcuts: `H` hand · `C` crop · `J` heal · `S` clone · `B` brush · `G` gradient · `I` eyedropper · `\` before / after.
+Tool rail shortcuts: `H` hand · `C` crop · `J` heal · `S` clone · `B` brush · `G` gradient · `I` eyedropper · `\` before / after. Everything else lives in the menu bar, where it can be found.
 
 ---
 
 ## Install
 
-Grab `PhotoEditor-2.0.0.zip` from the latest
+Grab `PhotoEditor-2.1.0.zip` from the latest
 [release](https://github.com/ajaiupadhyaya/totallynotanopensourcelightroom/releases/latest),
 unzip, and drag `PhotoEditor.app` to `/Applications`.
 
@@ -106,7 +107,7 @@ xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor \
   -destination 'platform=macOS' build
 ```
 
-Tests (~259):
+Tests (281):
 
 ```sh
 xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor \
@@ -121,7 +122,10 @@ xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor \
 - `EditRenderer` replays a stack as a lazy `CIImage` chain in deliberate order (film conversion first — on an un-inverted negative every other slider would work backwards). Mixer, B&W, grading, calibration, point color, and channel curves collapse into one cached 32³ LUT.
 - The “developed source” prefix (film, geometry, defringe, retouch) is memoized, so dragging a tone slider never re-runs a heal or a negative conversion.
 - Preview uses a Metal `CIRenderDestination` path; export re-decodes the original at full resolution and replays the same stack. Masks, crops, and retouch live in unit coordinates so both paths agree.
+- The preview is built by exactly one path — the same chain the export replays — because a preview-only shortcut is a preview that can disagree with the file you ship. The canvas renders that graph into a viewport-sized Metal drawable, so Core Image resolves the region of interest backwards through the chain and touches nothing the screen cannot show.
+- Histograms and clipping diagnostics are measured in display space, not the linear working space, because they are read by a person.
 - The catalog lives at `~/Library/Application Support/PhotoEditor/`.
+- The app icon is drawn in code — run `scripts/make-app-icon.sh` to regenerate it.
 
 ---
 

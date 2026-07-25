@@ -14,7 +14,7 @@ struct PointColorPanel: View {
 
             if model.editStack.color.pointColors.isEmpty {
                 Text("Sample colours on the photograph, then shift their hue, saturation, and luminance within a chosen range.")
-                    .font(Theme.readableFont)
+                    .font(Theme.body)
                     .foregroundStyle(Theme.secondaryText)
             } else {
                 ForEach(Array(model.editStack.color.pointColors.enumerated()), id: \.element.id) { index, _ in
@@ -25,7 +25,7 @@ struct PointColorPanel: View {
                                             green: target(index).green,
                                             blue: target(index).blue))
                                 .frame(width: 18, height: 12)
-                            Text("TARGET \(index + 1)").engraved()
+                            Text("TARGET \(index + 1)").sectionLabel()
                             Spacer()
                             PlateButton(title: model.canvasPicker == .pointColorSample
                                         && model.pointColorSampleIndex == index
@@ -39,7 +39,7 @@ struct PointColorPanel: View {
                                     model.canvasPicker = .pointColorSample
                                 }
                             }
-                            GlyphButton(kind: .cross, label: "Remove target") {
+                            IconButton(icon: .cross, label: "Remove target") {
                                 model.editStack.color.pointColors.remove(at: index)
                             }
                         }

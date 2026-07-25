@@ -1,17 +1,24 @@
 import SwiftUI
 
-/// A collapsible develop-panel section with an engraved, stage-numbered label.
+/// A collapsible develop-panel section, numbered by its position in the render
+/// pipeline and threaded onto the signal chain's spine.
 ///
-/// The header reads like the title block of a drawing: a dim stage index, then
-/// the section name in tracked caps over a hairline rule. The indices aren't
-/// decoration — they are the order of the render pipeline itself, so the panel
-/// column doubles as a legend of the signal chain.
+/// ## The spine
+///
+/// Every section's stage index sits in a fixed gutter down the left of the
+/// develop column, and a hairline runs through that gutter connecting them. It
+/// is not a rule for decoration: the numbers really are the order the renderer
+/// runs in, film conversion first and effects last, and the spine lights up
+/// beside any stage carrying edits.
+///
+/// That turns the column into a single readable answer to the question a
+/// photographer asks constantly — *what have I actually done to this frame?* —
+/// which is otherwise buried inside thirteen collapsed sections. A folded
+/// section keeps its state visible instead of hiding it.
 ///
 /// Sections remember whether they were collapsed across launches (keyed by
-/// title), because a photographer who never touches Effects shouldn't have to
-/// fold it away every session. A section can also surface a `reset` action,
-/// shown only while the section contains non-neutral edits — the affordance
-/// appears exactly when it means something.
+/// title), because someone who never touches Effects shouldn't have to fold it
+/// away every session.
 struct PanelSection<Content: View>: View {
     let title: String
     var index: String?
@@ -37,7 +44,7 @@ struct PanelSection<Content: View>: View {
         // A fresh inspector opens on Light, the most common operation, while
         // the rest of the chain stays legible as a compact index.
         _isExpanded = AppStorage(wrappedValue: title == "Light",
-                                 "panel.v2.expanded.\(title)")
+                                 "panel.v3.expanded.\(title)")
     }
 
     var body: some View {
@@ -48,64 +55,101 @@ struct PanelSection<Content: View>: View {
                 VStack(alignment: .leading, spacing: Theme.controlSpacing) {
                     content()
                 }
-                .padding(.horizontal, Theme.panelInset)
-                .padding(.top, 10)
-                .padding(.bottom, 16)
+                .padding(.leading, Theme.stageGutter)
+                .padding(.trailing, Theme.panelInset)
+                .padding(.top, 4)
+                .padding(.bottom, Theme.space4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(Theme.surface)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Theme.separator).frame(height: Theme.hairline)
-        }
+        .background(isExpanded ? Theme.surface : Theme.surface.opacity(0.6))
+        .overlay(alignment: .topLeading) { Rule() }
+        .overlay(alignment: .leading) { spine }
+        .clipped()
+    }
+
+    /// The chain running through the index gutter. It brightens to the accent
+    /// beside a stage that is carrying edits, so the column reads at a glance.
+    private var spine: some View {
+        Rectangle()
+            .fill(isModified ? Theme.accent.opacity(0.65) : Theme.separator)
+            .frame(width: isModified ? 2 : Theme.hairline)
+            .padding(.leading, Theme.panelInset - 3)
+            .animation(Theme.standard, value: isModified)
     }
 
     private var header: some View {
         Button {
-            withAnimation(.easeOut(duration: 0.15)) { isExpanded.toggle() }
+            withAnimation(Theme.expand) { isExpanded.toggle() }
         } label: {
-            HStack(spacing: 6) {
-                if let index {
-                    Text(index)
-                        .font(Theme.indexFont)
-                        .foregroundStyle(Theme.tertiaryText.opacity(0.8))
+            HStack(spacing: 0) {
+                // The gutter: stage index, on the spine.
+                Group {
+                    if let index {
+                        Text(index)
+                            .font(Theme.indexFont)
+                            .foregroundStyle(isModified ? Theme.accent : Theme.tertiaryText)
+                    }
                 }
+                .frame(width: Theme.stageGutter, alignment: .leading)
+                .padding(.leading, Theme.panelInset)
 
                 Text(title.uppercased())
-                    .engraved()
+                    .sectionLabel(isExpanded || isModified ? Theme.text : Theme.secondaryText)
 
-                // A quiet dot marks a section carrying edits even when folded,
-                // so state is never hidden by the fold.
-                if isModified {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 4, height: 4)
-                }
-
-                Spacer()
+                Spacer(minLength: Theme.space2)
 
                 if let onReset, isModified, isHovering {
-                    Button {
-                        onReset()
-                    } label: {
+                    Button(action: onReset) {
                         Text("RESET")
-                            .font(Theme.plateFont)
-                            .kerning(Theme.plateTracking)
-                            .foregroundStyle(Theme.secondaryText)
+                            .plateLabel()
+                            .foregroundStyle(Theme.tertiaryText)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .help("Reset \(title)")
+                    .transition(.opacity)
                 }
 
-                Glyph(kind: isExpanded ? .chevronDown : .chevronRight, size: 6, weight: 1.1)
-                    .foregroundStyle(Theme.tertiaryText)
+                Icon(kind: isExpanded ? .chevronDown : .chevronRight, size: 10, weight: 1.3)
+                    .foregroundStyle(isHovering ? Theme.secondaryText : Theme.tertiaryText)
+                    .padding(.trailing, Theme.panelInset)
+                    .padding(.leading, Theme.space2)
             }
-            .padding(.horizontal, Theme.panelInset)
-            .padding(.vertical, 11)
+            .frame(height: 38)
             .background(isHovering ? Theme.raisedSurface : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+        .animation(Theme.quick, value: isHovering)
         .accessibilityLabel("\(title) section")
         .accessibilityValue(isExpanded ? "expanded" : "collapsed")
+        .accessibilityHint(isModified ? "Contains edits" : "")
+    }
+}
+
+/// A quiet divider naming a run of pipeline stages.
+///
+/// Thirteen numbered sections in a row is a list, not a structure. Grouping
+/// them by what the stages *do* — repair the frame, place the tones, grade the
+/// colour — gives the column a rhythm to scan by without renumbering anything
+/// or pretending the pipeline is shorter than it is.
+struct PanelGroupHeading: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: Theme.space2) {
+            Text(title.uppercased())
+                .font(Theme.plateFont)
+                .kerning(1.4)
+                .foregroundStyle(Theme.tertiaryText.opacity(0.85))
+            Rule(color: Theme.separator.opacity(0.7))
+        }
+        .padding(.leading, Theme.panelInset)
+        .padding(.trailing, Theme.panelInset)
+        .padding(.top, Theme.space5)
+        .padding(.bottom, Theme.space2)
+        .background(Theme.background.opacity(0.5))
     }
 }

@@ -17,8 +17,21 @@ struct Histogram: Equatable {
 
     /// The largest bin value across all channels, used to normalize display
     /// height. Never returns 0, so it is safe to divide by.
+    ///
+    /// The end bins are excluded from the search. They are where clipped pixels
+    /// accumulate, and a frame with a genuinely black surround — a scan with a
+    /// rebate, a night shot, a silhouette — can pile a third of its pixels into
+    /// bin 0. Scaling to that spike squashes the entire tonal range of the
+    /// actual photograph into the bottom sliver of the graph, which is the one
+    /// job a histogram has. Clipping is still reported, separately and exactly,
+    /// by ``shadowClippedFraction`` and ``highlightClippedFraction`` — so
+    /// nothing is hidden by leaving the spikes out of the scale.
     var peak: Float {
-        let m = max(red.max() ?? 0, green.max() ?? 0, blue.max() ?? 0)
+        let interior = [red, green, blue].compactMap { channel -> Float? in
+            guard channel.count > 2 else { return channel.max() }
+            return channel.dropFirst().dropLast().max()
+        }
+        let m = interior.max() ?? 0
         return m > 0 ? m : 1
     }
 
