@@ -163,11 +163,7 @@ struct EditRenderer {
     }
 
     private func applyContrast(_ image: CIImage, stack: EditStack) -> CIImage {
-        guard stack.contrast != 0 else { return image }
-        let controls = CIFilter.colorControls()
-        controls.inputImage = image
-        controls.contrast = Float(1.0 + stack.contrast / 100.0)
-        return controls.outputImage ?? image
+        ToneStages.contrast(image, amount: stack.contrast)
     }
 
     // MARK: Presence
