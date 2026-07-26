@@ -159,4 +159,64 @@ final class CalibrationTests: XCTestCase {
         let darkFar = Calibration.displayValue(of: out, x: 8, y: 64)
         XCTAssertEqual(darkNear, darkFar, accuracy: 0.04, "uneven lift = halo on the dark side")
     }
+
+    // MARK: Vibrance / saturation
+
+    private func rgbAfter(_ r: Double, _ g: Double, _ b: Double,
+                          _ mutate: (inout EditStack) -> Void) -> (r: Double, g: Double, b: Double) {
+        let renderer = EditRenderer()
+        var stack = EditStack()
+        mutate(&stack)
+        let src = TestSupport.solidImage(red: r, green: g, blue: b, size: 16)
+        let c = TestSupport.readColor(renderer.render(source: src, stack: stack))
+        return (c.red, c.green, c.blue)
+    }
+
+    private func displayLuma(_ c: (r: Double, g: Double, b: Double)) -> Double {
+        0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+    }
+
+    func testSaturationPreservesDisplayLuminance() {
+        // PV1 dropped a bright red's display luma from 0.43 to 0.21 at +50.
+        for color in [(0.9, 0.3, 0.3), (0.2, 0.35, 0.7), (0.35, 0.1, 0.1)] {
+            let before = displayLuma((color.0, color.1, color.2))
+            let after = displayLuma(rgbAfter(color.0, color.1, color.2) { $0.saturation = 50 })
+            XCTAssertEqual(after, before, accuracy: 0.015,
+                           "saturation +50 moved display luma of \(color): \(before) → \(after)")
+        }
+    }
+
+    func testSaturationRollsOffAtTheGamutEdgeInsteadOfClipping() {
+        // PV1 sent (0.9, 0.3, 0.3) to (1.0, 0.0, 0.0) at +50 — two channels
+        // slammed into the walls. The rolloff must keep all channels interior.
+        let c = rgbAfter(0.9, 0.3, 0.3) { $0.saturation = 60 }
+        XCTAssertGreaterThan(c.g, 0.02)
+        XCTAssertGreaterThan(c.b, 0.02)
+        XCTAssertLessThan(c.r, 0.999)
+        XCTAssertGreaterThan(c.r - c.g, 0.6 - 0.0001, "it must still saturate meaningfully")
+    }
+
+    func testSaturationMinus100IsGreyscale() {
+        let c = rgbAfter(0.7, 0.4, 0.2) { $0.saturation = -100 }
+        XCTAssertEqual(c.r, c.g, accuracy: 0.01)
+        XCTAssertEqual(c.g, c.b, accuracy: 0.01)
+    }
+
+    func testVibranceProtectsSkinAndFavorsMutedColors() {
+        // Muted blue moves more than an equally-muted skin tone.
+        let skinBefore = (r: 0.75, g: 0.62, b: 0.55)
+        let blueBefore = (r: 0.55, g: 0.62, b: 0.75)
+        func chroma(_ c: (r: Double, g: Double, b: Double)) -> Double {
+            max(c.r, c.g, c.b) - min(c.r, c.g, c.b)
+        }
+        let skinAfter = rgbAfter(skinBefore.r, skinBefore.g, skinBefore.b) { $0.vibrance = 100 }
+        let blueAfter = rgbAfter(blueBefore.r, blueBefore.g, blueBefore.b) { $0.vibrance = 100 }
+        let skinGain = chroma(skinAfter) - chroma(skinBefore)
+        let blueGain = chroma(blueAfter) - chroma(blueBefore)
+        XCTAssertGreaterThan(blueGain, skinGain * 1.5 + 0.005,
+                             "vibrance must move muted non-skin colors more than skin")
+        // And an already-saturated color barely moves.
+        let vivid = rgbAfter(0.95, 0.1, 0.1) { $0.vibrance = 100 }
+        XCTAssertEqual(chroma(vivid), 0.85, accuracy: 0.08)
+    }
 }

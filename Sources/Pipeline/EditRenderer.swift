@@ -211,23 +211,7 @@ struct EditRenderer {
     // MARK: Color
 
     private func applyColor(_ image: CIImage, stack: EditStack) -> CIImage {
-        var result = image
-
-        if stack.vibrance != 0 {
-            let filter = CIFilter.vibrance()
-            filter.inputImage = result
-            filter.amount = Float(stack.vibrance / 100.0)
-            result = filter.outputImage ?? result
-        }
-
-        if stack.saturation != 0 {
-            let controls = CIFilter.colorControls()
-            controls.inputImage = result
-            controls.saturation = Float(1.0 + stack.saturation / 100.0)
-            result = controls.outputImage ?? result
-        }
-
-        return result
+        ColorStages.vibranceAndSaturation(image, vibrance: stack.vibrance, saturation: stack.saturation)
     }
 
     /// Applies the color mixer, black-and-white treatment, three-way grading,
