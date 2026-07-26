@@ -26,6 +26,10 @@ signing/
 # SDD scratch
 .superpowers/
 
+# RAW test fixtures — not committed (real camera files); README explains why
+Tests/Fixtures/RAW/*
+!Tests/Fixtures/RAW/README.md
+
 # Worktrees (isolated workspaces)
 .worktrees/
 # SDD plan workspaces

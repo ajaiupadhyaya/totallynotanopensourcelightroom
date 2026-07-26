@@ -28,10 +28,7 @@ enum ImageDecoder {
     /// - Returns: The decoded image, or `nil` if the file could not be read as
     ///   an image (including a RAW format this machine cannot decode).
     static func loadFullImage(from url: URL) -> CIImage? {
-        if isRAW(url), let raw = loadRAW(from: url) {
-            return raw
-        }
-        return CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
+        loadSource(from: url, maxDimension: nil)?.image
     }
 
     /// Loads an image as a `CIImage`, honoring its EXIF orientation and
@@ -44,8 +41,33 @@ enum ImageDecoder {
     /// - Returns: A preview-scaled `CIImage`, or `nil` if the file could not
     ///   be decoded as an image.
     static func loadPreviewImage(from url: URL, maxDimension: CGFloat = 1600) -> CIImage? {
-        guard let image = loadFullImage(from: url) else { return nil }
-        return downsampled(image, maxDimension: maxDimension)
+        loadSource(from: url, maxDimension: maxDimension)?.image
+    }
+
+    /// Loads a file as a `SourceImage`. RAW files keep their `CIRAWFilter`
+    /// (configured for PV2: gamut mapping off so out-of-gamut color survives,
+    /// EDR headroom on so highlights above 1.0 survive, decoded at
+    /// `maxDimension` via `scaleFactor` rather than decode-then-downsample).
+    /// Everything else decodes through ImageIO as before.
+    static func loadSource(from url: URL, maxDimension: CGFloat?) -> SourceImage? {
+        if isRAW(url), let filter = CIRAWFilter(imageURL: url) {
+            filter.isGamutMappingEnabled = false
+            filter.extendedDynamicRangeAmount = 1.0
+            if let maxDimension {
+                let native = max(filter.nativeSize.width, filter.nativeSize.height)
+                if native > maxDimension && native > 0 {
+                    filter.scaleFactor = Float(maxDimension / native)
+                }
+            }
+            return .raw(filter)
+        }
+        guard let image = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else {
+            return nil
+        }
+        if let maxDimension {
+            return .rendered(downsampled(image, maxDimension: maxDimension))
+        }
+        return .rendered(image)
     }
 
     /// Scales an image down so its longest edge is at most `maxDimension`.
@@ -58,19 +80,5 @@ enum ImageDecoder {
         }
         let scale = maxDimension / longestEdge
         return image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-    }
-
-    // MARK: Private
-
-    /// Decodes a camera RAW file via `CIRAWFilter`.
-    ///
-    /// The filter's defaults are Apple's baseline rendering for the camera
-    /// model — a reasonable neutral starting point, since our own adjustments
-    /// are applied downstream on top of it. RAW-specific controls (per-file
-    /// demosaic and noise-reduction parameters) are deliberately not exposed;
-    /// the edit stack stays format-independent.
-    private static func loadRAW(from url: URL) -> CIImage? {
-        guard let filter = CIRAWFilter(imageURL: url) else { return nil }
-        return filter.outputImage
     }
 }

@@ -68,16 +68,34 @@ struct EditRenderer {
     /// through ``LegacyToneRenderer`` verbatim; version 2+ stacks replay
     /// through the chain below, whose stages are migrated off the legacy math
     /// one at a time (see the PV2 spec).
-    func render(source: CIImage, stack: EditStack, mlEnvironment: MLMaskEnvironment? = nil) -> CIImage {
+    ///
+    /// A `.raw` source under PV2 routes white balance, exposure, and the
+    /// baseline boost through `CIRAWFilter`'s own sensor-domain controls
+    /// instead of the scene-referred stages below — see ``RawDevelopSettings``.
+    func render(source: SourceImage, stack: EditStack, mlEnvironment: MLMaskEnvironment? = nil) -> CIImage {
         guard stack.processVersion >= 2 else {
-            return legacy.render(source: source, stack: stack,
+            return legacy.render(source: source.image, stack: stack,
                                  mlEnvironment: mlEnvironment, context: context)
         }
 
         // PV2 chain — stage bodies are replaced task by task. Note the tone
         // order here differs from legacy: highlights/shadows recover first,
         // contrast shapes midtones, then whites/blacks place the clip points.
-        var image = source
+        var image: CIImage
+        var sensorDomainHandled = false
+        switch source {
+        case .raw(let filter) where !stack.filmNegative.isEnabled:
+            // WB, exposure, and boost act on sensor data. A film-negative
+            // scan that happens to be RAW opts out: inversion must precede
+            // white balance, so it takes the rendered route below.
+            RawDevelopSettings(stack: stack).configure(filter)
+            image = filter.outputImage ?? CIImage.empty()
+            sensorDomainHandled = true
+        case .raw(let filter):
+            image = filter.outputImage ?? CIImage.empty()
+        case .rendered(let base):
+            image = base
+        }
 
         image = developedCache.developed(from: image,
                                          film: stack.filmNegative,
@@ -85,8 +103,10 @@ struct EditRenderer {
                                          defringe: stack.defringe,
                                          retouch: stack.retouch,
                                          context: context)
-        image = applyWhiteBalance(image, stack: stack)
-        image = applyExposure(image, stack: stack)
+        if !sensorDomainHandled {
+            image = applyWhiteBalance(image, stack: stack)
+            image = applyExposure(image, stack: stack)
+        }
         image = applyHighlightsAndShadows(image, stack: stack)
         image = applyContrast(image, stack: stack)
         image = applyWhitesAndBlacks(image, stack: stack)
@@ -106,6 +126,13 @@ struct EditRenderer {
         image = applyEffects(image, stack: stack)
 
         return image
+    }
+
+    /// Compatibility overload for callers that only ever have a decoded
+    /// `CIImage` (tests, and any code that predates RAW-domain routing).
+    /// Wraps it as `.rendered`, which is exactly the pre-RAW behavior.
+    func render(source: CIImage, stack: EditStack, mlEnvironment: MLMaskEnvironment? = nil) -> CIImage {
+        render(source: .rendered(source), stack: stack, mlEnvironment: mlEnvironment)
     }
 
     // MARK: Tone
