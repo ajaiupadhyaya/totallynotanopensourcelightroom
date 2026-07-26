@@ -78,7 +78,11 @@ final class WorkspaceModel {
             }
             inspectorMode = .masks
         case .eyedropper:
-            model.canvasPicker = .whiteBalance
+            // Arming the picker on a sensor-domain RAW would put the canvas in
+            // a mode whose click does nothing (see
+            // ``EditorModel/pickWhiteBalance(atUnitPoint:)``). Show the White
+            // Balance panel instead, where the disabled affordance says why.
+            if !model.isSensorDomainWB { model.canvasPicker = .whiteBalance }
             inspectorMode = .adjust
         case .compare:
             break

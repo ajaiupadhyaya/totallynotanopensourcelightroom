@@ -162,7 +162,9 @@ struct ToolOptionsBar: View {
                 }
             }
         case .eyedropper:
-            contextNote("Click something that should be neutral gray")
+            contextNote(model.isSensorDomainWB
+                        ? "Not available on a RAW photo — see White Balance"
+                        : "Click something that should be neutral gray")
         case .compare:
             HStack(spacing: 10) {
                 contextNote(model.isShowingBefore ? "Showing the original interpretation"

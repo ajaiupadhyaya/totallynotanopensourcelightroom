@@ -68,6 +68,10 @@ final class CanvasToolTests: XCTestCase {
         let (editor, url) = try makeEditor(imageColor: (0.62, 0.52, 0.40))
         defer { try? FileManager.default.removeItem(at: url) }
 
+        // The picker is only switched off for sensor-domain RAW; a rendered
+        // source keeps it, and that is what this test measures.
+        XCTAssertFalse(editor.isSensorDomainWB)
+
         editor.canvasPicker = .whiteBalance
         editor.handleCanvasClick(atUnitPoint: CGPoint(x: 0.5, y: 0.5))
 

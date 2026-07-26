@@ -84,6 +84,20 @@ final class EditorModel {
     /// Boost slider, which is meaningless on an already-rendered source.
     var isRAWSource: Bool { ImageDecoder.isRAW(entry.fileURL) }
 
+    /// True when white balance, exposure, and the baseline boost are being
+    /// routed to `CIRAWFilter`'s sensor-domain controls rather than to the
+    /// scene-referred stages — the same predicate `EditRenderer.render` uses
+    /// to take that branch.
+    ///
+    /// It gates the controls that only mean something on one side of that
+    /// branch: the Raw Boost slider (a `CIRAWFilter` control) and the white
+    /// balance eyedropper (whose estimate is in the wrong units for the
+    /// sensor domain — see ``pickWhiteBalance(atUnitPoint:)``).
+    var isSensorDomainWB: Bool {
+        guard case .raw = sourceImage else { return false }
+        return editStack.processVersion >= 2 && !editStack.filmNegative.isEnabled
+    }
+
     /// Read-only capture metadata, read once when the photo opens.
     let metadata: PhotoMetadata
     var canUndo: Bool { !undoStack.isEmpty }
@@ -260,8 +274,20 @@ final class EditorModel {
     /// exact image the WB stage sees — then its correlated temperature and
     /// tint become the new slider values. Declaring the clicked color to be
     /// the scene's illuminant is precisely what "pick a neutral" means.
+    ///
+    /// Deliberately a no-op while ``isSensorDomainWB`` is true. On a PV2 RAW
+    /// the two slider fields are `CIRAWFilter.neutralTemperature` and
+    /// `.neutralTint` — a sensor-domain Kelvin against the camera's own
+    /// calibration, plus a tint on the camera-calibration scale (roughly
+    /// −150…150). What `ColorScience.temperatureAndTint` returns is a
+    /// D65-relative estimate of an *already demosaiced* colour, with tint on
+    /// its own uv-offset scale. Writing one into the other is not an
+    /// approximation, it is a units error in two dimensions: the picked grey
+    /// would come out further from neutral than it started. Composing a
+    /// correct sensor-domain estimate needs a real RAW fixture to validate
+    /// against, so the affordance is switched off until there is one.
     func pickWhiteBalance(atUnitPoint point: CGPoint) {
-        guard let source else { return }
+        guard !isSensorDomainWB, let source else { return }
 
         var neutralStack = editStack
         neutralStack.whiteBalanceTemp = 6500

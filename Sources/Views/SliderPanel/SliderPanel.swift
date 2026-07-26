@@ -374,8 +374,18 @@ struct WhiteBalancePanel: View {
 
         PlateButton(title: model.canvasPicker == .whiteBalance
                     ? "Click a neutral in the photo…"
-                    : "Pick Neutral") {
+                    : "Pick Neutral",
+                    isEnabled: !model.isSensorDomainWB) {
             model.canvasPicker = model.canvasPicker == .whiteBalance ? nil : .whiteBalance
+        }
+
+        if model.isSensorDomainWB {
+            Text("On a RAW photo these two drive the camera's own white "
+                 + "balance, in the sensor's units. The neutral picker "
+                 + "estimates in a different unit system, so it stays off "
+                 + "here rather than move the photograph the wrong way.")
+                .font(Theme.body)
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 }

@@ -94,6 +94,31 @@ final class RawSourceTests: XCTestCase {
         let img = source.image
         XCTAssertLessThanOrEqual(max(img.extent.width, img.extent.height), 1700)
     }
+
+    /// The white-balance eyedropper is switched off wherever the sliders mean
+    /// sensor-domain units (see `EditorModel.pickWhiteBalance`). Gated: it
+    /// takes a real RAW to produce a `.raw` source at all.
+    func testSensorDomainRawDisablesTheWhiteBalancePicker() throws {
+        guard let url = RawFixture.url() else {
+            throw XCTSkip("no RAW fixture present — see Tests/Fixtures/RAW/README.md")
+        }
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(fileURL: url)
+        try catalog.save(entry)
+        let editor = EditorModel(entry: entry, catalog: catalog,
+                                 thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+
+        XCTAssertTrue(editor.isSensorDomainWB, "a PV2 non-film RAW edits in the sensor domain")
+        let before = editor.editStack
+        editor.canvasPicker = .whiteBalance
+        editor.handleCanvasClick(atUnitPoint: CGPoint(x: 0.5, y: 0.5))
+        XCTAssertEqual(editor.editStack, before, "the picker must not write D65 units into sensor WB")
+
+        // Film-negative RAWs render through WhiteBalanceStage, so there the
+        // picker is meaningful again.
+        editor.editStack.filmNegative.isEnabled = true
+        XCTAssertFalse(editor.isSensorDomainWB)
+    }
 }
 
 enum RawFixture {
