@@ -29,7 +29,6 @@
 		3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */; };
 		36CAEE8082B31C61445393B3 /* MLMaskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7EEB7632D72A68035D921B /* MLMaskCache.swift */; };
 		3DE235260D6D0BEE9761CADA /* GeometryTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */; };
-		4495DD4CFF7726FF6D95FCC8 /* DisplaySpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB92E1C29EFB41BCC4BC7E8D /* DisplaySpace.swift */; };
 		45466F838219CF7761A727B2 /* GeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091C43C1EDDF307D8B43C947 /* GeometryTests.swift */; };
 		4820C5A435581193CA4C5AEB /* MetalCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3584DC4BB48755D7ACAE0C /* MetalCanvasView.swift */; };
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
@@ -210,7 +209,6 @@
 		A43954DA441D273C7823E7F1 /* WorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceModel.swift; sourceTree = "<group>"; };
 		A58C8023259214599AAA4498 /* SnapshotPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotPanel.swift; sourceTree = "<group>"; };
 		AA726AC28295C6553FB58293 /* EndToEndFilmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndToEndFilmTests.swift; sourceTree = "<group>"; };
-		AB92E1C29EFB41BCC4BC7E8D /* DisplaySpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplaySpace.swift; sourceTree = "<group>"; };
 		AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSuiteTests.swift; sourceTree = "<group>"; };
 		B2B0E50E4F655388B03702D4 /* EditStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditStack.swift; sourceTree = "<group>"; };
 		B35F67E6839E77568201E3FB /* MaskComponentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentTests.swift; sourceTree = "<group>"; };
@@ -403,7 +401,6 @@
 				732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */,
 				857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */,
 				5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */,
-				AB92E1C29EFB41BCC4BC7E8D /* DisplaySpace.swift */,
 				85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */,
 				DAA4A8702F7807BAA87F5D7C /* ExportService.swift */,
 				4625C5AC7A6158F9CC38CD61 /* FocusPeaking.swift */,
@@ -640,7 +637,6 @@
 				95EEE8788082E374AFA57BBE /* DefringeRenderer.swift in Sources */,
 				05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */,
 				94D724351379DB477A5F2E19 /* DevelopedSourceCache.swift in Sources */,
-				4495DD4CFF7726FF6D95FCC8 /* DisplaySpace.swift in Sources */,
 				4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */,
 				CAC6C60E412BFCCF6672799C /* EditSnapshot.swift in Sources */,
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
