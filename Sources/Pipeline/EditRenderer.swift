@@ -292,17 +292,19 @@ struct EditRenderer {
     private func applyToneCurve(_ image: CIImage, stack: EditStack) -> CIImage {
         var result = image
         if hasParametricToneCurve(stack) {
-            result = applyParametricToneCurve(result, stack: stack)
+            result = applyParametricToneCurve(result, stack: stack)   // replaced in Task 7
         }
         guard stack.toneCurvePoints.count == 5 else { return result }
-        let curve = CIFilter.toneCurve()
-        curve.inputImage = result
-        curve.point0 = stack.toneCurvePoints[0]
-        curve.point1 = stack.toneCurvePoints[1]
-        curve.point2 = stack.toneCurvePoints[2]
-        curve.point3 = stack.toneCurvePoints[3]
-        curve.point4 = stack.toneCurvePoints[4]
-        return curve.outputImage ?? result
+        return result.inDisplaySpace { encoded in
+            let curve = CIFilter.toneCurve()
+            curve.inputImage = encoded
+            curve.point0 = stack.toneCurvePoints[0]
+            curve.point1 = stack.toneCurvePoints[1]
+            curve.point2 = stack.toneCurvePoints[2]
+            curve.point3 = stack.toneCurvePoints[3]
+            curve.point4 = stack.toneCurvePoints[4]
+            return curve.outputImage ?? encoded
+        }
     }
 
     private func hasParametricToneCurve(_ stack: EditStack) -> Bool {
