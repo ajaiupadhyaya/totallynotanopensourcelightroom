@@ -121,8 +121,12 @@ final class AppModel {
            let image = ThumbnailGenerator.thumbnailCGImage(for: entry.fileURL) {
             return image
         }
-        guard let source = ImageDecoder.loadPreviewImage(from: entry.fileURL,
-                                                         maxDimension: 640) else { return nil }
+        // The entry's own process version, so a PV1 photo's thumbnail is
+        // decoded — not just rendered — the way its edit was made.
+        guard let source = ImageDecoder.loadPreviewImage(
+            from: entry.fileURL, maxDimension: 640,
+            processVersion: entry.editStack.processVersion
+        ) else { return nil }
         return renderer.makeCGImage(renderer.render(source: source, stack: entry.editStack))
     }
 

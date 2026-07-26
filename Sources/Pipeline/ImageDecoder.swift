@@ -25,10 +25,15 @@ enum ImageDecoder {
 
     /// Decodes a file at full resolution, honoring EXIF orientation.
     ///
+    /// Throws away the `SourceImage`'s RAW provenance, so this is only for
+    /// callers that will never edit in the sensor domain. `processVersion` is
+    /// still required: it selects the RAW *decode* policy, which differs
+    /// between PV1 and PV2 (see ``RawDecodePolicy``).
+    ///
     /// - Returns: The decoded image, or `nil` if the file could not be read as
     ///   an image (including a RAW format this machine cannot decode).
-    static func loadFullImage(from url: URL) -> CIImage? {
-        loadSource(from: url, maxDimension: nil)?.image
+    static func loadFullImage(from url: URL, processVersion: Int) -> CIImage? {
+        loadSource(from: url, maxDimension: nil, processVersion: processVersion)?.image
     }
 
     /// Loads an image as a `CIImage`, honoring its EXIF orientation and
@@ -40,26 +45,47 @@ enum ImageDecoder {
     ///
     /// - Returns: A preview-scaled `CIImage`, or `nil` if the file could not
     ///   be decoded as an image.
-    static func loadPreviewImage(from url: URL, maxDimension: CGFloat = 1600) -> CIImage? {
-        loadSource(from: url, maxDimension: maxDimension)?.image
+    static func loadPreviewImage(from url: URL, maxDimension: CGFloat = 1600,
+                                 processVersion: Int) -> CIImage? {
+        loadSource(from: url, maxDimension: maxDimension,
+                   processVersion: processVersion)?.image
     }
 
-    /// Loads a file as a `SourceImage`. RAW files keep their `CIRAWFilter`
-    /// (configured for PV2: gamut mapping off so out-of-gamut color survives,
-    /// EDR headroom on so highlights above 1.0 survive, decoded at
-    /// `maxDimension` via `scaleFactor` rather than decode-then-downsample).
-    /// Everything else decodes through ImageIO as before.
-    static func loadSource(from url: URL, maxDimension: CGFloat?) -> SourceImage? {
+    /// Loads a file as a `SourceImage`, decoding RAW under the process
+    /// version's frozen decode policy (see ``RawDecodePolicy``).
+    ///
+    /// Under PV2 a RAW keeps its `CIRAWFilter` so white balance, exposure, and
+    /// the baseline boost can act on sensor data. Under PV1 it is decoded at
+    /// Apple's defaults, full-size, and downsampled afterwards — byte for byte
+    /// what the pre-PV2 decoder did — and handed back as `.rendered`, because
+    /// the PV1 chain never reaches the filter.
+    ///
+    /// `processVersion` has no default on purpose: silently decoding somebody's
+    /// PV1 photo under PV2's policy is exactly the bug this parameter exists to
+    /// prevent, so every call site has to state which look it wants.
+    static func loadSource(from url: URL, maxDimension: CGFloat?,
+                           processVersion: Int) -> SourceImage? {
         if isRAW(url), let filter = CIRAWFilter(imageURL: url) {
-            filter.isGamutMappingEnabled = false
-            filter.extendedDynamicRangeAmount = 1.0
-            if let maxDimension {
-                let native = max(filter.nativeSize.width, filter.nativeSize.height)
-                if native > maxDimension && native > 0 {
-                    filter.scaleFactor = Float(maxDimension / native)
-                }
+            let policy = RawDecodePolicy(processVersion: processVersion)
+            if policy.disablesGamutMapping { filter.isGamutMappingEnabled = false }
+            if let edrAmount = policy.edrAmount {
+                filter.extendedDynamicRangeAmount = Float(edrAmount)
             }
-            return .raw(filter)
+            if policy.usesScaleFactorPreviews {
+                if let maxDimension {
+                    let native = max(filter.nativeSize.width, filter.nativeSize.height)
+                    if native > maxDimension && native > 0 {
+                        filter.scaleFactor = Float(maxDimension / native)
+                    }
+                }
+                return .raw(filter)
+            }
+            if let image = filter.outputImage {
+                guard let maxDimension else { return .rendered(image) }
+                return .rendered(downsampled(image, maxDimension: maxDimension))
+            }
+            // outputImage nil: fall through to ImageIO, as the pre-PV2 decoder
+            // did for a RAW that CIRAWFilter accepted but could not render.
         }
         guard let image = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else {
             return nil

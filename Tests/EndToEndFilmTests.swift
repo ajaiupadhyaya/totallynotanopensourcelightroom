@@ -144,7 +144,7 @@ final class EndToEndFilmTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         // 1. Decode the file the way the app does.
-        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url))
+        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url, processVersion: 2))
         XCTAssertEqual(source.extent.width, sceneWidth + border * 2, accuracy: 1)
 
         // 2. Find the film base without being told what it is.
@@ -203,7 +203,7 @@ final class EndToEndFilmTests: XCTestCase {
         let url = try writeScan()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url))
+        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url, processVersion: 2))
         let sampled = try XCTUnwrap(FilmBaseSampler.sampleBase(from: source, context: context))
 
         var stack = EditStack()
@@ -227,7 +227,7 @@ final class EndToEndFilmTests: XCTestCase {
         let url = try writeScan()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url))
+        let source = try XCTUnwrap(ImageDecoder.loadFullImage(from: url, processVersion: 2))
         let sampled = try XCTUnwrap(FilmBaseSampler.sampleBase(from: source, context: context))
 
         var stack = EditStack()

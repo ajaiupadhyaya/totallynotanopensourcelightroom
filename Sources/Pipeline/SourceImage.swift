@@ -22,6 +22,38 @@ enum SourceImage {
     var extent: CGRect { image.extent }
 }
 
+/// How a RAW file is *decoded*, frozen per process version.
+///
+/// The decode is part of the look, not a detail below it. A PV1 photo was
+/// edited against Apple's baseline RAW rendering — gamut mapping on, no EDR
+/// boost, and a full-size decode that the app downsampled afterwards — so
+/// turning any of those knobs would change a finished edit, which is precisely
+/// what the process version exists to prevent. PV2 turns all three around:
+/// gamut mapping off so out-of-gamut colour reaches the sensor-domain chain,
+/// EDR headroom on so highlights above 1.0 survive it, and previews decoded
+/// straight to size through `CIRAWFilter.scaleFactor` (cheaper, and it keeps
+/// the filter — not a downsampled snapshot — as the live source).
+///
+/// Pure and version-only, so the freeze is testable without a camera file.
+struct RawDecodePolicy: Equatable {
+    /// PV2 only: `CIRAWFilter.isGamutMappingEnabled = false`.
+    let disablesGamutMapping: Bool
+    /// PV2 only: `CIRAWFilter.extendedDynamicRangeAmount`. `nil` means "leave
+    /// Apple's default alone".
+    let edrAmount: Double?
+    /// PV2 only: decode previews via `scaleFactor`. PV1 decodes full-size and
+    /// downsamples the resulting `CIImage`, and so yields a `.rendered`
+    /// source — its chain never reaches the filter anyway.
+    let usesScaleFactorPreviews: Bool
+
+    init(processVersion: Int) {
+        let isPV2 = processVersion >= 2
+        disablesGamutMapping = isPV2
+        edrAmount = isPV2 ? 1.0 : nil
+        usesScaleFactorPreviews = isPV2
+    }
+}
+
 /// The stack fields that live in the RAW sensor domain, as a pure value —
 /// separable from CIRAWFilter so the mapping is unit-testable without a
 /// camera file.

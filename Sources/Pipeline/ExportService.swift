@@ -161,7 +161,10 @@ struct ExportService {
         to destination: URL,
         entryID: UUID? = nil
     ) throws {
-        guard let source = ImageDecoder.loadSource(from: sourceURL, maxDimension: nil) else {
+        // The stack being exported names its own decode policy: a PV1 export
+        // must come off the same pixels the PV1 preview was judged on.
+        guard let source = ImageDecoder.loadSource(from: sourceURL, maxDimension: nil,
+                                                   processVersion: stack.processVersion) else {
             throw ExportError.sourceUnreadable(sourceURL)
         }
 

@@ -810,7 +810,12 @@ final class EditorModel {
     // MARK: Rendering & IO
 
     private func loadSource() {
-        guard let loaded = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: 1600) else {
+        // The LIVE stack's version, not `entry.editStack`'s: `entry` is a `let`
+        // captured when the photo opened, so it goes stale the moment the
+        // photographer upgrades this photo to PV2 mid-session. The renderer
+        // dispatches on the live stack, and the decode has to agree with it.
+        guard let loaded = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: 1600,
+                                                   processVersion: editStack.processVersion) else {
             isMissingFile = true
             sourceImage = nil
             fullSourceImage = nil
@@ -856,7 +861,8 @@ final class EditorModel {
         guard let sourceImage else { return nil }
         if (zoomLevel ?? 0) >= 1.0 {
             if fullSourceImage == nil {
-                fullSourceImage = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: nil)
+                fullSourceImage = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: nil,
+                                                          processVersion: editStack.processVersion)
                 fullSource = fullSourceImage?.image
             }
             return fullSourceImage ?? sourceImage
