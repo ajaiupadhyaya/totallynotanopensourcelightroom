@@ -53,4 +53,37 @@ final class CalibrationTests: XCTestCase {
         XCTAssertGreaterThan(plus[16], inputs[16])  //              highlights brighter
         XCTAssertGreaterThan(minus[2], inputs[2])   // − flattens: shadows lifted
     }
+
+    func testWhitesMoveTheWhiteClippingPoint() {
+        // PV1's pinned curve mapped display 1.0 → 1.0 at ANY whites value and
+        // could never clip. Whites +100 must drive the top of the range to white.
+        let top = Calibration.displaySweep(inputs: [0.85, 1.0]) { $0.whites = 100 }
+        XCTAssertGreaterThan(top[0], 0.97, "near-white must reach white at whites +100")
+        XCTAssertGreaterThanOrEqual(top[1], 0.995)
+        // …while barely moving a quarter-tone (that's contrast's job).
+        let quarter = Calibration.displaySweep(inputs: [0.25]) { $0.whites = 100 }
+        XCTAssertEqual(quarter[0], 0.25 / 0.7, accuracy: 0.06)
+        // Negative whites pulls the top down without touching shadows.
+        let pulled = Calibration.displaySweep(inputs: [0.15, 1.0]) { $0.whites = -100 }
+        XCTAssertLessThan(pulled[1], 0.75)
+        XCTAssertEqual(pulled[0], 0.15, accuracy: 0.03)
+    }
+
+    func testBlacksMoveTheBlackClippingPoint() {
+        let bottom = Calibration.displaySweep(inputs: [0.0, 0.15]) { $0.blacks = -100 }
+        XCTAssertLessThan(bottom[1], 0.03, "near-black must crush at blacks −100")
+        let high = Calibration.displaySweep(inputs: [0.85]) { $0.blacks = -100 }
+        XCTAssertEqual(high[0], (0.85 - 0.3) / 0.7, accuracy: 0.06)
+        // Positive blacks lifts the floor (the faded look).
+        let lifted = Calibration.displaySweep(inputs: [0.0]) { $0.blacks = 100 }
+        XCTAssertGreaterThan(lifted[0], 0.1)
+    }
+
+    func testWhitesAndBlacksComposeMonotonically() {
+        let inputs = stride(from: 0.0, through: 1.0, by: 0.1).map { $0 }
+        let out = Calibration.displaySweep(inputs: inputs) { $0.whites = 60; $0.blacks = -60 }
+        for i in 1..<out.count {
+            XCTAssertGreaterThanOrEqual(out[i] + 0.002, out[i - 1])
+        }
+    }
 }

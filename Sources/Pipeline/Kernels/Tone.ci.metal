@@ -48,3 +48,33 @@ extern "C" float4 pv2_contrast(coreimage::sample_t s, float amount) {
                contrast_curve(d.z, amount));
     return float4(srgb_decode(d), s.a);
 }
+
+// Soft shoulder: exact identity below 1−k, C1 quadratic knee that reaches
+// exactly 1.0 (zero slope) at t = 1+k. This is what lets whites/blacks
+// genuinely clip without posterizing at the knee.
+static float soft_shoulder(float t, float k) {
+    if (t <= 1.0f - k) return t;
+    if (t >= 1.0f + k) return 1.0f;
+    float u = (t - (1.0f - k)) / (2.0f * k);
+    return (1.0f - k) + 2.0f * k * (u - 0.5f * u * u);
+}
+
+// Whites/blacks move the clipping points (authority: 0.30 of the range at
+// ±100, knee width 0.05), with the negative directions as tone-weighted
+// compressions so the opposite end of the range stays put.
+static float whites_blacks(float x, float w, float b) {
+    float y = x;
+    if (w > 0.0f)      y = soft_shoulder(y / (1.0f - 0.30f * w), 0.05f);
+    else if (w < 0.0f) y = y + 0.35f * w * y * y;                      // top-weighted pull-down
+    if (b < 0.0f)      y = 1.0f - soft_shoulder((1.0f - y) / (1.0f + 0.30f * b), 0.05f);
+    else if (b > 0.0f) y = y + 0.25f * b * (1.0f - y) * (1.0f - y);    // bottom-weighted lift
+    return y;
+}
+
+extern "C" float4 pv2_whites_blacks(coreimage::sample_t s, float whites, float blacks) {
+    float3 d = srgb_encode(s.rgb);
+    d = float3(whites_blacks(d.x, whites, blacks),
+               whites_blacks(d.y, whites, blacks),
+               whites_blacks(d.z, whites, blacks));
+    return float4(srgb_decode(d), s.a);
+}

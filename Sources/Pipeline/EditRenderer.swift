@@ -130,25 +130,10 @@ struct EditRenderer {
         return exposure.outputImage ?? image
     }
 
-    /// Whites and blacks reshape the two ends of the tone range via a curve
-    /// pinned at both extremes: pure black stays black and pure white stays
-    /// white, while the quarter- and three-quarter-tones move. Scaling the
-    /// endpoints instead would just clip.
+    /// Whites and blacks reshape the two ends of the tone range, moving the
+    /// clipping points with a soft knee to avoid posterization.
     private func applyWhitesAndBlacks(_ image: CIImage, stack: EditStack) -> CIImage {
-        guard stack.whites != 0 || stack.blacks != 0 else { return image }
-
-        func clamp(_ value: Double) -> Double { min(max(value, 0), 1) }
-        let quarter = clamp(0.25 + stack.blacks / 100 * 0.15)
-        let threeQuarter = clamp(0.75 + stack.whites / 100 * 0.15)
-
-        let curve = CIFilter.toneCurve()
-        curve.inputImage = image
-        curve.point0 = CGPoint(x: 0, y: 0)
-        curve.point1 = CGPoint(x: 0.25, y: quarter)
-        curve.point2 = CGPoint(x: 0.5, y: 0.5)
-        curve.point3 = CGPoint(x: 0.75, y: threeQuarter)
-        curve.point4 = CGPoint(x: 1, y: 1)
-        return curve.outputImage ?? image
+        ToneStages.whitesAndBlacks(image, whites: stack.whites, blacks: stack.blacks)
     }
 
     private func applyHighlightsAndShadows(_ image: CIImage, stack: EditStack) -> CIImage {
