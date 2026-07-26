@@ -1,5 +1,6 @@
 import CoreGraphics
 import CoreImage
+import CoreImage.CIFilterBuiltins
 import XCTest
 @testable import PhotoEditor
 
@@ -34,6 +35,34 @@ enum Calibration {
         return inputs.map { v in
             displayValue(of: renderer.render(source: patch(v), stack: stack), x: 2, y: 2)
         }
+    }
+
+    /// A patch whose *linear working-space* value is `v` in all channels,
+    /// including above 1.0.
+    ///
+    /// There is no sRGB colour that encodes 2.0, so the value is built the way
+    /// `KernelInfrastructureTests` builds one: a white patch pushed up by an
+    /// unclamped `CIColorMatrix` bias. This is the only EDR-shaped input the
+    /// suite can construct without a real HDR file.
+    static func edrPatch(_ v: Double, size: CGFloat = 64) -> CIImage {
+        let base = TestSupport.solidImage(red: 1, green: 1, blue: 1, size: size)
+        let matrix = CIFilter.colorMatrix()
+        matrix.inputImage = base
+        matrix.biasVector = CIVector(x: v - 1, y: v - 1, z: v - 1, w: 0)
+        return matrix.outputImage?.cropped(to: base.extent) ?? base
+    }
+
+    /// Reads back the *linear working-space* red value at (x, y), unclamped —
+    /// `colorSpace: nil` plus `.RGBAf` is what lets values above 1.0 be
+    /// measured at all. ``displayValue(of:x:y:)` goes through RGBA8 and would
+    /// report every one of them as 1.0.
+    static func linearValue(of image: CIImage, x: Int = 0, y: Int = 0) -> Double {
+        var px = [Float](repeating: 0, count: 4)
+        context.render(image, toBitmap: &px,
+                       rowBytes: 4 * MemoryLayout<Float>.stride,
+                       bounds: CGRect(x: x, y: y, width: 1, height: 1),
+                       format: .RGBAf, colorSpace: nil)
+        return Double(px[0])
     }
 
     /// A 128-wide horizontal display-space ramp from 0 to 1, `height` tall.

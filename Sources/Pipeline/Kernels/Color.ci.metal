@@ -2,6 +2,12 @@
 // Chroma is scaled about the display-space luma axis, so luma is invariant
 // BY CONSTRUCTION; an exponential rolloff toward the maximum feasible scale
 // replaces PV1's channel clipping.
+//
+// EDR POLICY (uniform across Tone/LocalTone/Color.ci.metal): per
+// display-encoded channel, dc = clamp(d, 0, 1) and residual = d − dc; the
+// chroma math operates on dc alone and the residual is added back at the end,
+// so a value above 1.0 (or below 0) is carried through untouched instead of
+// being fed to math that was only ever defined on [0, 1].
 #include <metal_stdlib>
 using namespace metal;
 #include <CoreImage/CoreImage.h>
@@ -38,7 +44,9 @@ static float skin_weight(float3 c) {
 
 extern "C" float4 pv2_vibrance_saturation(coreimage::sample_t s,
                                           float vibrance, float saturation) {
-    float3 d = clamp(srgb_encode(s.rgb), 0.0f, 1.0f);
+    float3 encoded = srgb_encode(s.rgb);
+    float3 d = clamp(encoded, 0.0f, 1.0f);
+    float3 residual = encoded - d;                  // EDR / negative headroom
     float L = dot(d, float3(0.2126f, 0.7152f, 0.0722f));
     float3 chroma = d - L;
 
@@ -67,6 +75,9 @@ extern "C" float4 pv2_vibrance_saturation(coreimage::sample_t s,
         }
     }
 
+    // Residual goes back on BEFORE the decode: it is a display-encoded
+    // quantity, so adding it to the decoded value would be adding two numbers
+    // in different spaces.
     float3 outc = L + chroma * f;
-    return float4(srgb_decode(clamp(outc, 0.0f, 1.0f)), s.a);
+    return float4(srgb_decode(clamp(outc, 0.0f, 1.0f) + residual), s.a);
 }

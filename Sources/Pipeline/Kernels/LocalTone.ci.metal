@@ -3,6 +3,12 @@
 // edges — that bleed is what a halo is). The kernel retones the BASE only
 // and adds the untouched detail back on top.
 //
+// EDR POLICY (uniform across Tone/LocalTone/Color.ci.metal): per
+// display-encoded channel, xc = clamp(x, 0, 1) and residual = x − xc; the
+// retone operates on xc alone and the residual is added back at the end, so a
+// value above 1.0 (or below 0) is carried through untouched instead of being
+// fed to math that was only ever defined on [0, 1].
+//
 // Duplicated per .ci.metal file on purpose — classic CIKernel metallibs
 // cannot link functions across translation units, so this is a separate
 // translation unit from Tone.ci.metal and needs its own copy of the sRGB
@@ -30,17 +36,26 @@ extern "C" float4 pv2_local_tone(coreimage::sample_t s, coreimage::sample_t base
     float3 b = srgb_encode(base.rgb);
     float3 detail = img - b;
 
-    float L = dot(b, float3(0.2126f, 0.7152f, 0.0722f));
-    float hw = smoothstep(0.35f, 0.85f, L);          // highlight region weight
-    float sw = 1.0f - smoothstep(0.15f, 0.65f, L);   // shadow region weight
-    // 0.45 total authority; (1−L)/L factors keep each control from crossing
-    // into the opposite end of the range.
-    float newL = L
-        + shadows * 0.45f * sw * (1.0f - L)
-        + highlights * 0.45f * hw * L;
-    newL = clamp(newL, 0.0f, 1.0f);
-    float gain = (L > 1e-4f) ? newL / L : 1.0f;
+    // The region weights and the (1−L)/L authority factors are defined on the
+    // display range only, so the base is split the same way every other PV2
+    // kernel splits its input: retone the clamped part, carry the rest.
+    float3 bc = clamp(b, 0.0f, 1.0f);
+    float3 baseResidual = b - bc;
 
-    float3 outRGB = clamp(b * gain + detail, -0.1f, 4.0f);
+    float Lc = dot(bc, float3(0.2126f, 0.7152f, 0.0722f));
+    float hw = smoothstep(0.35f, 0.85f, Lc);          // highlight region weight
+    float sw = 1.0f - smoothstep(0.15f, 0.65f, Lc);   // shadow region weight
+    // 0.45 total authority; (1−Lc)/Lc factors keep each control from crossing
+    // into the opposite end of the range.
+    float newL = Lc
+        + shadows * 0.45f * sw * (1.0f - Lc)
+        + highlights * 0.45f * hw * Lc;
+    // No upper clamp: an EDR frame's clipped base is already at Lc = 1 and
+    // clamping newL there would flatten every highlight to white. Negative
+    // luma has no meaning, so the floor stays.
+    newL = max(newL, 0.0f);
+    float gain = newL / max(Lc, 1e-4f);
+
+    float3 outRGB = clamp(bc * gain + baseResidual + detail, -0.1f, 4.0f);
     return float4(srgb_decode(outRGB), s.a);
 }

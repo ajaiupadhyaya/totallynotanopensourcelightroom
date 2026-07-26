@@ -219,4 +219,48 @@ final class CalibrationTests: XCTestCase {
         let vivid = rgbAfter(0.95, 0.1, 0.1) { $0.vibrance = 100 }
         XCTAssertEqual(chroma(vivid), 0.85, accuracy: 0.08)
     }
+
+    // MARK: Extended range
+
+    /// The EDR policy, pinned end-to-end: every PV2 kernel does its math on the
+    /// display-encoded value clamped to [0, 1] and adds the out-of-range
+    /// residual back afterwards. Two consequences must hold for every tonal and
+    /// colour control:
+    ///
+    /// 1. **Headroom survives.** A linear 2.0 or 4.0 input still comes out
+    ///    above 1.0, so a highlight recovered later in the chain (or by the
+    ///    display's own EDR) still has something to recover.
+    /// 2. **Brighter stays brighter.** Feeding 4.0 never produces a darker
+    ///    result than feeding 2.0. Before this convention was uniform,
+    ///    `whites −100` was quadratic in the *unclamped* value and inverted the
+    ///    two (2.0 → 0.47, 4.0 → 0.39), and `saturation` clamped both to 1.0.
+    ///
+    /// Expected values follow directly from the kernels' math (encode 2.0 =
+    /// 1.3533, residual 0.3533; encode 4.0 = 1.8248, residual 0.8248):
+    /// contrast/saturation are identity on a clipped achromatic patch (2.0,
+    /// 4.0); `whites −100` sends the clamped 1.0 to 0.65 (1.007, 2.44);
+    /// `highlights −60` sends it to 0.73 (1.200, 2.757).
+    func testToneKernelsPreserveExtendedRange() {
+        let renderer = EditRenderer()
+        let cases: [(name: String, mutate: (inout EditStack) -> Void)] = [
+            ("contrast +70", { (s: inout EditStack) in s.contrast = 70 }),
+            ("whites −100", { (s: inout EditStack) in s.whites = -100 }),
+            ("highlights −60", { (s: inout EditStack) in s.highlights = -60 }),
+            ("saturation +50", { (s: inout EditStack) in s.saturation = 50 }),
+        ]
+        for (name, mutate) in cases {
+            var stack = EditStack()
+            mutate(&stack)
+            let dim = Calibration.linearValue(
+                of: renderer.render(source: Calibration.edrPatch(2), stack: stack), x: 32, y: 32)
+            let bright = Calibration.linearValue(
+                of: renderer.render(source: Calibration.edrPatch(4), stack: stack), x: 32, y: 32)
+            XCTAssertGreaterThan(dim, 1.0,
+                                 "\(name): linear 2.0 flattened to \(dim) — EDR headroom lost")
+            XCTAssertGreaterThan(bright, 1.0,
+                                 "\(name): linear 4.0 flattened to \(bright) — EDR headroom lost")
+            XCTAssertGreaterThan(bright, dim,
+                                 "\(name): non-monotonic — 2.0 → \(dim) but 4.0 → \(bright)")
+        }
+    }
 }

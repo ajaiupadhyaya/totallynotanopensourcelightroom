@@ -3,6 +3,12 @@
 // the user's eye live, and decodes back. Sign-preserving transfer functions
 // keep extended-range values alive; values above 1.0 pass around the curve
 // as a residual so EDR headroom is not flattened.
+//
+// EDR POLICY (uniform across Tone/LocalTone/Color.ci.metal): per
+// display-encoded channel, xc = clamp(x, 0, 1) and residual = x − xc; every
+// curve operates on xc alone and the residual is added back at the end, so a
+// value above 1.0 (or below 0) is carried through untouched instead of being
+// fed to math that was only ever defined on [0, 1].
 #include <metal_stdlib>
 using namespace metal;
 #include <CoreImage/CoreImage.h>
@@ -62,13 +68,20 @@ static float soft_shoulder(float t, float k) {
 // Whites/blacks move the clipping points (authority: 0.30 of the range at
 // ±100, knee width 0.05), with the negative directions as tone-weighted
 // compressions so the opposite end of the range stays put.
+//
+// The y² and (1−y)² weightings below are only meaningful on [0, 1]: fed an EDR
+// value they grow without bound and invert the ordering (a brighter input came
+// out darker). Hence the shared xc/residual convention, matching
+// `contrast_curve` and `parametric_curve` above.
 static float whites_blacks(float x, float w, float b) {
-    float y = x;
+    float xc = clamp(x, 0.0f, 1.0f);
+    float residual = x - xc;                       // EDR / negative headroom
+    float y = xc;
     if (w > 0.0f)      y = soft_shoulder(y / (1.0f - 0.30f * w), 0.05f);
     else if (w < 0.0f) y = y + 0.35f * w * y * y;                      // top-weighted pull-down
     if (b < 0.0f)      y = 1.0f - soft_shoulder((1.0f - y) / (1.0f + 0.30f * b), 0.05f);
     else if (b > 0.0f) y = y + 0.25f * b * (1.0f - y) * (1.0f - y);    // bottom-weighted lift
-    return y;
+    return clamp(y, 0.0f, 1.0f) + residual;
 }
 
 extern "C" float4 pv2_whites_blacks(coreimage::sample_t s, float whites, float blacks) {
