@@ -230,7 +230,7 @@ struct SliderPanel: View {
                 }
 
                 PlateButton(title: "Reset all adjustments",
-                            isEnabled: model.editStack != EditStack(),
+                            isEnabled: !model.editStack.isNeutralEdit,
                             fillsWidth: true) {
                     model.resetAdjustments()
                 }
