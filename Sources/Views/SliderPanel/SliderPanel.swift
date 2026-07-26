@@ -93,7 +93,12 @@ struct SliderPanel: View {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
                                      range: -3...3, format: "%.2f EV", neutral: 0)
-                    if model.isRAWSource {
+                    // Raw Boost is CIRAWFilter.boostAmount, so it only exists
+                    // on the sensor-domain branch — the same condition that
+                    // gates the white balance picker. A PV1 RAW (decoded at
+                    // Apple's defaults) or a film-negative scan never reaches
+                    // the filter, and the slider would move nothing.
+                    if model.isSensorDomainWB {
                         AdjustmentSlider(title: "Raw Boost",
                                          value: $model.editStack.rawBoost,
                                          range: 0...100, format: "%.0f", neutral: 100)

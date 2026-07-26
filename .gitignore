@@ -31,10 +31,9 @@ Tests/Fixtures/RAW/*
 !Tests/Fixtures/RAW/README.md
 
 # Parity fixtures — personal-photo TIFF exports from Lightroom, not
-# committed; the manifest (generated, not a photo) and README are kept
+# committed. Only the TIFFs are ignored, so the manifest (generated, not a
+# photo) and the README stay tracked without needing negations.
 Tests/Fixtures/Parity/*.tif
-!Tests/Fixtures/Parity/README.md
-!Tests/Fixtures/Parity/manifest.json
 
 # Generated XMP presets — reproducible from scripts/make-parity-presets.swift
 scripts/parity-presets/

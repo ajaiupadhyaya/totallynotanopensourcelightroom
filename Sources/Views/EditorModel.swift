@@ -80,10 +80,6 @@ final class EditorModel {
 
     var fileName: String { entry.fileURL.lastPathComponent }
 
-    /// Whether this photo decodes through `CIRAWFilter` — gates the Raw
-    /// Boost slider, which is meaningless on an already-rendered source.
-    var isRAWSource: Bool { ImageDecoder.isRAW(entry.fileURL) }
-
     /// True when white balance, exposure, and the baseline boost are being
     /// routed to `CIRAWFilter`'s sensor-domain controls rather than to the
     /// scene-referred stages — the same predicate `EditRenderer.render` uses

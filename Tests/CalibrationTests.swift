@@ -4,8 +4,14 @@ import XCTest
 
 final class CalibrationTests: XCTestCase {
     /// Dragging the curve's midpoint up must lift DISPLAY midtones most.
-    /// PV1 applied CIToneCurve in the linear working space, which put the
-    /// peak of the lift near display 0.74 instead of 0.50.
+    ///
+    /// `CIToneCurve` is natively display-referred — it interpolates its control
+    /// points in display space, not in the linear working space it is handed —
+    /// which is why ``EditRenderer/applyToneCurve(_:stack:)`` deliberately does
+    /// no space conversion around it. That is an undocumented property of a
+    /// system filter, so this test is what pins it: if it ever changed, a 0.5
+    /// control point would land near display 0.74 and every point curve in the
+    /// catalog would be wrong.
     func testPointCurveMidtoneLiftPeaksAtDisplayMidtone() {
         let inputs = stride(from: 0.1, through: 0.9, by: 0.1).map { $0 }
         let outputs = Calibration.displaySweep(inputs: inputs) {

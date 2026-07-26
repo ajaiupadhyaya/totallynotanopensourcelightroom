@@ -50,9 +50,11 @@ final class ParityTests: XCTestCase {
         let cases = try JSONDecoder().decode([ParityCase].self, from: Data(contentsOf: manifestURL))
         let renderer = EditRenderer()
         var failures: [String] = []
+        var evaluated = 0
 
         for c in cases {
             guard let reference = loadFixture(c.fixture) else { continue }
+            evaluated += 1
             var stack = EditStack()
             c.apply(to: &stack)
             let ours = renderer.render(source: neutral, stack: stack)
@@ -79,6 +81,13 @@ final class ParityTests: XCTestCase {
             print("PARITY: \(report)")
             if let mt = c.meanTolerance, mean > mt { failures.append(report + "  mean > \(mt)") }
             if let xt = c.maxTolerance, maxD > xt { failures.append(report + "  max > \(xt)") }
+        }
+        // `neutral.tif` is the *input*, not a case: none of the 17 manifest
+        // entries name it. Exporting only the neutral frame therefore un-gates
+        // this test while comparing nothing, which would read as parity passing.
+        guard evaluated > 0 else {
+            throw XCTSkip("neutral.tif is present but no per-control exports are — "
+                          + "see docs/PARITY.md step 5")
         }
         XCTAssertTrue(failures.isEmpty, "parity failures:\n" + failures.joined(separator: "\n"))
     }

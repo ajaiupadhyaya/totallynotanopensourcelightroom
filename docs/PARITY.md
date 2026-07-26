@@ -20,5 +20,7 @@ One-time setup per reference photo (15 minutes):
    report per control; WB cases are report-only (Lightroom's incremental WB
    units have no exact Kelvin mapping).
 
-Fixtures are personal photos and stay untracked (`Tests/Fixtures/Parity/*`
-is gitignored except the manifest and README).
+Export every fixture as `.tif` — that extension is what keeps these personal
+photos out of the repository. Only `Tests/Fixtures/Parity/*.tif` is gitignored;
+anything else dropped in that folder (a stray `.jpg`, a `.png`) would be
+committed.

@@ -87,5 +87,8 @@ let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
 let manifestDir = root.deletingLastPathComponent()
     .appendingPathComponent("Tests/Fixtures/Parity")
 try? fm.createDirectory(at: manifestDir, withIntermediateDirectories: true)
-try! enc.encode(manifest).write(to: manifestDir.appendingPathComponent("manifest.json"))
+// Trailing newline: this file is tracked, and JSONEncoder does not add one.
+var manifestData = try! enc.encode(manifest)
+manifestData.append(0x0A)
+try manifestData.write(to: manifestDir.appendingPathComponent("manifest.json"))
 print("Wrote \(presets.count) presets to \(outDir.path) and manifest.json")
