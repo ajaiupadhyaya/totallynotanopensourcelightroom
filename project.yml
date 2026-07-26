@@ -20,6 +20,8 @@ settings:
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
     ENABLE_HARDENED_RUNTIME: NO
+    MTL_COMPILER_FLAGS: "-fcikernel"
+    MTLLINKER_FLAGS: "-cikernel"
 
 targets:
   PhotoEditor:
