@@ -120,8 +120,16 @@ final class EditorModel {
     }
 
     /// Resets all adjustments to their neutral defaults.
+    ///
+    /// A fresh stack has `rawWBInitialized` false, which makes the as-shot
+    /// white-balance decision applicable again — so on a RAW, Reset returns to
+    /// the *camera's* neutral rather than to an assumed 6500 K the file never
+    /// had. Folding that into the same assignment keeps Reset one undo step
+    /// and one render, exactly as before.
     func resetAdjustments() {
-        editStack = EditStack()
+        var fresh = EditStack()
+        if let adopted = adoptingAsShot(fresh) { fresh = adopted }
+        editStack = fresh
     }
 
     // MARK: Canvas pickers
@@ -544,15 +552,26 @@ final class EditorModel {
     /// Appearance will change — that is the point — so the PV1 look is
     /// snapshotted first and one click away forever.
     ///
-    /// Unlike ``adoptAsShotWhiteBalanceIfNeeded``, this is a deliberate user
-    /// action taken from the develop panel, not bookkeeping — so it does *not*
-    /// pre-align `lastCommittedStack`. The mutation below flows through the
-    /// normal debounced commit path and registers one ordinary undo step,
-    /// the same as dragging a slider or applying a preset.
+    /// Unlike the as-shot adoption in ``loadSource()``, this is a deliberate
+    /// user action taken from the develop panel, not bookkeeping — so it does
+    /// *not* pre-align `lastCommittedStack`. The single assignment below flows
+    /// through the normal debounced commit path and registers one ordinary
+    /// undo step, the same as dragging a slider or applying a preset.
     func upgradeToProcessVersion2() {
         guard editStack.processVersion < 2 else { return }
         _ = saveSnapshot(named: "Before Process Version 2")
-        editStack.processVersion = 2
+
+        var upgraded = editStack
+        upgraded.processVersion = 2
+        // A PV1 RAW was decoded at Apple's defaults and flattened to
+        // `.rendered` (see ``RawDecodePolicy``), so neither the sensor-domain
+        // chain nor the as-shot neutral it needs exist until the file has been
+        // re-decoded under the new version.
+        reloadSource(processVersion: upgraded.processVersion)
+        if let adopted = adoptingAsShot(upgraded) { upgraded = adopted }
+        // One assignment: the version bump and the WB it implies are a single
+        // undo step, not two.
+        editStack = upgraded
     }
 
     // MARK: Geometry
@@ -814,8 +833,29 @@ final class EditorModel {
         // captured when the photo opened, so it goes stale the moment the
         // photographer upgrades this photo to PV2 mid-session. The renderer
         // dispatches on the live stack, and the decode has to agree with it.
+        reloadSource(processVersion: editStack.processVersion)
+        guard let adopted = adoptingAsShot(editStack) else { return }
+
+        // Adopting as-shot WB *at open* is bookkeeping, not a user edit — align
+        // lastCommittedStack to the adopted value *before* assigning editStack
+        // so the debounced commit sees no diff and registers no spurious
+        // "White Balance" undo/history step (mirrors undo()/redo() below).
+        // A single whole-stack assignment also means exactly one
+        // renderPreview()/scheduleCommit() instead of three. Reset and the PV2
+        // upgrade deliberately skip this alignment: there the adoption rides
+        // along with a change the photographer asked for and should be undoable
+        // as one step with it.
+        lastCommittedStack = adopted
+        editStack = adopted
+    }
+
+    /// Decodes the preview source under `processVersion`'s decode policy.
+    ///
+    /// Separate from ``loadSource()`` because the upgrade path has to re-decode
+    /// *without* the load-time undo bookkeeping.
+    private func reloadSource(processVersion: Int) {
         guard let loaded = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: 1600,
-                                                   processVersion: editStack.processVersion) else {
+                                                   processVersion: processVersion) else {
             isMissingFile = true
             sourceImage = nil
             fullSourceImage = nil
@@ -823,38 +863,50 @@ final class EditorModel {
             fullSource = nil
             return
         }
+        isMissingFile = false
         sourceImage = loaded
         source = loaded.image
+        // Decoded under the old policy, so no longer valid at any zoom.
         fullSourceImage = nil
         fullSource = nil
-        adoptAsShotWhiteBalanceIfNeeded(from: loaded)
     }
 
-    /// First open of a RAW under PV2: the stack's WB defaults become the
-    /// file's as-shot neutral instead of an assumed 6500 K.
-    private func adoptAsShotWhiteBalanceIfNeeded(from loaded: SourceImage) {
-        guard case .raw(let filter) = loaded,
-              editStack.processVersion >= 2, !editStack.rawWBInitialized,
-              // Film-negative RAWs render through the .rendered/WhiteBalanceStage
-              // path instead (the matching `!stack.filmNegative.isEnabled` guard
-              // in EditRenderer.render), so seeding sensor-domain as-shot Kelvin
-              // here would apply the wrong WB semantics on top of the wrong domain.
-              !editStack.filmNegative.isEnabled
-        else { return }
+    /// The as-shot adoption decision for the *current* source: nil unless it is
+    /// a live RAW filter whose neutral can be read.
+    private func adoptingAsShot(_ stack: EditStack) -> EditStack? {
+        guard case .raw(let filter)? = sourceImage else { return nil }
+        return Self.adoptedStack(stack,
+                                 asShotTemperature: Double(filter.neutralTemperature),
+                                 asShotTint: Double(filter.neutralTint))
+    }
 
-        var adopted = editStack
-        adopted.whiteBalanceTemp = Double(filter.neutralTemperature)
-        adopted.whiteBalanceTint = Double(filter.neutralTint)
+    /// Whether — and how — a RAW's as-shot neutral should replace a stack's
+    /// white balance, as a pure function of the stack.
+    ///
+    /// Adoption is *not* a load-time event. Reset clears `rawWBInitialized`
+    /// and so makes it applicable again; the PV1→PV2 upgrade makes it
+    /// applicable for the first time. Keeping the decision here means all
+    /// three callers ask the same question, and the question is testable
+    /// without a camera file.
+    ///
+    /// - Returns: The stack to adopt, or `nil` when nothing should change:
+    ///   the stack already carries an adopted (or edited) RAW white balance;
+    ///   it is a PV1 stack, whose legacy chain never reads sensor-domain WB;
+    ///   or film-negative conversion is on, in which case the RAW renders
+    ///   through the `.rendered`/`WhiteBalanceStage` path instead (the
+    ///   matching `!stack.filmNegative.isEnabled` guard in
+    ///   `EditRenderer.render`) and sensor-domain Kelvin would be the wrong
+    ///   units in the wrong domain.
+    static func adoptedStack(_ stack: EditStack,
+                             asShotTemperature: Double,
+                             asShotTint: Double) -> EditStack? {
+        guard stack.processVersion >= 2, !stack.rawWBInitialized,
+              !stack.filmNegative.isEnabled else { return nil }
+        var adopted = stack
+        adopted.whiteBalanceTemp = asShotTemperature
+        adopted.whiteBalanceTint = asShotTint
         adopted.rawWBInitialized = true
-
-        // Adopting as-shot WB is bookkeeping, not a user edit — align
-        // lastCommittedStack to the adopted value *before* assigning editStack
-        // so the debounced commit sees no diff and registers no spurious
-        // "White Balance" undo/history step (mirrors undo()/redo() above).
-        // A single whole-stack assignment also means exactly one
-        // renderPreview()/scheduleCommit() instead of three.
-        lastCommittedStack = adopted
-        editStack = adopted
+        return adopted
     }
 
     private func activeRenderSource() -> SourceImage? {

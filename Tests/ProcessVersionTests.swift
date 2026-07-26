@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import XCTest
 @testable import PhotoEditor
@@ -63,14 +64,111 @@ final class ProcessVersionTests: XCTestCase {
         let model = try TestSupport.makeEditorModel()
         model.editStack.processVersion = 1
         model.editStack.contrast = 30
+        model.commitEdit()
         let snapshotsBefore = model.snapshots.count
+        let undoBefore = model.undoDepth
+
         model.upgradeToProcessVersion2()
         XCTAssertEqual(model.editStack.processVersion, 2)
         XCTAssertEqual(model.editStack.contrast, 30, "slider values are kept — only the engine changes")
         XCTAssertEqual(model.snapshots.count, snapshotsBefore + 1, "must snapshot before upgrading")
+        // The source here is a PNG, so there is no as-shot neutral to seed:
+        // the non-RAW upgrade must be exactly the version bump it always was.
+        XCTAssertEqual(model.editStack.whiteBalanceTemp, 6500)
+        XCTAssertEqual(model.editStack.whiteBalanceTint, 0)
+        XCTAssertFalse(model.editStack.rawWBInitialized)
+        // …and one user-visible undo step, seeding or not.
+        model.commitEdit()
+        XCTAssertEqual(model.undoDepth, undoBefore + 1, "the upgrade must be a single undo step")
+
         // Idempotent.
         model.upgradeToProcessVersion2()
         XCTAssertEqual(model.snapshots.count, snapshotsBefore + 1)
+    }
+
+    // MARK: As-shot white balance adoption
+
+    /// A RAW's as-shot neutral, standing in for what `CIRAWFilter` reports.
+    private let asShot = (temperature: 5100.0, tint: 12.0)
+
+    func testAdoptedStackSeedsAsShotWhiteBalanceExactlyOnce() throws {
+        let adopted = try XCTUnwrap(EditorModel.adoptedStack(
+            EditStack(), asShotTemperature: asShot.temperature, asShotTint: asShot.tint))
+        XCTAssertEqual(adopted.whiteBalanceTemp, asShot.temperature)
+        XCTAssertEqual(adopted.whiteBalanceTint, asShot.tint)
+        XCTAssertTrue(adopted.rawWBInitialized)
+
+        XCTAssertNil(EditorModel.adoptedStack(adopted, asShotTemperature: 4000, asShotTint: -30),
+                     "an already-adopted stack must never be overwritten")
+    }
+
+    func testAdoptedStackDeclinesLegacyAndFilmNegativeStacks() {
+        var legacy = EditStack()
+        legacy.processVersion = 1
+        XCTAssertNil(EditorModel.adoptedStack(legacy, asShotTemperature: asShot.temperature,
+                                              asShotTint: asShot.tint),
+                     "PV1 renders through the legacy chain, which never reads sensor-domain WB")
+
+        var film = EditStack()
+        film.filmNegative.isEnabled = true
+        XCTAssertNil(EditorModel.adoptedStack(film, asShotTemperature: asShot.temperature,
+                                              asShotTint: asShot.tint),
+                     "a film-negative RAW renders through WhiteBalanceStage — different units")
+    }
+
+    func testAdoptedStackChangesNothingElse() throws {
+        var stack = EditStack()
+        stack.exposure = 0.8
+        stack.contrast = -20
+        stack.vibrance = 35
+        stack.rawBoost = 40
+        stack.geometry.cropRect = CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)
+
+        let adopted = try XCTUnwrap(EditorModel.adoptedStack(
+            stack, asShotTemperature: asShot.temperature, asShotTint: asShot.tint))
+
+        var expected = stack
+        expected.whiteBalanceTemp = asShot.temperature
+        expected.whiteBalanceTint = asShot.tint
+        expected.rawWBInitialized = true
+        XCTAssertEqual(adopted, expected, "adoption must touch exactly three fields")
+    }
+
+    /// The upgrade path: a PV1 RAW has never had a chance to adopt (the guard
+    /// above rejected it), so bumping the version makes the decision newly
+    /// applicable on the very same stack — which is why it is a pure function
+    /// rather than a load-time side effect.
+    func testAdoptedStackSeedsAStackThatWasJustUpgraded() throws {
+        var legacy = EditStack()
+        legacy.processVersion = 1
+        legacy.contrast = 30
+        XCTAssertNil(EditorModel.adoptedStack(legacy, asShotTemperature: asShot.temperature,
+                                              asShotTint: asShot.tint))
+
+        var upgraded = legacy
+        upgraded.processVersion = 2
+        let adopted = try XCTUnwrap(EditorModel.adoptedStack(
+            upgraded, asShotTemperature: asShot.temperature, asShotTint: asShot.tint))
+        XCTAssertEqual(adopted.whiteBalanceTemp, asShot.temperature)
+        XCTAssertEqual(adopted.whiteBalanceTint, asShot.tint)
+        XCTAssertTrue(adopted.rawWBInitialized)
+        XCTAssertEqual(adopted.contrast, 30)
+    }
+
+    /// Reset clears `rawWBInitialized` along with everything else, so the
+    /// as-shot decision becomes applicable again — and must fold into the one
+    /// undo step Reset already registers.
+    func testResetIsASingleUndoStep() throws {
+        let model = try TestSupport.makeEditorModel()
+        model.editStack.exposure = 1.5
+        model.commitEdit()
+        let undoBefore = model.undoDepth
+
+        model.resetAdjustments()
+        model.commitEdit()
+        XCTAssertEqual(model.undoDepth, undoBefore + 1)
+        XCTAssertEqual(model.editStack, EditStack(),
+                       "a non-RAW reset is still exactly a fresh stack")
     }
 
     func testNeutralStacksRenderIdenticallyUnderBothVersions() {
