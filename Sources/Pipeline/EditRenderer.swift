@@ -137,14 +137,7 @@ struct EditRenderer {
     }
 
     private func applyHighlightsAndShadows(_ image: CIImage, stack: EditStack) -> CIImage {
-        guard stack.highlights != 0 || stack.shadows != 0 else { return image }
-        // highlightAmount 1.0 == no change (lower recovers highlights);
-        // shadowAmount 0 == no change (positive lifts).
-        let hs = CIFilter.highlightShadowAdjust()
-        hs.inputImage = image
-        hs.highlightAmount = Float(1.0 + stack.highlights / 100.0)
-        hs.shadowAmount = Float(stack.shadows / 100.0)
-        return hs.outputImage ?? image
+        LocalToneStage.apply(image, highlights: stack.highlights, shadows: stack.shadows)
     }
 
     private func applyContrast(_ image: CIImage, stack: EditStack) -> CIImage {

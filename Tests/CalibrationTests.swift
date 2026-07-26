@@ -114,4 +114,49 @@ final class CalibrationTests: XCTestCase {
         let out = Calibration.displaySweep(inputs: [0.3, 0.7]) { $0.toneCurveDarks = 100 }
         XCTAssertGreaterThan(out[0] - 0.3, (out[1] - 0.7) * 2)
     }
+
+    func testHighlightsWorksInBothDirections() {
+        // The PV1 bug: +highlights was a hard no-op. Both signs must move a
+        // bright patch, monotonically.
+        let bright = 0.8
+        let up = Calibration.displaySweep(inputs: [bright]) { $0.highlights = 80 }
+        let down = Calibration.displaySweep(inputs: [bright]) { $0.highlights = -80 }
+        let downFull = Calibration.displaySweep(inputs: [bright]) { $0.highlights = -100 }
+        XCTAssertGreaterThan(up[0], bright + 0.02)
+        XCTAssertLessThan(down[0], bright - 0.05)
+        XCTAssertLessThan(downFull[0], down[0], "recovery must deepen with amount")
+        // …and leave a shadow patch essentially alone.
+        let dark = Calibration.displaySweep(inputs: [0.15]) { $0.highlights = -100 }
+        XCTAssertEqual(dark[0], 0.15, accuracy: 0.02)
+    }
+
+    func testShadowsWorksInBothDirectionsAndIsLocalToShadows() {
+        let lifted = Calibration.displaySweep(inputs: [0.2]) { $0.shadows = 80 }
+        let deepened = Calibration.displaySweep(inputs: [0.2]) { $0.shadows = -80 }
+        XCTAssertGreaterThan(lifted[0], 0.25)
+        XCTAssertLessThan(deepened[0], 0.15)
+        let bright = Calibration.displaySweep(inputs: [0.85]) { $0.shadows = 80 }
+        XCTAssertEqual(bright[0], 0.85, accuracy: 0.03)
+    }
+
+    /// The halo test. Shadow recovery on a hard dark/bright edge must not
+    /// overshoot on either side of the boundary — the guided-filter base
+    /// keeps the step a step, so the gain map cannot leak across it.
+    func testShadowLiftDoesNotHaloAcrossAHardEdge() {
+        let renderer = EditRenderer()
+        var stack = EditStack()
+        stack.shadows = 100
+        let edge = CalibrationEdge.image(dark: 0.16, bright: 0.82, size: 128)
+        let out = renderer.render(source: edge, stack: stack)
+        // Bright side, near and far from the edge: lift must not darken it,
+        // and near-edge must match far-edge (no dark band).
+        let brightNear = Calibration.displayValue(of: out, x: 68, y: 64)
+        let brightFar = Calibration.displayValue(of: out, x: 120, y: 64)
+        XCTAssertGreaterThanOrEqual(brightNear, 0.80)
+        XCTAssertEqual(brightNear, brightFar, accuracy: 0.03, "halo band on the bright side")
+        // Dark side near the edge must be lifted the same as far from it.
+        let darkNear = Calibration.displayValue(of: out, x: 60, y: 64)
+        let darkFar = Calibration.displayValue(of: out, x: 8, y: 64)
+        XCTAssertEqual(darkNear, darkFar, accuracy: 0.04, "uneven lift = halo on the dark side")
+    }
 }

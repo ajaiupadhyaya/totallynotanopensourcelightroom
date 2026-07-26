@@ -52,3 +52,20 @@ enum Calibration {
                        format: .RGBA8, colorSpace: srgb)
     }
 }
+
+enum CalibrationEdge {
+    /// A vertical hard edge: left half `dark`, right half `bright` (display values).
+    static func image(dark: Double, bright: Double, size: Int) -> CIImage {
+        var bytes = [UInt8](repeating: 255, count: size * size * 4)
+        for y in 0..<size {
+            for x in 0..<size {
+                let v = UInt8(((x < size / 2 ? dark : bright) * 255).rounded())
+                let i = (y * size + x) * 4
+                bytes[i] = v; bytes[i + 1] = v; bytes[i + 2] = v
+            }
+        }
+        return CIImage(bitmapData: Data(bytes), bytesPerRow: size * 4,
+                       size: CGSize(width: size, height: size),
+                       format: .RGBA8, colorSpace: Calibration.srgb)
+    }
+}

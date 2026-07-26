@@ -47,6 +47,7 @@
 		5834C86CBCD724394093DEC6 /* LocalAdjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */; };
 		5874FF400B0872B7850891C2 /* LibrarySidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602AF91A44F0025239865F8D /* LibrarySidebar.swift */; };
 		595C3CD80230ED514032E4E8 /* ColorCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */; };
+		5D071733349287D8A890ED31 /* LocalToneStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55728F374D0D0B0F90B57625 /* LocalToneStage.swift */; };
 		5D9BC731F56683DAAFDC6BC4 /* ProcessVersionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F05CA56EF32A61B28A7F2EA /* ProcessVersionTests.swift */; };
 		5EE7C970E1D0449A3733E5A5 /* OpticsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D365F1176EE97796A58796 /* OpticsPanel.swift */; };
 		602CF8DEF86DC9E6F658F4A2 /* EndToEndFilmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA726AC28295C6553FB58293 /* EndToEndFilmTests.swift */; };
@@ -83,6 +84,7 @@
 		97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */; };
 		9837DF10BD6443312BE36067 /* RangeMaskCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */; };
 		9ACD2C0FA63F5EDDDB5D0F11 /* LegacyToneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */; };
+		9CFB989AC50C552BA4BFD912 /* LocalTone.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = F060B4298C198989DD59D75C /* LocalTone.ci.metal */; };
 		9EC7032CD5145CA66D621C51 /* ColorSuiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */; };
 		A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */; };
 		A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */; };
@@ -173,6 +175,7 @@
 		4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeCache.swift; sourceTree = "<group>"; };
 		4F05CA56EF32A61B28A7F2EA /* ProcessVersionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessVersionTests.swift; sourceTree = "<group>"; };
 		523FF6E84F8696BA923A783B /* MaskCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositor.swift; sourceTree = "<group>"; };
+		55728F374D0D0B0F90B57625 /* LocalToneStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalToneStage.swift; sourceTree = "<group>"; };
 		5A2F971CBD017A251DD0D590 /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
 		5B1C63E06502A5AD187DA403 /* Defringe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Defringe.swift; sourceTree = "<group>"; };
 		5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentTests.swift; sourceTree = "<group>"; };
@@ -244,6 +247,7 @@
 		EC55460271E2A012E80DEEEC /* FilmPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmPanel.swift; sourceTree = "<group>"; };
 		ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerPanel.swift; sourceTree = "<group>"; };
 		EFB4F1CD3CF945C5503145A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F060B4298C198989DD59D75C /* LocalTone.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = LocalTone.ci.metal; sourceTree = "<group>"; };
 		F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmBaseSamplerTests.swift; sourceTree = "<group>"; };
 		F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositorTests.swift; sourceTree = "<group>"; };
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
@@ -413,6 +417,7 @@
 				798CF687AF441778F974D6E6 /* ImageDecoder.swift */,
 				BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */,
 				08C1D0BE182638F209A58D27 /* LocalAdjustmentRenderer.swift */,
+				55728F374D0D0B0F90B57625 /* LocalToneStage.swift */,
 				F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */,
 				523FF6E84F8696BA923A783B /* MaskCompositor.swift */,
 				4A7EEB7632D72A68035D921B /* MLMaskCache.swift */,
@@ -473,6 +478,7 @@
 			isa = PBXGroup;
 			children = (
 				80F11E5D7410F510CEE64411 /* KernelLibrary.swift */,
+				F060B4298C198989DD59D75C /* LocalTone.ci.metal */,
 				2312CA0017EF4F1D013472D8 /* Probe.ci.metal */,
 				A8C6195D005B7B3428A2DC0A /* Tone.ci.metal */,
 			);
@@ -672,6 +678,8 @@
 				5834C86CBCD724394093DEC6 /* LocalAdjustment.swift in Sources */,
 				CEA25C022BD3801BB4A0E305 /* LocalAdjustmentPanel.swift in Sources */,
 				E71E15827C4A46B3E5022C65 /* LocalAdjustmentRenderer.swift in Sources */,
+				9CFB989AC50C552BA4BFD912 /* LocalTone.ci.metal in Sources */,
+				5D071733349287D8A890ED31 /* LocalToneStage.swift in Sources */,
 				36CAEE8082B31C61445393B3 /* MLMaskCache.swift in Sources */,
 				7B3D44E9A59BDF069BC0DD92 /* MLMaskEnvironment.swift in Sources */,
 				6128CCD83322A9AFD1B988A4 /* MaskComponent.swift in Sources */,
