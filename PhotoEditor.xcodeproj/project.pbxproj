@@ -45,6 +45,7 @@
 		5834C86CBCD724394093DEC6 /* LocalAdjustment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */; };
 		5874FF400B0872B7850891C2 /* LibrarySidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602AF91A44F0025239865F8D /* LibrarySidebar.swift */; };
 		595C3CD80230ED514032E4E8 /* ColorCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */; };
+		5D9BC731F56683DAAFDC6BC4 /* ProcessVersionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F05CA56EF32A61B28A7F2EA /* ProcessVersionTests.swift */; };
 		5EE7C970E1D0449A3733E5A5 /* OpticsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D365F1176EE97796A58796 /* OpticsPanel.swift */; };
 		602CF8DEF86DC9E6F658F4A2 /* EndToEndFilmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA726AC28295C6553FB58293 /* EndToEndFilmTests.swift */; };
 		60A35DABA722DA72F962E386 /* FilmStock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7C39D72A549DFE7D38FA03F /* FilmStock.swift */; };
@@ -164,6 +165,7 @@
 		4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogEntry.swift; sourceTree = "<group>"; };
 		4DEBA8C2FB709B20C9CB1D15 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		4EBF2EA223C4B8FE88D0B38F /* ColorCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeCache.swift; sourceTree = "<group>"; };
+		4F05CA56EF32A61B28A7F2EA /* ProcessVersionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessVersionTests.swift; sourceTree = "<group>"; };
 		523FF6E84F8696BA923A783B /* MaskCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositor.swift; sourceTree = "<group>"; };
 		5A2F971CBD017A251DD0D590 /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
 		5B1C63E06502A5AD187DA403 /* Defringe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Defringe.swift; sourceTree = "<group>"; };
@@ -333,6 +335,7 @@
 				C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */,
 				4DEBA8C2FB709B20C9CB1D15 /* PerformanceTests.swift */,
 				955D38A421CE01C63316D878 /* Phase2Tests.swift */,
+				4F05CA56EF32A61B28A7F2EA /* ProcessVersionTests.swift */,
 				458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */,
 				DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */,
 				C971C5547D7963F84FCD8C69 /* TestSupport.swift */,
@@ -592,6 +595,7 @@
 				3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */,
 				C8073E4F79144D80D057908A /* PerformanceTests.swift in Sources */,
 				49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */,
+				5D9BC731F56683DAAFDC6BC4 /* ProcessVersionTests.swift in Sources */,
 				1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */,
 				91D2B5ADD90FF74D56FF5078 /* RetouchTests.swift in Sources */,
 				BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */,

@@ -14,6 +14,15 @@ import Foundation
 /// ``LenientDecoding``), which is what makes adding a field safe for photos
 /// edited by an earlier build.
 struct EditStack: Codable, Equatable {
+    // MARK: Process version
+
+    /// Which rendering engine interprets this stack. 1 = the original chain,
+    /// frozen verbatim in ``LegacyToneRenderer`` so old edits never change
+    /// appearance; 2 = the calibrated PV2 chain. New stacks start at 2;
+    /// decoding falls back to 1 because any stack persisted before this field
+    /// existed was authored against the old math.
+    var processVersion: Int = 2
+
     // MARK: Light
 
     /// Exposure adjustment in EV stops. `0` leaves the image unchanged.
@@ -97,6 +106,17 @@ struct EditStack: Codable, Equatable {
     /// Grain size, `0...100`; larger is coarser, like a faster stock.
     var grainSize: Double = 25
 
+    /// Vignette shape, `-100...100`. Negative pushes the superellipse toward
+    /// rectangular; positive rounds it toward a circle.
+    var vignetteRoundness: Double = 0
+
+    /// Vignette falloff width, `0...100`.
+    var vignetteFeather: Double = 50
+
+    /// Vignette highlight priority, `0...100`. Lets bright areas punch
+    /// through a darkening vignette.
+    var vignetteHighlights: Double = 0
+
     // MARK: Tone curve
 
     /// Tone-curve control points in the unit square (x = input, y = output),
@@ -142,6 +162,19 @@ struct EditStack: Codable, Equatable {
     /// photos are unaffected.
     var filmNegative = FilmNegativeSettings()
 
+    // MARK: RAW
+
+    /// Baseline RAW rendering boost, `0...100`, mapped to
+    /// `CIRAWFilter.boostAmount`. 100 is Apple's default look; 0 is the flat
+    /// linear rendering. This is the spec's "visible, adjustable baseline
+    /// tone lift" — the lift exists either way; this makes it a slider
+    /// instead of an invisible bake. Ignored for non-RAW sources.
+    var rawBoost: Double = 100
+
+    /// Whether as-shot white balance has been read from the RAW file into
+    /// ``whiteBalanceTemp``/``whiteBalanceTint`` (done once on first load).
+    var rawWBInitialized: Bool = false
+
     init() {}
 }
 
@@ -151,6 +184,8 @@ extension EditStack {
     init(from decoder: Decoder) throws {
         self.init()
         let c = try decoder.container(keyedBy: CodingKeys.self)
+
+        processVersion = c.lenient(.processVersion, 1)
 
         exposure = c.lenient(.exposure, 0)
         contrast = c.lenient(.contrast, 0)
@@ -177,6 +212,9 @@ extension EditStack {
         vignetteMidpoint = c.lenient(.vignetteMidpoint, 50)
         grainAmount = c.lenient(.grainAmount, 0)
         grainSize = c.lenient(.grainSize, 25)
+        vignetteRoundness = c.lenient(.vignetteRoundness, 0)
+        vignetteFeather = c.lenient(.vignetteFeather, 50)
+        vignetteHighlights = c.lenient(.vignetteHighlights, 0)
 
         toneCurvePoints = c.lenient(.toneCurvePoints, [])
         toneCurveHighlights = c.lenient(.toneCurveHighlights, 0)
@@ -189,5 +227,21 @@ extension EditStack {
         defringe = c.lenient(.defringe, Defringe())
         geometry = c.lenient(.geometry, Geometry())
         filmNegative = c.lenient(.filmNegative, FilmNegativeSettings())
+        rawBoost = c.lenient(.rawBoost, 100)
+        rawWBInitialized = c.lenient(.rawWBInitialized, false)
+    }
+}
+
+extension EditStack {
+    /// True when the stack contains no edits, regardless of which process
+    /// version it targets. Use this — not `== EditStack()` — for "has the
+    /// user done anything" checks; a neutral PV1 stack differs from
+    /// `EditStack()` only in `processVersion`, and a neutral stack renders
+    /// identically under both engines.
+    var isNeutralEdit: Bool {
+        var normalized = self
+        normalized.processVersion = EditStack().processVersion
+        normalized.rawWBInitialized = false
+        return normalized == EditStack()
     }
 }

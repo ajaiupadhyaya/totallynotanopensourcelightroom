@@ -117,7 +117,7 @@ final class AppModel {
     /// photograph no longer is. ImageIO failing is not fatal — some sources it
     /// declines are still decodable — so the render path is also the fallback.
     private func makeThumbnailImage(for entry: CatalogEntry) -> CGImage? {
-        if entry.editStack == EditStack(),
+        if entry.editStack.isNeutralEdit,
            let image = ThumbnailGenerator.thumbnailCGImage(for: entry.fileURL) {
             return image
         }
