@@ -52,6 +52,9 @@ struct EditRenderer {
     /// Memoizes the developed source (film conversion + geometry).
     private let developedCache = DevelopedSourceCache()
 
+    /// Memoizes the RAW sensor-domain develop, so the cache above can hit.
+    private let rawCache = RawDevelopCache()
+
     /// The frozen process-version-1 chain. Every stack persisted before PV2
     /// existed renders through this, unchanged forever.
     private let legacy = LegacyToneRenderer()
@@ -88,8 +91,15 @@ struct EditRenderer {
             // WB, exposure, and boost act on sensor data. A film-negative
             // scan that happens to be RAW opts out: inversion must precede
             // white balance, so it takes the rendered route below.
-            RawDevelopSettings(stack: stack).configure(filter)
-            image = filter.outputImage ?? CIImage.empty()
+            //
+            // Memoized: re-reading `outputImage` yields a new CIImage identity
+            // every time, which would miss `developedCache` on every tick of
+            // any slider — including the ones that cannot change the develop.
+            let settings = RawDevelopSettings(stack: stack)
+            image = rawCache.image(filter: filter, settings: settings) {
+                settings.configure(filter)
+                return filter.outputImage ?? CIImage.empty()
+            }
             sensorDomainHandled = true
         case .raw(let filter):
             image = filter.outputImage ?? CIImage.empty()

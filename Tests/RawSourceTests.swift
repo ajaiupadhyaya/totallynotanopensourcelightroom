@@ -16,6 +16,49 @@ final class RawSourceTests: XCTestCase {
         XCTAssertEqual(s.boost, 0.4)
     }
 
+    /// The develop must be applied once per *change*, not once per render —
+    /// otherwise `CIRAWFilter.outputImage`'s fresh identity misses
+    /// `DevelopedSourceCache` on every slider tick. `AnyObject` stands in for
+    /// the filter so the memo is testable without a camera file; what remains
+    /// fixture-gated is that a real `CIRAWFilter` is the object being keyed.
+    func testRawDevelopCacheSkipsUnchangedSettings() {
+        let cache = RawDevelopCache()
+        let filter = NSObject()
+        var develops = 0
+        func develop() -> CIImage {
+            develops += 1
+            return TestSupport.solidImage(red: 0.5, green: 0.5, blue: 0.5, size: 8)
+        }
+
+        var stack = EditStack()
+        let first = cache.image(filter: filter, settings: RawDevelopSettings(stack: stack),
+                                develop: develop)
+        XCTAssertEqual(develops, 1, "the first call must develop")
+
+        let again = cache.image(filter: filter, settings: RawDevelopSettings(stack: stack),
+                                develop: develop)
+        XCTAssertEqual(develops, 1, "equal settings must not re-develop")
+        XCTAssertTrue(first === again, "the identity is the whole point — a new one misses downstream")
+
+        // The bug this fixes: a slider that is not in RawDevelopSettings.
+        stack.contrast = 40
+        let unrelated = cache.image(filter: filter, settings: RawDevelopSettings(stack: stack),
+                                    develop: develop)
+        XCTAssertEqual(develops, 1, "a Contrast tick cannot change the sensor-domain develop")
+        XCTAssertTrue(first === unrelated)
+
+        stack.exposure = 0.5
+        let changed = cache.image(filter: filter, settings: RawDevelopSettings(stack: stack),
+                                  develop: develop)
+        XCTAssertEqual(develops, 2, "a sensor-domain change must re-develop")
+        XCTAssertFalse(first === changed)
+
+        // Another photo's filter misses even at identical settings.
+        _ = cache.image(filter: NSObject(), settings: RawDevelopSettings(stack: stack),
+                        develop: develop)
+        XCTAssertEqual(develops, 3)
+    }
+
     func testRenderedSourcesStillRouteThroughTheFullChain() {
         let renderer = EditRenderer()
         var stack = EditStack()
