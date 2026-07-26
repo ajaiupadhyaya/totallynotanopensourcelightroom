@@ -111,15 +111,7 @@ struct EditRenderer {
     // MARK: Tone
 
     private func applyWhiteBalance(_ image: CIImage, stack: EditStack) -> CIImage {
-        guard stack.whiteBalanceTemp != 6500 || stack.whiteBalanceTint != 0 else { return image }
-        let wb = CIFilter.temperatureAndTint()
-        wb.inputImage = image
-        // Treat the chosen temp/tint as the image's *current* neutral and remap
-        // it to D65. This gives the intuitive direction: a higher temperature
-        // warms the image (pushes red up, blue down).
-        wb.neutral = CIVector(x: stack.whiteBalanceTemp, y: stack.whiteBalanceTint)
-        wb.targetNeutral = CIVector(x: 6500, y: 0)
-        return wb.outputImage ?? image
+        WhiteBalanceStage.apply(image, temperature: stack.whiteBalanceTemp, tint: stack.whiteBalanceTint)
     }
 
     private func applyExposure(_ image: CIImage, stack: EditStack) -> CIImage {

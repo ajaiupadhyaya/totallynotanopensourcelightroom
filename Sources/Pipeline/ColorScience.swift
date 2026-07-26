@@ -186,12 +186,18 @@ enum ColorScience {
         }
 
         // Apply tint as a v-offset in CIE 1960 uv (green up, magenta down).
+        // Positive tint names the source neutral as green-shifted (v up);
+        // adapting a green-described neutral to D65 removes green from the
+        // output, i.e. pushes a real neutral toward magenta — the same
+        // legacy CITemperatureAndTint convention (verified empirically:
+        // neutral=(6500, +60) -> targetNeutral=(6500,0) on a flat grey
+        // patch yields display RGB ~(141, 120, 142), green below red/blue).
         func whitePointXYZ(kelvin: Double, tint: Double) -> (X: Double, Y: Double, Z: Double) {
             let (x, y) = locusXY(kelvin: kelvin)
             let d = -2 * x + 12 * y + 3
             var u = 4 * x / d
             var v = 6 * y / d
-            v -= tint * 3e-4
+            v += tint * 3e-4
             u = max(u, 1e-4); v = max(v, 1e-4)
             let d2 = 2 * u - 8 * v + 4
             let nx = 3 * u / d2
