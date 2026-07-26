@@ -43,3 +43,40 @@ extern "C" float4 pv2_vignette(coreimage::sampler src,
     }
     return float4(s.rgb * g, s.a);
 }
+
+// Deterministic value noise. Seedless by design: the same develop settings
+// must produce the same grain on every render, preview or export — the
+// lattice is anchored to the frame (normalized coordinates), not the pixel
+// grid, so resolution only changes how densely the same field is sampled.
+static float hash21(float2 p) {
+    p = fract(p * float2(123.34f, 456.21f));
+    p += dot(p, p + 45.32f);
+    return fract(p.x * p.y);
+}
+static float value_noise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * (3.0f - 2.0f * f);
+    float a = hash21(i);
+    float b = hash21(i + float2(1.0f, 0.0f));
+    float c = hash21(i + float2(0.0f, 1.0f));
+    float d = hash21(i + float2(1.0f, 1.0f));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+extern "C" float4 pv2_grain(coreimage::sampler src,
+                            float cellSize, float amount,
+                            float originX, float originY,
+                            coreimage::destination dest) {
+    float2 dc = dest.coord();
+    float4 s = sample(src, src.transform(dc));
+
+    float2 cell = (dc - float2(originX, originY)) / max(cellSize, 0.5f);
+    float g = value_noise(cell) - 0.5f;                      // −0.5…0.5
+
+    float3 d = srgb_encode(clamp(s.rgb, 0.0f, 1.0f));
+    float L = dot(d, float3(0.2126f, 0.7152f, 0.0722f));
+    float w = 4.0f * L * (1.0f - L);                         // midtone-weighted, like emulsion
+    d = clamp(d + g * amount * 0.35f * w, 0.0f, 1.0f);
+    return float4(srgb_decode(d), s.a);
+}

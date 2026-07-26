@@ -350,43 +350,9 @@ struct EditRenderer {
         var result = image
 
         result = EffectsStages.vignette(result, stack: stack)
-
-        if stack.grainAmount > 0 {
-            result = applyGrain(result, stack: stack)
-        }
+        result = EffectsStages.grain(result, amount: stack.grainAmount, size: stack.grainSize)
 
         return result
-    }
-
-    /// Film grain: monochrome noise blended over the image in soft light.
-    ///
-    /// The noise is desaturated first — real grain is a density variation in
-    /// the emulsion, not colored speckle, so colored noise reads as sensor
-    /// noise rather than film. Soft light keeps the grain from crushing the
-    /// blacks or blowing the highlights the way an additive blend would.
-    private func applyGrain(_ image: CIImage, stack: EditStack) -> CIImage {
-        let extent = image.extent
-        guard !extent.isInfinite, extent.width > 0 else { return image }
-
-        guard let noise = CIFilter(name: "CIRandomGenerator")?.outputImage else { return image }
-
-        // Scale the noise up for coarser grain, then crop to the frame.
-        let scale = 0.5 + stack.grainSize / 100.0 * 2.5
-        let scaled = noise.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-
-        let mono = CIFilter.colorControls()
-        mono.inputImage = scaled
-        mono.saturation = 0
-        // Pull the noise toward mid-gray so soft light nudges rather than
-        // stamps; strength then scales that residual contrast.
-        mono.contrast = Float(stack.grainAmount / 100.0 * 0.9)
-        mono.brightness = 0
-        guard let grain = mono.outputImage?.cropped(to: extent) else { return image }
-
-        let blend = CIFilter.softLightBlendMode()
-        blend.inputImage = grain
-        blend.backgroundImage = image
-        return blend.outputImage?.cropped(to: extent) ?? image
     }
 
     // MARK: Rasterization

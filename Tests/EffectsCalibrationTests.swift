@@ -65,4 +65,55 @@ final class EffectsCalibrationTests: XCTestCase {
                                               y: Int(out.extent.minY) + h / 2)
         XCTAssertLessThan(leftEdge, center - 0.05)
     }
+
+    func testGrainIsDeterministic() {
+        let a = rendered { $0.grainAmount = 60 }
+        let b = rendered { $0.grainAmount = 60 }
+        for point in [(10, 10), (50, 80), (100, 30)] {
+            XCTAssertEqual(Calibration.displayValue(of: a, x: point.0, y: point.1),
+                           Calibration.displayValue(of: b, x: point.0, y: point.1),
+                           accuracy: 0.004, "grain must be identical across renders")
+        }
+    }
+
+    func testGrainActuallyAppears() {
+        let out = rendered { $0.grainAmount = 80 }
+        var values: Set<Int> = []
+        for x in stride(from: 4, to: 124, by: 4) {
+            values.insert(Int(Calibration.displayValue(of: out, x: x, y: 64) * 255))
+        }
+        XCTAssertGreaterThan(values.count, 4, "an 80-strength grain must vary the patch")
+    }
+
+    /// The preview/export contract: the same photo rendered at two sizes
+    /// carries the SAME grain field. Rendering the noise in normalized frame
+    /// coordinates makes the 256px render a downsample of the 512px one.
+    func testGrainIsResolutionIndependent() {
+        let renderer = EditRenderer()
+        var stack = EditStack()
+        stack.grainAmount = 70
+        stack.grainSize = 50
+        let small = renderer.render(source: Calibration.patch(0.5, size: 256), stack: stack)
+        // Downsample the large render to the small one's size before
+        // comparing — point-sampling both would compare misaligned pixel
+        // centers of a continuous noise field and flake.
+        let large = renderer.render(source: Calibration.patch(0.5, size: 512), stack: stack)
+            .transformed(by: CGAffineTransform(scaleX: 0.5, y: 0.5))
+        var matched = 0, total = 0
+        for y in stride(from: 8, to: 248, by: 12) {
+            for x in stride(from: 8, to: 248, by: 12) {
+                let s = Calibration.displayValue(of: small, x: x, y: y)
+                let l = Calibration.displayValue(of: large, x: x, y: y)
+                total += 1
+                if abs(s - l) < 0.05 { matched += 1 }
+            }
+        }
+        XCTAssertGreaterThan(Double(matched) / Double(total), 0.7,
+                             "grain field must match across render sizes (\(matched)/\(total))")
+    }
+
+    func testGrainZeroIsIdentity() {
+        let out = rendered { $0.grainAmount = 0 }
+        XCTAssertEqual(Calibration.displayValue(of: out, x: 64, y: 64), 0.6, accuracy: 0.01)
+    }
 }

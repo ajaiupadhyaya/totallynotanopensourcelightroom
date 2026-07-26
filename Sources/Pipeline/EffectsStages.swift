@@ -2,6 +2,7 @@ import CoreImage
 
 enum EffectsStages {
     private static let vignetteKernel = KernelLibrary.general("pv2_vignette")
+    private static let grainKernel = KernelLibrary.general("pv2_grain")
 
     static func vignette(_ image: CIImage, stack: EditStack) -> CIImage {
         guard stack.vignetteAmount != 0 else { return image }
@@ -31,5 +32,20 @@ enum EffectsStages {
                         Float(stack.vignetteFeather / 100),
                         Float(shapeN),
                         Float(stack.vignetteHighlights / 100)]) ?? image
+    }
+
+    static func grain(_ image: CIImage, amount: Double, size: Double) -> CIImage {
+        guard amount > 0 else { return image }
+        let extent = image.extent
+        guard !extent.isInfinite, extent.width > 0 else { return image }
+        // Cell size as a fraction of the frame's long edge: size 0 → fine
+        // (~1/1000th of the frame), 100 → coarse (~1/125th).
+        let longEdge = Double(max(extent.width, extent.height))
+        let cell = longEdge * (0.001 + size / 100 * 0.007)
+        return grainKernel.apply(
+            extent: extent,
+            roiCallback: { _, rect in rect },
+            arguments: [image, Float(cell), Float(amount / 100),
+                        Float(extent.minX), Float(extent.minY)]) ?? image
     }
 }
