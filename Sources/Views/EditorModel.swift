@@ -778,6 +778,9 @@ final class EditorModel {
             || old.colorNoiseReduction != new.colorNoiseReduction { stages.append("Detail") }
         if old.vignetteAmount != new.vignetteAmount
             || old.vignetteMidpoint != new.vignetteMidpoint
+            || old.vignetteRoundness != new.vignetteRoundness
+            || old.vignetteFeather != new.vignetteFeather
+            || old.vignetteHighlights != new.vignetteHighlights
             || old.grainAmount != new.grainAmount || old.grainSize != new.grainSize {
             stages.append("Effects")
         }

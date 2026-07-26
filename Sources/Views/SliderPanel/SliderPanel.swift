@@ -317,12 +317,16 @@ struct SliderPanel: View {
     private var isEffectsModified: Bool {
         let s = model.editStack
         return s.vignetteAmount != 0 || s.vignetteMidpoint != 50
+            || s.vignetteRoundness != 0 || s.vignetteFeather != 50 || s.vignetteHighlights != 0
             || s.grainAmount != 0 || s.grainSize != 25
     }
 
     private func resetEffects() {
         model.editStack.vignetteAmount = 0
         model.editStack.vignetteMidpoint = 50
+        model.editStack.vignetteRoundness = 0
+        model.editStack.vignetteFeather = 50
+        model.editStack.vignetteHighlights = 0
         model.editStack.grainAmount = 0
         model.editStack.grainSize = 25
     }

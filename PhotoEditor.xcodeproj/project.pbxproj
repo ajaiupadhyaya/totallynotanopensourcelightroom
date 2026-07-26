@@ -16,6 +16,7 @@
 		05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */; };
 		09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */; };
 		0E9C125BCDD2DD2C9B08B43A /* FilmPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC55460271E2A012E80DEEEC /* FilmPanel.swift */; };
+		0FE187815F46E6FBA7EA16D9 /* EffectsCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0613C6D1D19EC2716F5195 /* EffectsCalibrationTests.swift */; };
 		1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */; };
 		1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD897D60EAA5BF2C6D21704E /* EditorModel.swift */; };
 		1D5A1CA413710403E332411D /* CurvePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADE0E7375015B3EDE0039A6 /* CurvePanel.swift */; };
@@ -34,6 +35,7 @@
 		457DB68F9E2673AD00635AD9 /* ToneStages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CA90B85315F2603C48F4766 /* ToneStages.swift */; };
 		4820C5A435581193CA4C5AEB /* MetalCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3584DC4BB48755D7ACAE0C /* MetalCanvasView.swift */; };
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
+		4C73473B2849E148E76197C8 /* EffectsStages.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
 		504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267388D14FEE2777E922AC35 /* ColorMixerTests.swift */; };
 		50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */; };
@@ -55,6 +57,7 @@
 		6128CCD83322A9AFD1B988A4 /* MaskComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F44C12165E98D2652E57A3 /* MaskComponent.swift */; };
 		616756D288F64D368F8022C7 /* SnapshotPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A58C8023259214599AAA4498 /* SnapshotPanel.swift */; };
 		6CC19951ABC1EC858CC9A1A8 /* PatchMatchInpainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38B5434BD549F9F325077FB3 /* PatchMatchInpainter.swift */; };
+		6DD0F963DC7D62FD68584DFB /* Effects.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = 895885E0242C92B208130DFC /* Effects.ci.metal */; };
 		6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */; };
 		71F8DD407A0625EC745D4E3D /* WorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78988AE124F31D425DB32C2F /* WorkflowTests.swift */; };
 		7338731C6C7BD32B8F3190AE /* FilmNegativeConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */; };
@@ -174,6 +177,7 @@
 		34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanel.swift; sourceTree = "<group>"; };
 		350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskOverlayTests.swift; sourceTree = "<group>"; };
 		38B5434BD549F9F325077FB3 /* PatchMatchInpainter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchMatchInpainter.swift; sourceTree = "<group>"; };
+		3A0613C6D1D19EC2716F5195 /* EffectsCalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsCalibrationTests.swift; sourceTree = "<group>"; };
 		3C04A9D24D3F8AC42ED6B246 /* BatchExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExportSheet.swift; sourceTree = "<group>"; };
 		3F42D8FE50D31A1366CC7206 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		40363F5629EE0EF44F2763EF /* ColorStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorStages.swift; sourceTree = "<group>"; };
@@ -211,6 +215,7 @@
 		85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRenderer.swift; sourceTree = "<group>"; };
 		8701AFF80F12C07B2E720244 /* FilmColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmColor.swift; sourceTree = "<group>"; };
 		873E87A006C281863ABF1DBD /* SubjectMaskProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectMaskProvider.swift; sourceTree = "<group>"; };
+		895885E0242C92B208130DFC /* Effects.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Effects.ci.metal; sourceTree = "<group>"; };
 		89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeConverter.swift; sourceTree = "<group>"; };
 		8CA90B85315F2603C48F4766 /* ToneStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneStages.swift; sourceTree = "<group>"; };
 		8DBF57D32B1D839FD6740AF6 /* PanelSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSection.swift; sourceTree = "<group>"; };
@@ -267,6 +272,7 @@
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
 		F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTImporter.swift; sourceTree = "<group>"; };
 		FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopPreset.swift; sourceTree = "<group>"; };
+		FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsStages.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -356,6 +362,7 @@
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
 				7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */,
 				23D5A47B1630002BE67596A1 /* EditRendererTests.swift */,
+				3A0613C6D1D19EC2716F5195 /* EffectsCalibrationTests.swift */,
 				AA726AC28295C6553FB58293 /* EndToEndFilmTests.swift */,
 				1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */,
 				F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */,
@@ -436,6 +443,7 @@
 				857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */,
 				5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */,
 				85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */,
+				FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */,
 				DAA4A8702F7807BAA87F5D7C /* ExportService.swift */,
 				4625C5AC7A6158F9CC38CD61 /* FocusPeaking.swift */,
 				C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */,
@@ -506,6 +514,7 @@
 			isa = PBXGroup;
 			children = (
 				F23771CF00BC23FA824B51B6 /* Color.ci.metal */,
+				895885E0242C92B208130DFC /* Effects.ci.metal */,
 				80F11E5D7410F510CEE64411 /* KernelLibrary.swift */,
 				F060B4298C198989DD59D75C /* LocalTone.ci.metal */,
 				2312CA0017EF4F1D013472D8 /* Probe.ci.metal */,
@@ -647,6 +656,7 @@
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
 				80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */,
+				0FE187815F46E6FBA7EA16D9 /* EffectsCalibrationTests.swift in Sources */,
 				602CF8DEF86DC9E6F658F4A2 /* EndToEndFilmTests.swift in Sources */,
 				6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */,
 				04F21DBAAAC3AADDE5DD5C67 /* FilmBaseSamplerTests.swift in Sources */,
@@ -704,6 +714,8 @@
 				57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */,
 				0056804FE1C330F481EF42F4 /* EditorCommands.swift in Sources */,
 				1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */,
+				6DD0F963DC7D62FD68584DFB /* Effects.ci.metal in Sources */,
+				4C73473B2849E148E76197C8 /* EffectsStages.swift in Sources */,
 				BB4A129B5DD8EE0A16DF4850 /* ExportService.swift in Sources */,
 				B9EF8A6A2D3635E698B2294D /* FilmBaseSampler.swift in Sources */,
 				02B776C57296163D7BEF6CB4 /* FilmColor.swift in Sources */,

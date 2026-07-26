@@ -349,30 +349,13 @@ struct EditRenderer {
     private func applyEffects(_ image: CIImage, stack: EditStack) -> CIImage {
         var result = image
 
-        if stack.vignetteAmount != 0 {
-            result = applyVignette(result, stack: stack)
-        }
+        result = EffectsStages.vignette(result, stack: stack)
 
         if stack.grainAmount > 0 {
             result = applyGrain(result, stack: stack)
         }
 
         return result
-    }
-
-    private func applyVignette(_ image: CIImage, stack: EditStack) -> CIImage {
-        let extent = image.extent
-        guard !extent.isInfinite, extent.width > 0 else { return image }
-
-        let filter = CIFilter.vignetteEffect()
-        filter.inputImage = image
-        filter.center = CGPoint(x: extent.midX, y: extent.midY)
-        // Midpoint controls how far in from the corners the falloff reaches.
-        let maxRadius = max(extent.width, extent.height) / 2
-        filter.radius = Float(maxRadius * (0.5 + stack.vignetteMidpoint / 100.0))
-        filter.intensity = Float(-stack.vignetteAmount / 100.0)
-        filter.falloff = 0.5
-        return filter.outputImage ?? image
     }
 
     /// Film grain: monochrome noise blended over the image in soft light.
