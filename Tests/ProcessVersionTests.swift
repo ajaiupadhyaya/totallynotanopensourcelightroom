@@ -86,6 +86,88 @@ final class ProcessVersionTests: XCTestCase {
         XCTAssertEqual(model.snapshots.count, snapshotsBefore + 1)
     }
 
+    // MARK: The decode/version invariant
+
+    /// A stack as an older build would have saved it.
+    private var legacyStack: EditStack {
+        var stack = EditStack()
+        stack.processVersion = 1
+        return stack
+    }
+
+    /// The invariant: whatever replaces the stack, the decoded source must be
+    /// the one that stack's renderer dispatches on. Undo across an upgrade is
+    /// the sharpest case — the frozen PV1 chain would otherwise replay against
+    /// PV2's non-default RAW decode, which is precisely what the process
+    /// version exists to prevent.
+    func testUndoAndRedoAcrossTheUpgradeReDecodeTheSource() throws {
+        let model = try TestSupport.makeEditorModel(editStack: legacyStack)
+        XCTAssertEqual(model.decodedProcessVersion, 1)
+        model.commitEdit()
+
+        model.upgradeToProcessVersion2()
+        model.commitEdit()
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+
+        model.undo()
+        XCTAssertEqual(model.editStack.processVersion, 1)
+        XCTAssertEqual(model.decodedProcessVersion, 1,
+                       "undo popped the stack to PV1 but left a PV2 decode in place")
+        XCTAssertFalse(model.isMissingFile, "the re-decode must actually succeed")
+        XCTAssertNotNil(model.displayImage)
+
+        model.redo()
+        XCTAssertEqual(model.editStack.processVersion, 2)
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+    }
+
+    func testSnapshotRestoreAcrossTheVersionBoundaryReDecodes() throws {
+        let model = try TestSupport.makeEditorModel(editStack: legacyStack)
+        model.upgradeToProcessVersion2()
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+
+        let snapshot = try XCTUnwrap(model.snapshots.first { $0.name == "Before Process Version 2" })
+        model.applySnapshot(snapshot)
+        XCTAssertEqual(model.editStack.processVersion, 1)
+        XCTAssertEqual(model.decodedProcessVersion, 1)
+    }
+
+    func testHistoryRestoreAcrossTheVersionBoundaryReDecodes() throws {
+        let model = try TestSupport.makeEditorModel(editStack: legacyStack)
+        let opened = try XCTUnwrap(model.historyEvents.first)
+        XCTAssertEqual(opened.stack.processVersion, 1)
+
+        model.upgradeToProcessVersion2()
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+
+        model.restoreHistoryEvent(opened)
+        XCTAssertEqual(model.editStack.processVersion, 1)
+        XCTAssertEqual(model.decodedProcessVersion, 1)
+    }
+
+    /// Reset replaces a PV1 stack with a fresh PV2 one, so it crosses the
+    /// boundary in the other direction — and it must cross it *before* the
+    /// as-shot adoption reads the source, or a RAW would adopt from a decode
+    /// that has no filter.
+    func testResetFromALegacyStackReDecodesUnderTheFreshVersion() throws {
+        let model = try TestSupport.makeEditorModel(editStack: legacyStack)
+        XCTAssertEqual(model.decodedProcessVersion, 1)
+
+        model.resetAdjustments()
+        XCTAssertEqual(model.editStack.processVersion, 2)
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+        XCTAssertFalse(model.isMissingFile)
+    }
+
+    /// The invariant holds even for a bare field mutation, because it is
+    /// enforced where every path meets: `editStack`'s observer.
+    func testMutatingTheVersionDirectlyReDecodes() throws {
+        let model = try TestSupport.makeEditorModel()
+        XCTAssertEqual(model.decodedProcessVersion, 2)
+        model.editStack.processVersion = 1
+        XCTAssertEqual(model.decodedProcessVersion, 1)
+    }
+
     // MARK: As-shot white balance adoption
 
     /// A RAW's as-shot neutral, standing in for what `CIRAWFilter` reports.

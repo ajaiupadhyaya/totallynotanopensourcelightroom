@@ -162,6 +162,42 @@ final class RawSourceTests: XCTestCase {
         editor.editStack.filmNegative.isEnabled = true
         XCTAssertFalse(editor.isSensorDomainWB)
     }
+
+    /// The RAW half of the decode/version invariant. `ProcessVersionTests`
+    /// pins the version bookkeeping on a PNG; only a real RAW can show that
+    /// crossing the boundary actually swaps a flattened `.rendered` decode for
+    /// a live `CIRAWFilter` and back. Gated on the fixture.
+    func testCrossingTheVersionBoundaryReDecodesARealRaw() throws {
+        guard let url = RawFixture.url() else {
+            throw XCTSkip("no RAW fixture present — see Tests/Fixtures/RAW/README.md")
+        }
+        var legacy = EditStack()
+        legacy.processVersion = 1
+
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(fileURL: url, editStack: legacy)
+        try catalog.save(entry)
+        let editor = EditorModel(entry: entry, catalog: catalog,
+                                 thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+
+        XCTAssertEqual(editor.decodedProcessVersion, 1)
+        XCTAssertFalse(editor.isSensorDomainWB, "a PV1 RAW decodes flattened to .rendered")
+        editor.commitEdit()
+
+        editor.upgradeToProcessVersion2()
+        editor.commitEdit()
+        XCTAssertEqual(editor.decodedProcessVersion, 2)
+        XCTAssertTrue(editor.isSensorDomainWB,
+                      "the upgrade must yield a live CIRAWFilter, not the old flattened decode")
+        XCTAssertTrue(editor.editStack.rawWBInitialized, "…and seed the as-shot neutral off it")
+
+        editor.undo()
+        XCTAssertEqual(editor.editStack.processVersion, 1)
+        XCTAssertEqual(editor.decodedProcessVersion, 1,
+                       "the frozen PV1 chain must not replay against PV2's decode")
+        XCTAssertFalse(editor.isSensorDomainWB)
+        XCTAssertFalse(editor.isMissingFile)
+    }
 }
 
 enum RawFixture {

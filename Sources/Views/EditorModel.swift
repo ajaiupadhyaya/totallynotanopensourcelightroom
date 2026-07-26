@@ -26,8 +26,17 @@ final class EditorModel {
     let entry: CatalogEntry
 
     /// The active edits. Mutating any field re-renders and schedules a commit.
+    ///
+    /// The re-decode comes first, and deliberately lives here rather than in
+    /// the callers. Undo, redo, Reset, snapshot restore, history restore and
+    /// the PV2 upgrade all replace the stack wholesale, and any of them can
+    /// swap the process version out from under an already-decoded source —
+    /// after which the render below would dispatch the *other* version's chain
+    /// at these pixels. Six call sites is six chances to forget; the property
+    /// every path has to go through is one.
     var editStack: EditStack {
         didSet {
+            syncDecodedSource(for: editStack.processVersion)
             renderPreview()
             scheduleCommit()
         }
@@ -49,6 +58,17 @@ final class EditorModel {
 
     /// True when the original file could not be found/decoded.
     private(set) var isMissingFile = false
+
+    /// The process version ``sourceImage`` was decoded under, or nil when
+    /// nothing is decoded.
+    ///
+    /// The decode is version-dependent (see ``RawDecodePolicy``), so this is
+    /// half of an invariant: it must equal `editStack.processVersion` whenever
+    /// a render happens, or the frozen legacy chain replays against PV2 pixels
+    /// (or vice versa) — exactly the defect the process version exists to
+    /// prevent. Readable so the invariant can be asserted in tests without a
+    /// camera file.
+    private(set) var decodedProcessVersion: Int?
 
     /// The decoded preview source, keeping RAW provenance so sensor-domain
     /// edits (white balance, exposure, boost) can reach `CIRAWFilter`.
@@ -138,6 +158,11 @@ final class EditorModel {
     /// and one render, exactly as before.
     func resetAdjustments() {
         var fresh = EditStack()
+        // Ahead of the assignment, because the adoption below reads
+        // `sourceImage`: resetting a PV1 photo crosses into PV2, and until the
+        // file is re-decoded a RAW is still the flattened `.rendered` its old
+        // version called for, with no filter to read an as-shot neutral from.
+        syncDecodedSource(for: fresh.processVersion)
         if let adopted = adoptingAsShot(fresh) { fresh = adopted }
         editStack = fresh
     }
@@ -585,11 +610,12 @@ final class EditorModel {
 
         var upgraded = editStack
         upgraded.processVersion = 2
-        // A PV1 RAW was decoded at Apple's defaults and flattened to
-        // `.rendered` (see ``RawDecodePolicy``), so neither the sensor-domain
-        // chain nor the as-shot neutral it needs exist until the file has been
-        // re-decoded under the new version.
-        reloadSource(processVersion: upgraded.processVersion)
+        // Ahead of the assignment, for the same reason Reset does it: the
+        // adoption below reads `sourceImage`, and a PV1 RAW was decoded at
+        // Apple's defaults and flattened to `.rendered` (see
+        // ``RawDecodePolicy``), so neither the sensor-domain chain nor the
+        // as-shot neutral it needs exist until the file is re-decoded.
+        syncDecodedSource(for: upgraded.processVersion)
         if let adopted = adoptingAsShot(upgraded) { upgraded = adopted }
         // One assignment: the version bump and the WB it implies are a single
         // undo step, not two.
@@ -855,7 +881,7 @@ final class EditorModel {
         // captured when the photo opened, so it goes stale the moment the
         // photographer upgrades this photo to PV2 mid-session. The renderer
         // dispatches on the live stack, and the decode has to agree with it.
-        reloadSource(processVersion: editStack.processVersion)
+        syncDecodedSource(for: editStack.processVersion)
         guard let adopted = adoptingAsShot(editStack) else { return }
 
         // Adopting as-shot WB *at open* is bookkeeping, not a user edit — align
@@ -871,14 +897,28 @@ final class EditorModel {
         editStack = adopted
     }
 
+    /// Re-decodes when — and only when — the source on hand was decoded under
+    /// a different process version than the one about to render.
+    ///
+    /// Cheap to call on every mutation: the guard is an integer comparison, and
+    /// a crossing is rare. The decode itself builds a lazy `CIImage`/
+    /// `CIRAWFilter` graph rather than pixels, so even a crossing costs little
+    /// beyond the render that was going to happen anyway.
+    private func syncDecodedSource(for processVersion: Int) {
+        guard processVersion != decodedProcessVersion else { return }
+        reloadSource(processVersion: processVersion)
+    }
+
     /// Decodes the preview source under `processVersion`'s decode policy.
     ///
-    /// Separate from ``loadSource()`` because the upgrade path has to re-decode
-    /// *without* the load-time undo bookkeeping.
+    /// Separate from ``loadSource()`` because the paths that read `sourceImage`
+    /// *before* assigning a stack (Reset, the PV2 upgrade) have to re-decode
+    /// ahead of the observer above, without the load-time undo bookkeeping.
     private func reloadSource(processVersion: Int) {
         guard let loaded = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: 1600,
                                                    processVersion: processVersion) else {
             isMissingFile = true
+            decodedProcessVersion = nil
             sourceImage = nil
             fullSourceImage = nil
             source = nil
@@ -886,6 +926,7 @@ final class EditorModel {
             return
         }
         isMissingFile = false
+        decodedProcessVersion = processVersion
         sourceImage = loaded
         source = loaded.image
         // Decoded under the old policy, so no longer valid at any zoom.
