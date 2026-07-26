@@ -80,6 +80,10 @@ final class EditorModel {
 
     var fileName: String { entry.fileURL.lastPathComponent }
 
+    /// Whether this photo decodes through `CIRAWFilter` — gates the Raw
+    /// Boost slider, which is meaningless on an already-rendered source.
+    var isRAWSource: Bool { ImageDecoder.isRAW(entry.fileURL) }
+
     /// Read-only capture metadata, read once when the photo opens.
     let metadata: PhotoMetadata
     var canUndo: Bool { !undoStack.isEmpty }
@@ -536,6 +540,21 @@ final class EditorModel {
         reloadSnapshots()
     }
 
+    /// Re-interprets this photo's slider values through the PV2 engine.
+    /// Appearance will change — that is the point — so the PV1 look is
+    /// snapshotted first and one click away forever.
+    ///
+    /// Unlike ``adoptAsShotWhiteBalanceIfNeeded``, this is a deliberate user
+    /// action taken from the develop panel, not bookkeeping — so it does *not*
+    /// pre-align `lastCommittedStack`. The mutation below flows through the
+    /// normal debounced commit path and registers one ordinary undo step,
+    /// the same as dragging a slider or applying a preset.
+    func upgradeToProcessVersion2() {
+        guard editStack.processVersion < 2 else { return }
+        _ = saveSnapshot(named: "Before Process Version 2")
+        editStack.processVersion = 2
+    }
+
     // MARK: Geometry
 
     /// Sets a centered crop with the given aspect ratio (width ÷ height),
@@ -766,7 +785,8 @@ final class EditorModel {
             || old.whiteBalanceTint != new.whiteBalanceTint { stages.append("White Balance") }
         if old.exposure != new.exposure || old.contrast != new.contrast
             || old.highlights != new.highlights || old.shadows != new.shadows
-            || old.whites != new.whites || old.blacks != new.blacks { stages.append("Light") }
+            || old.whites != new.whites || old.blacks != new.blacks
+            || old.rawBoost != new.rawBoost { stages.append("Light") }
         if old.texture != new.texture || old.clarity != new.clarity
             || old.dehaze != new.dehaze || old.vibrance != new.vibrance
             || old.saturation != new.saturation { stages.append("Presence") }

@@ -2,6 +2,70 @@
 
 All notable changes to PhotoEditor are documented here.
 
+## 2.2.0 — 2026-07-26
+
+A second develop engine, opt-in per photo. An already-edited photo keeps
+rendering exactly as it always has — Process Version 1 is frozen — until
+updated from the new Process badge; new imports start on Process Version 2,
+which corrects the specific, measured bugs below.
+
+### Fixed
+
+- **Contrast crushed midtones.** Process Version 1 pivoted contrast around
+  linear 0.5 instead of display middle grey, and a midtone could clip to
+  solid black or white well before the slider reached either end. Process
+  Version 2's contrast pivots at display middle grey and never crushes.
+- **Positive Highlights did nothing.** `CIHighlightShadowAdjust`'s highlight
+  side was silently a no-op. PV2 retones a guided-filter base/detail split
+  instead, so highlights and shadows move tone without haloing across hard
+  edges.
+- **Whites and Blacks didn't move the frame's actual clipping point.** They
+  shaped tone without affecting what the clipping diagnostics measure. PV2's
+  soft-knee implementation moves the real point.
+- **Saturation and Vibrance destroyed luminance and clipped hue.** +50
+  saturation could drop a bright red's display luma from 0.43 to 0.21, and
+  channels clipped flat into the gamut wall instead of rolling off. PV2
+  scales chroma about the luma axis instead — luma-invariant by
+  construction — with an exponential rolloff at the gamut edge, and Vibrance
+  now favors muted, non-skin colors over already-vivid and skin-tone ones.
+- **White balance's Temperature slider was uniform in Kelvin, not in a
+  perceptual unit**, so the same slider distance meant a much bigger shift
+  at 3000 K than at 8000 K. PV2's Bradford adaptation is parameterized in
+  mired, so a given slider distance means the same shift anywhere on the
+  range.
+- **Grain was measured in output pixels**, so the same Amount and Size
+  looked different at every preview and export resolution and wasn't
+  reproducible between renders. PV2's grain is a deterministic,
+  frame-relative lattice: identical across preview, export, and resolution.
+
+### Added
+
+- **RAW files are edited in the sensor domain.** White balance, exposure,
+  and a new **Raw Boost** slider (0–100; Apple's baseline RAW rendering
+  lift — 100 is the default look, 0 the flat linear render) now run on the
+  sensor data through `CIRAWFilter` before the rest of the develop stack
+  sees a rendered image, instead of every RAW being flattened to its
+  default render before any edit could reach it. A RAW's as-shot white
+  balance is read from the file and used as that photo's starting
+  Temperature/Tint, instead of an assumed 6500 K.
+- **Vignette gained Roundness, Feather, and Highlights sliders**, alongside
+  the existing Amount and Midpoint: shape from rectangular to circular,
+  falloff width, and how far a bright area can punch back through a
+  darkened corner.
+- **The develop panel shows a Process badge** on any photo still on the
+  original engine, with an Update button. Updating snapshots the current
+  look first — the Process Version 1 result stays one click away in
+  Snapshots — then switches the engine; it's a normal, undoable edit like
+  any slider.
+- **A Lightroom parity harness** (`docs/PARITY.md`) measures PV2's sliders
+  against Lightroom CC in ΔE2000 from manually exported reference photos.
+  Developer-facing; not part of the app's UI.
+
+### Changed
+
+- New imports start on Process Version 2 instead of 1. Existing catalog
+  entries are unaffected until updated from the Process badge.
+
 ## 2.1.0 — 2026-07-25
 
 A correctness pass over the 2.0 rendering work, and a rebuild of the interface

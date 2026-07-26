@@ -42,8 +42,10 @@ struct PanelSection<Content: View>: View {
         self.onReset = onReset
         self.content = content
         // A fresh inspector opens on Light, the most common operation, while
-        // the rest of the chain stays legible as a compact index.
-        _isExpanded = AppStorage(wrappedValue: title == "Light",
+        // the rest of the chain stays legible as a compact index. Process
+        // opens too — it's an action waiting on the user, not a pipeline
+        // stage to browse, so it must not hide behind a disclosure triangle.
+        _isExpanded = AppStorage(wrappedValue: title == "Light" || title == "Process",
                                  "panel.v3.expanded.\(title)")
     }
 

@@ -19,6 +19,19 @@ struct SliderPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                if model.editStack.processVersion < 2 {
+                    PanelSection("Process") {
+                        Text("This photo uses the original develop engine. "
+                             + "Slider values are kept — only the engine changes, "
+                             + "and the current look stays one click away in Snapshots.")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Theme.secondaryText)
+                        PlateButton(title: "Update to Version 2") {
+                            model.upgradeToProcessVersion2()
+                        }
+                    }
+                }
+
                 PanelGroupHeading(title: "The frame")
 
                 PanelSection(
@@ -80,6 +93,11 @@ struct SliderPanel: View {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
                                      range: -3...3, format: "%.2f EV", neutral: 0)
+                    if model.isRAWSource {
+                        AdjustmentSlider(title: "Raw Boost",
+                                         value: $model.editStack.rawBoost,
+                                         range: 0...100, format: "%.0f", neutral: 100)
+                    }
                     AdjustmentSlider(title: "Contrast",
                                      value: $model.editStack.contrast,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -211,6 +229,15 @@ struct SliderPanel: View {
                     AdjustmentSlider(title: "Grain Size",
                                      value: $model.editStack.grainSize,
                                      range: 0...100, format: "%.0f", neutral: 25)
+                    AdjustmentSlider(title: "Vignette Roundness",
+                                     value: $model.editStack.vignetteRoundness,
+                                     range: -100...100, format: "%.0f", neutral: 0)
+                    AdjustmentSlider(title: "Vignette Feather",
+                                     value: $model.editStack.vignetteFeather,
+                                     range: 0...100, format: "%.0f", neutral: 50)
+                    AdjustmentSlider(title: "Vignette Highlights",
+                                     value: $model.editStack.vignetteHighlights,
+                                     range: 0...100, format: "%.0f", neutral: 0)
                 }
 
                 // Below the chain: things about this frame in the catalog,
@@ -275,7 +302,7 @@ struct SliderPanel: View {
     private var isLightModified: Bool {
         let s = model.editStack
         return s.exposure != 0 || s.contrast != 0 || s.highlights != 0
-            || s.shadows != 0 || s.whites != 0 || s.blacks != 0
+            || s.shadows != 0 || s.whites != 0 || s.blacks != 0 || s.rawBoost != 100
     }
 
     private func resetLight() {
@@ -285,6 +312,7 @@ struct SliderPanel: View {
         model.editStack.shadows = 0
         model.editStack.whites = 0
         model.editStack.blacks = 0
+        model.editStack.rawBoost = 100
     }
 
     private var isPresenceModified: Bool {

@@ -130,6 +130,23 @@ enum TestSupport {
             editStack: editStack, thumbnailPath: nil
         )
     }
+
+    /// Builds a working `EditorModel` over a fresh temp-catalog entry — the
+    /// shared fixture for tests that only need a model to act on, not its
+    /// backing file. (Tests that also inspect the rendered pixels and need to
+    /// clean up the temp file keep their own local `makeEditor` returning the
+    /// URL too, e.g. `EditorModelTests`.) A long `commitDelay` keeps the
+    /// debounce timer from firing mid-test.
+    static func makeEditorModel(gray: UInt8 = 128, editStack: EditStack = EditStack()) throws -> EditorModel {
+        let url = try makeTempPNG(gray: gray)
+        let catalog = try inMemoryCatalog()
+        let entry = makeEntry(fileURL: url, editStack: editStack)
+        try catalog.save(entry)
+        return EditorModel(
+            entry: entry, catalog: catalog,
+            thumbnails: tempThumbnails(), commitDelay: 60
+        )
+    }
 }
 
 extension LocalAdjustment {

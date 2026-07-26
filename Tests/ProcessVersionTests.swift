@@ -59,6 +59,20 @@ final class ProcessVersionTests: XCTestCase {
                        "PV1 must keep the legacy no-op highlights bug")
     }
 
+    func testUpgradeToProcessVersion2SnapshotsFirst() throws {
+        let model = try TestSupport.makeEditorModel()
+        model.editStack.processVersion = 1
+        model.editStack.contrast = 30
+        let snapshotsBefore = model.snapshots.count
+        model.upgradeToProcessVersion2()
+        XCTAssertEqual(model.editStack.processVersion, 2)
+        XCTAssertEqual(model.editStack.contrast, 30, "slider values are kept — only the engine changes")
+        XCTAssertEqual(model.snapshots.count, snapshotsBefore + 1, "must snapshot before upgrading")
+        // Idempotent.
+        model.upgradeToProcessVersion2()
+        XCTAssertEqual(model.snapshots.count, snapshotsBefore + 1)
+    }
+
     func testNeutralStacksRenderIdenticallyUnderBothVersions() {
         let renderer = EditRenderer()
         let source = TestSupport.solidImage(red: 0.4, green: 0.5, blue: 0.6, size: 32)
