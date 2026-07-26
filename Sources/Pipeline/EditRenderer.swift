@@ -294,17 +294,9 @@ struct EditRenderer {
     }
 
     private func applyParametricToneCurve(_ image: CIImage, stack: EditStack) -> CIImage {
-        func lift(_ value: Double, amount: Double) -> Double {
-            ColorScience.clamp(value + amount / 100 * 0.25)
-        }
-        let curve = CIFilter.toneCurve()
-        curve.inputImage = image
-        curve.point0 = CGPoint(x: 0, y: lift(0, amount: stack.toneCurveShadows))
-        curve.point1 = CGPoint(x: 0.25, y: lift(0.25, amount: stack.toneCurveDarks))
-        curve.point2 = CGPoint(x: 0.5, y: 0.5)
-        curve.point3 = CGPoint(x: 0.75, y: lift(0.75, amount: stack.toneCurveLights))
-        curve.point4 = CGPoint(x: 1, y: lift(1, amount: stack.toneCurveHighlights))
-        return curve.outputImage ?? image
+        ToneStages.parametricCurve(image, highlights: stack.toneCurveHighlights,
+                                   lights: stack.toneCurveLights, darks: stack.toneCurveDarks,
+                                   shadows: stack.toneCurveShadows)
     }
 
     // MARK: Detail

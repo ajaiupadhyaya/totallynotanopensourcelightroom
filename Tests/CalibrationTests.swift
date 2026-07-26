@@ -86,4 +86,32 @@ final class CalibrationTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(out[i] + 0.002, out[i - 1])
         }
     }
+
+    func testParametricRegionsPeakInTheirOwnQuartiles() {
+        // 0.9 not 0.95: at +100 the highlight lift saturates at 1.0, and probing
+        // too close to white would let the unclamped 0.7 delta win.
+        let inputs = [0.05, 0.3, 0.7, 0.9]
+        // Swift can't treat an inline array literal of `(inout EditStack) -> Void`
+        // closures as escaping (needed by .enumerated()); bind it to a typed
+        // variable first so the closures are escaping from the start.
+        let mutators: [(inout EditStack) -> Void] = [
+            { (s: inout EditStack) in s.toneCurveShadows = 100 },
+            { (s: inout EditStack) in s.toneCurveDarks = 100 },
+            { (s: inout EditStack) in s.toneCurveLights = 100 },
+            { (s: inout EditStack) in s.toneCurveHighlights = 100 },
+        ]
+        for (index, mutate) in mutators.enumerated() {
+            let out = Calibration.displaySweep(inputs: inputs, mutate: mutate)
+            let deltas = zip(out, inputs).map { $0 - $1 }
+            let peak = deltas.firstIndex(of: deltas.max()!)!
+            XCTAssertEqual(peak, index,
+                           "region \(index) peaked at input \(inputs[peak]); deltas \(deltas)")
+        }
+    }
+
+    func testParametricIsAppliedInDisplaySpace() {
+        // Darks +100 must move display 0.3 far more than display 0.7.
+        let out = Calibration.displaySweep(inputs: [0.3, 0.7]) { $0.toneCurveDarks = 100 }
+        XCTAssertGreaterThan(out[0] - 0.3, (out[1] - 0.7) * 2)
+    }
 }

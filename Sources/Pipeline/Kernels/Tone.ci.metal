@@ -78,3 +78,27 @@ extern "C" float4 pv2_whites_blacks(coreimage::sample_t s, float whites, float b
                whites_blacks(d.z, whites, blacks));
     return float4(srgb_decode(d), s.a);
 }
+
+// Parametric tone curve. The four regions are the cubic Bernstein basis
+// functions — smooth, non-negative, summing to 1, peaking at 0, 1/3, 2/3, 1
+// in display space. 0.25 sets total authority at ±100.
+static float parametric_curve(float x, float hl, float lt, float dk, float sh) {
+    float xc = clamp(x, 0.0f, 1.0f);
+    float residual = x - xc;
+    float omx = 1.0f - xc;
+    float wsh = omx * omx * omx;
+    float wdk = 3.0f * xc * omx * omx;
+    float wlt = 3.0f * xc * xc * omx;
+    float whl = xc * xc * xc;
+    float y = xc + 0.25f * (sh * wsh + dk * wdk + lt * wlt + hl * whl);
+    return clamp(y, 0.0f, 1.0f) + residual;
+}
+
+extern "C" float4 pv2_parametric(coreimage::sample_t s,
+                                 float highlights, float lights, float darks, float shadows) {
+    float3 d = srgb_encode(s.rgb);
+    d = float3(parametric_curve(d.x, highlights, lights, darks, shadows),
+               parametric_curve(d.y, highlights, lights, darks, shadows),
+               parametric_curve(d.z, highlights, lights, darks, shadows));
+    return float4(srgb_decode(d), s.a);
+}
