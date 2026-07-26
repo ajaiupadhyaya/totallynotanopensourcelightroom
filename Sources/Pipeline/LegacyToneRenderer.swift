@@ -1,50 +1,13 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
-/// Turns an ``EditStack`` into a rendered image by replaying it as a Core Image
-/// filter chain against an untouched source `CIImage`.
+/// The original (process version 1) develop chain, frozen.
 ///
-/// The design keeps the edit math separate from rasterization:
-/// - ``render(source:stack:)`` is pure — it assembles the (lazy) filter chain
-///   and returns a `CIImage`, doing no pixel work. This is what makes the edit
-///   logic straightforward to unit test.
-/// - ``makeCGImage(_:)`` rasterizes a chain to a `CGImage` for display.
-/// - ``histogram(of:binCount:)`` computes a per-channel histogram on the GPU.
-///
-/// ## Process versions
-///
-/// ``render(source:stack:)`` dispatches on ``EditStack/processVersion``.
-/// Version 1 stacks — everything persisted before this field existed — replay
-/// through ``LegacyToneRenderer``, frozen verbatim so old edits never change
-/// appearance. Version 2+ stacks replay through the chain below, whose tonal
-/// stages are being migrated off the legacy math one at a time.
-///
-/// ## Order of operations
-///
-/// The chain follows the order a photographer would work in, and several steps
-/// only make sense in one position:
-///
-/// 1. **Film negative** — first, because on an un-inverted scan every
-///    subsequent slider would work backwards.
-/// 2. **Geometry** — early, so the histogram and every local effect (vignette,
-///    grain) describe the cropped frame rather than the discarded one.
-/// 3. **White balance**, then **exposure** — global color and brightness.
-/// 4. **Tonal shaping** — highlights/shadows recover, contrast shapes
-///    midtones, whites/blacks place the clip points last. (Legacy — PV1 —
-///    order differs: whites/blacks, highlights/shadows, contrast; see
-///    ``LegacyToneRenderer``.)
-/// 5. **Presence** — texture, clarity, dehaze: local-contrast work that wants
-///    the tones already placed.
-/// 6. **Color** — vibrance and saturation.
-/// 7. **Tone curve** — the last tonal shaping step, as in Lightroom.
-/// 8. **Detail** — noise reduction *before* sharpening, so sharpening isn't
-///    amplifying noise the reduction was about to remove.
-/// 9. **Effects** — vignette and grain last, over the finished image.
-struct EditRenderer {
-    /// Shared context; GPU-backed (Metal) by default. Reused across renders so
-    /// we don't pay context-setup cost on every slider tick.
-    let context: CIContext
-
+/// Every stack persisted before PV2 was authored against this math — including
+/// its bugs (linear-space contrast pivot, dead positive highlights, pinned
+/// whites/blacks). Those bugs are part of what those edits *look like*, so
+/// this file must never be edited. See the PV2 spec.
+final class LegacyToneRenderer {
     /// Memoizes the color LUT so it isn't rebuilt on slider ticks that don't
     /// touch a color setting.
     private let cubeCache = ColorCubeCache()
@@ -52,31 +15,8 @@ struct EditRenderer {
     /// Memoizes the developed source (film conversion + geometry).
     private let developedCache = DevelopedSourceCache()
 
-    /// The frozen process-version-1 chain. Every stack persisted before PV2
-    /// existed renders through this, unchanged forever.
-    private let legacy = LegacyToneRenderer()
-
-    init(context: CIContext = CIContext()) {
-        self.context = context
-    }
-
-    /// Builds the edit filter chain. No rasterization happens here — filters
-    /// that would leave the image unchanged (a value at its neutral point) are
-    /// skipped, so the identity edit returns the source untouched.
-    ///
-    /// Dispatches on ``EditStack/processVersion``: version 1 stacks replay
-    /// through ``LegacyToneRenderer`` verbatim; version 2+ stacks replay
-    /// through the chain below, whose stages are migrated off the legacy math
-    /// one at a time (see the PV2 spec).
-    func render(source: CIImage, stack: EditStack, mlEnvironment: MLMaskEnvironment? = nil) -> CIImage {
-        guard stack.processVersion >= 2 else {
-            return legacy.render(source: source, stack: stack,
-                                 mlEnvironment: mlEnvironment, context: context)
-        }
-
-        // PV2 chain — stage bodies are replaced task by task. Note the tone
-        // order here differs from legacy: highlights/shadows recover first,
-        // contrast shapes midtones, then whites/blacks place the clip points.
+    func render(source: CIImage, stack: EditStack,
+                mlEnvironment: MLMaskEnvironment?, context: CIContext) -> CIImage {
         var image = source
 
         image = developedCache.developed(from: image,
@@ -87,9 +27,9 @@ struct EditRenderer {
                                          context: context)
         image = applyWhiteBalance(image, stack: stack)
         image = applyExposure(image, stack: stack)
+        image = applyWhitesAndBlacks(image, stack: stack)
         image = applyHighlightsAndShadows(image, stack: stack)
         image = applyContrast(image, stack: stack)
-        image = applyWhitesAndBlacks(image, stack: stack)
         image = applyPresence(image, stack: stack)
         image = applyColor(image, stack: stack)
         image = applyColorLUT(image, stack: stack)
@@ -433,76 +373,5 @@ struct EditRenderer {
         blend.inputImage = grain
         blend.backgroundImage = image
         return blend.outputImage?.cropped(to: extent) ?? image
-    }
-
-    // MARK: Rasterization
-
-    /// Rasterizes an edited image to a `CGImage` for display.
-    ///
-    /// - Returns: `nil` if the image has an infinite extent (e.g. a bare
-    ///   generator image) or Core Image fails to produce a bitmap.
-    func makeCGImage(_ image: CIImage) -> CGImage? {
-        guard !image.extent.isInfinite else { return nil }
-        return context.createCGImage(image, from: image.extent)
-    }
-
-    /// Convenience: build the chain and rasterize in one call.
-    func renderCGImage(source: CIImage, stack: EditStack) -> CGImage? {
-        makeCGImage(render(source: source, stack: stack))
-    }
-
-    /// The space histograms and clipping diagnostics are measured in — the
-    /// space the photograph is shown in, not the space it is computed in.
-    private static let displaySpace = CGColorSpace(name: CGColorSpace.sRGB)!
-
-    /// Computes a per-channel histogram of an image via `CIAreaHistogram`
-    /// (a single GPU pass), read back into plain float arrays.
-    ///
-    /// - Returns: ``Histogram/empty`` if the image has no finite extent.
-    func histogram(of image: CIImage, binCount: Int = 256) -> Histogram {
-        let extent = image.extent
-        guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else {
-            return .empty
-        }
-
-        // Measure in display space, not the working space.
-        //
-        // Core Image works in linear light, where the tones a photographer
-        // thinks of as midtones sit far down the scale — sRGB 50% grey is 0.21
-        // linear, about a fifth of the way up. Histogramming the working image
-        // therefore crushes an ordinary exposure into the left of the graph and
-        // reports heavy shadow clipping on a frame that has none. A histogram
-        // is a reading instrument for a person, so it has to describe the
-        // photograph as displayed.
-        let measured = image.matchedFromWorkingSpace(to: Self.displaySpace) ?? image
-
-        let filter = CIFilter.areaHistogram()
-        filter.inputImage = measured
-        filter.extent = extent
-        filter.count = binCount
-        filter.scale = 20 // amplify counts into a visible range; we normalize by peak on display
-        guard let output = filter.outputImage else { return .empty }
-
-        var buffer = [Float](repeating: 0, count: binCount * 4)
-        // Read the raw bin counts with no color management (colorSpace: nil) —
-        // these are histogram values, not colors. The output is binCount×1.
-        context.render(
-            output,
-            toBitmap: &buffer,
-            rowBytes: binCount * 4 * MemoryLayout<Float>.stride,
-            bounds: CGRect(x: 0, y: 0, width: binCount, height: 1),
-            format: .RGBAf,
-            colorSpace: nil
-        )
-
-        var red = [Float](repeating: 0, count: binCount)
-        var green = red
-        var blue = red
-        for i in 0..<binCount {
-            red[i] = buffer[i * 4]
-            green[i] = buffer[i * 4 + 1]
-            blue[i] = buffer[i * 4 + 2]
-        }
-        return Histogram(red: red, green: green, blue: blue)
     }
 }

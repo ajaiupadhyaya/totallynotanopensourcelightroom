@@ -44,4 +44,29 @@ final class ProcessVersionTests: XCTestCase {
         XCTAssertEqual(stack.rawBoost, 100)
         XCTAssertFalse(stack.rawWBInitialized)
     }
+
+    func testVersion1RendersThroughLegacyChainUnchanged() {
+        // The known legacy bug: positive highlights is a no-op. If PV1 ever
+        // stops reproducing it, the freeze broke.
+        let renderer = EditRenderer()
+        var stack = EditStack()
+        stack.processVersion = 1
+        stack.highlights = 100
+        let source = TestSupport.solidImage(red: 0.6, green: 0.6, blue: 0.6, size: 32)
+        let out = renderer.render(source: source, stack: stack)
+        let color = TestSupport.readColor(out)
+        XCTAssertEqual(color.red, 0.6, accuracy: 0.01,
+                       "PV1 must keep the legacy no-op highlights bug")
+    }
+
+    func testNeutralStacksRenderIdenticallyUnderBothVersions() {
+        let renderer = EditRenderer()
+        let source = TestSupport.solidImage(red: 0.4, green: 0.5, blue: 0.6, size: 32)
+        var v1 = EditStack(); v1.processVersion = 1
+        let a = TestSupport.readColor(renderer.render(source: source, stack: v1))
+        let b = TestSupport.readColor(renderer.render(source: source, stack: EditStack()))
+        XCTAssertEqual(a.red, b.red, accuracy: 0.005)
+        XCTAssertEqual(a.green, b.green, accuracy: 0.005)
+        XCTAssertEqual(a.blue, b.blue, accuracy: 0.005)
+    }
 }

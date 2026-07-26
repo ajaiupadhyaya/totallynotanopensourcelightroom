@@ -79,6 +79,7 @@
 		95EEE8788082E374AFA57BBE /* DefringeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */; };
 		97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */; };
 		9837DF10BD6443312BE36067 /* RangeMaskCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */; };
+		9ACD2C0FA63F5EDDDB5D0F11 /* LegacyToneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */; };
 		9EC7032CD5145CA66D621C51 /* ColorSuiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */; };
 		A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */; };
 		A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */; };
@@ -209,6 +210,7 @@
 		B35F67E6839E77568201E3FB /* MaskComponentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentTests.swift; sourceTree = "<group>"; };
 		B41EC8A0826BF47AA06B55F5 /* MLMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLMaskTests.swift; sourceTree = "<group>"; };
 		B9F44C12165E98D2652E57A3 /* MaskComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponent.swift; sourceTree = "<group>"; };
+		BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyToneRenderer.swift; sourceTree = "<group>"; };
 		BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStoreTests.swift; sourceTree = "<group>"; };
 		BD40FF611C66AC099F6A793E /* EditorModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModelTests.swift; sourceTree = "<group>"; };
 		C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpticsTests.swift; sourceTree = "<group>"; };
@@ -399,6 +401,7 @@
 				C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */,
 				8F149C1AC756E023AB4F09DE /* Histogram.swift */,
 				798CF687AF441778F974D6E6 /* ImageDecoder.swift */,
+				BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */,
 				08C1D0BE182638F209A58D27 /* LocalAdjustmentRenderer.swift */,
 				F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */,
 				523FF6E84F8696BA923A783B /* MaskCompositor.swift */,
@@ -649,6 +652,7 @@
 				527F26C97FA8BD75E7190F21 /* InstrumentControls.swift in Sources */,
 				2EB9DEDED3DB0096E6E6E4B4 /* KernelLibrary.swift in Sources */,
 				88011E06831214F78376995B /* LUTImporter.swift in Sources */,
+				9ACD2C0FA63F5EDDDB5D0F11 /* LegacyToneRenderer.swift in Sources */,
 				7C57EAFB33A8061A0B57350B /* LenientDecoding.swift in Sources */,
 				5874FF400B0872B7850891C2 /* LibrarySidebar.swift in Sources */,
 				5834C86CBCD724394093DEC6 /* LocalAdjustment.swift in Sources */,

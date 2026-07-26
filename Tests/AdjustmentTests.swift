@@ -17,8 +17,14 @@ final class AdjustmentTests: XCTestCase {
     }
 
     /// Renders a stack over a patch and returns its average brightness.
+    ///
+    /// Pinned to process version 1: these tests assert the *legacy* tone
+    /// chain's direction (whites/blacks, highlights/shadows, contrast), which
+    /// is frozen in ``LegacyToneRenderer``. A fresh `EditStack()` now targets
+    /// PV2, whose stages later tasks will replace with different math.
     private func brightness(_ level: Double, _ mutate: (inout EditStack) -> Void) -> Double {
         var stack = EditStack()
+        stack.processVersion = 1
         mutate(&stack)
         let result = renderer.render(source: patch(level), stack: stack)
         return TestSupport.readColor(result).red
@@ -52,6 +58,7 @@ final class AdjustmentTests: XCTestCase {
     }
 
     func testWhitesAndBlacksActOnOppositeEnds() {
+        // This documents legacy (PV1) behavior — see LegacyToneRenderer.
         // Whites should barely move a quarter-tone; blacks should barely move a
         // three-quarter tone. If either did, they'd be duplicating contrast.
         let quarterWithWhites = brightness(0.25) { $0.whites = 100 }
