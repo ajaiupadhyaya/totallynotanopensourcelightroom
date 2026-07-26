@@ -806,10 +806,27 @@ final class EditorModel {
     /// file's as-shot neutral instead of an assumed 6500 K.
     private func adoptAsShotWhiteBalanceIfNeeded(from loaded: SourceImage) {
         guard case .raw(let filter) = loaded,
-              editStack.processVersion >= 2, !editStack.rawWBInitialized else { return }
-        editStack.whiteBalanceTemp = Double(filter.neutralTemperature)
-        editStack.whiteBalanceTint = Double(filter.neutralTint)
-        editStack.rawWBInitialized = true
+              editStack.processVersion >= 2, !editStack.rawWBInitialized,
+              // Film-negative RAWs render through the .rendered/WhiteBalanceStage
+              // path instead (the matching `!stack.filmNegative.isEnabled` guard
+              // in EditRenderer.render), so seeding sensor-domain as-shot Kelvin
+              // here would apply the wrong WB semantics on top of the wrong domain.
+              !editStack.filmNegative.isEnabled
+        else { return }
+
+        var adopted = editStack
+        adopted.whiteBalanceTemp = Double(filter.neutralTemperature)
+        adopted.whiteBalanceTint = Double(filter.neutralTint)
+        adopted.rawWBInitialized = true
+
+        // Adopting as-shot WB is bookkeeping, not a user edit — align
+        // lastCommittedStack to the adopted value *before* assigning editStack
+        // so the debounced commit sees no diff and registers no spurious
+        // "White Balance" undo/history step (mirrors undo()/redo() above).
+        // A single whole-stack assignment also means exactly one
+        // renderPreview()/scheduleCommit() instead of three.
+        lastCommittedStack = adopted
+        editStack = adopted
     }
 
     private func activeRenderSource() -> SourceImage? {

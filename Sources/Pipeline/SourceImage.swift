@@ -25,6 +25,17 @@ enum SourceImage {
 /// The stack fields that live in the RAW sensor domain, as a pure value —
 /// separable from CIRAWFilter so the mapping is unit-testable without a
 /// camera file.
+///
+/// `tint` is passed straight through to `CIRAWFilter.neutralTint`, whose
+/// native units follow the camera-calibration convention (roughly
+/// −150…150). A `.rendered` source's `whiteBalanceTint` is the *same*
+/// `EditStack` field, but `WhiteBalanceStage` interprets it on
+/// `ColorScience`'s own uv-offset scale instead — a different unit system
+/// entirely. As-shot adoption (`EditorModel.adoptAsShotWhiteBalanceIfNeeded`)
+/// round-trips exactly because it both reads and writes `neutralTint`
+/// directly; the two domains' *sliders* are intentionally not
+/// cross-calibrated to mean the same physical shift — a raw file's tint
+/// slider drives the sensor-domain control natively, the way Lightroom's does.
 struct RawDevelopSettings: Equatable {
     let temperature: Double
     let tint: Double

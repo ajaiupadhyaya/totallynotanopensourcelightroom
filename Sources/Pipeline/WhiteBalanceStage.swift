@@ -4,7 +4,7 @@ import CoreImage.CIFilterBuiltins
 /// White balance for rendered (non-RAW) sources: a Bradford adaptation
 /// matrix applied to linear working-space values via CIColorMatrix. RAW
 /// sources never reach this stage — their WB happens in the sensor domain
-/// (see RawSourcePreparation).
+/// (see RawDevelopSettings (SourceImage.swift)).
 enum WhiteBalanceStage {
     static func apply(_ image: CIImage, temperature: Double, tint: Double) -> CIImage {
         guard temperature != 6500 || tint != 0 else { return image }
