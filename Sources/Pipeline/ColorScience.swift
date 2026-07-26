@@ -138,6 +138,107 @@ enum ColorScience {
         )
     }
 
+    // MARK: White balance matrix
+
+    /// Linear-sRGB → linear-sRGB Bradford adaptation that maps the neutral
+    /// described by (temperature, tint) to D65.
+    ///
+    /// Semantics match PV1's `CITemperatureAndTint` usage: the sliders name
+    /// the image's *current* neutral, and the correction carries it to D65 —
+    /// so raising temperature warms the image. Internally the locus is
+    /// parameterized in **mired** (1e6/K), which is what makes equal slider
+    /// travel produce equal perceptual change at both ends; the UI stays in
+    /// Kelvin. Tint is a signed offset perpendicular-ish to the locus in
+    /// CIE 1960 uv (positive = magenta), scaled so ±100 covers a strong but
+    /// recoverable cast.
+    ///
+    /// - Returns: 9 row-major values; identity when the input is D65 exactly.
+    static func whiteBalanceMatrix(temperature: Double, tint: Double) -> [Double] {
+        if temperature == 6500 && tint == 0 {
+            return [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        }
+
+        // CCT → CIE xy on the Planckian/daylight locus (Kim et al. cubic
+        // spline approximation), computed from mired for numeric symmetry.
+        func locusXY(kelvin: Double) -> (x: Double, y: Double) {
+            let t = min(max(kelvin, 1667), 25000)
+            let invT = 1000.0 / t   // kiloKelvin⁻¹, i.e. mired / 1000
+            let x: Double
+            if t < 4000 {
+                x = -0.2661239 * pow(invT, 3) - 0.2343589 * pow(invT, 2)
+                    + 0.8776956 * invT + 0.179910
+            } else {
+                x = -3.0258469 * pow(invT, 3) + 2.1070379 * pow(invT, 2)
+                    + 0.2226347 * invT + 0.240390
+            }
+            let y: Double
+            if t < 2222 {
+                y = -1.1063814 * pow(x, 3) - 1.34811020 * pow(x, 2)
+                    + 2.18555832 * x - 0.20219683
+            } else if t < 4000 {
+                y = -0.9549476 * pow(x, 3) - 1.37418593 * pow(x, 2)
+                    + 2.09137015 * x - 0.16748867
+            } else {
+                y = 3.0817580 * pow(x, 3) - 5.87338670 * pow(x, 2)
+                    + 3.75112997 * x - 0.37001483
+            }
+            return (x, y)
+        }
+
+        // Apply tint as a v-offset in CIE 1960 uv (green up, magenta down).
+        func whitePointXYZ(kelvin: Double, tint: Double) -> (X: Double, Y: Double, Z: Double) {
+            let (x, y) = locusXY(kelvin: kelvin)
+            let d = -2 * x + 12 * y + 3
+            var u = 4 * x / d
+            var v = 6 * y / d
+            v -= tint * 3e-4
+            u = max(u, 1e-4); v = max(v, 1e-4)
+            let d2 = 2 * u - 8 * v + 4
+            let nx = 3 * u / d2
+            let ny = 2 * v / d2
+            return (nx / ny, 1.0, (1 - nx - ny) / ny)
+        }
+
+        // Bradford cone-response matrix and its inverse.
+        let bradford = [0.8951, 0.2664, -0.1614,
+                        -0.7502, 1.7135, 0.0367,
+                        0.0389, -0.0685, 1.0296]
+        let bradfordInv = [0.9869929, -0.1470543, 0.1599627,
+                           0.4323053, 0.5183603, 0.0492912,
+                           -0.0085287, 0.0400428, 0.9684867]
+        // sRGB (D65) ↔ XYZ.
+        let srgbToXYZ = [0.4124564, 0.3575761, 0.1804375,
+                         0.2126729, 0.7151522, 0.0721750,
+                         0.0193339, 0.1191920, 0.9503041]
+        let xyzToSRGB = [3.2404542, -1.5371385, -0.4985314,
+                         -0.9692660, 1.8760108, 0.0415560,
+                         0.0556434, -0.2040259, 1.0572252]
+
+        func mul(_ a: [Double], _ b: [Double]) -> [Double] {
+            var out = [Double](repeating: 0, count: 9)
+            for r in 0..<3 { for c in 0..<3 {
+                out[r * 3 + c] = a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c]
+            } }
+            return out
+        }
+        func apply(_ m: [Double], _ v: (Double, Double, Double)) -> (Double, Double, Double) {
+            (m[0] * v.0 + m[1] * v.1 + m[2] * v.2,
+             m[3] * v.0 + m[4] * v.1 + m[5] * v.2,
+             m[6] * v.0 + m[7] * v.1 + m[8] * v.2)
+        }
+
+        let src = whitePointXYZ(kelvin: temperature, tint: tint)
+        let d65 = (X: 0.95047, Y: 1.0, Z: 1.08883)
+        let srcCone = apply(bradford, (src.X, src.Y, src.Z))
+        let dstCone = apply(bradford, (d65.X, d65.Y, d65.Z))
+        let scale = [dstCone.0 / srcCone.0, 0, 0,
+                     0, dstCone.1 / srcCone.1, 0,
+                     0, 0, dstCone.2 / srcCone.2]
+
+        let adapt = mul(bradfordInv, mul(scale, bradford))
+        return mul(xyzToSRGB, mul(adapt, srgbToXYZ))
+    }
+
     // MARK: Curves
 
     /// Evaluates a tone curve at `x` using Catmull-Rom interpolation through
