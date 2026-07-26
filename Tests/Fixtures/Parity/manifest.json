@@ -1,0 +1,115 @@
+[
+  {
+    "field" : "exposure",
+    "fixture" : "exposure_p1.tif",
+    "maxTolerance" : 14,
+    "meanTolerance" : 6,
+    "value" : 1
+  },
+  {
+    "field" : "exposure",
+    "fixture" : "exposure_m1.tif",
+    "maxTolerance" : 14,
+    "meanTolerance" : 6,
+    "value" : -1
+  },
+  {
+    "field" : "contrast",
+    "fixture" : "contrast_p50.tif",
+    "maxTolerance" : 14,
+    "meanTolerance" : 6,
+    "value" : 50
+  },
+  {
+    "field" : "contrast",
+    "fixture" : "contrast_m50.tif",
+    "maxTolerance" : 14,
+    "meanTolerance" : 6,
+    "value" : -50
+  },
+  {
+    "field" : "contrast",
+    "fixture" : "contrast_p100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : 100
+  },
+  {
+    "field" : "highlights",
+    "fixture" : "highlights_m100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : -100
+  },
+  {
+    "field" : "highlights",
+    "fixture" : "highlights_p100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : 100
+  },
+  {
+    "field" : "shadows",
+    "fixture" : "shadows_p100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : 100
+  },
+  {
+    "field" : "shadows",
+    "fixture" : "shadows_m100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : -100
+  },
+  {
+    "field" : "whites",
+    "fixture" : "whites_p100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : 100
+  },
+  {
+    "field" : "blacks",
+    "fixture" : "blacks_m100.tif",
+    "maxTolerance" : 18,
+    "meanTolerance" : 8,
+    "value" : -100
+  },
+  {
+    "field" : "vibrance",
+    "fixture" : "vibrance_p60.tif",
+    "maxTolerance" : 16,
+    "meanTolerance" : 7,
+    "value" : 60
+  },
+  {
+    "field" : "saturation",
+    "fixture" : "saturation_p50.tif",
+    "maxTolerance" : 16,
+    "meanTolerance" : 7,
+    "value" : 50
+  },
+  {
+    "field" : "saturation",
+    "fixture" : "saturation_m50.tif",
+    "maxTolerance" : 16,
+    "meanTolerance" : 7,
+    "value" : -50
+  },
+  {
+    "field" : "whiteBalanceTemp",
+    "fixture" : "temp_p40.tif",
+    "value" : 8000
+  },
+  {
+    "field" : "whiteBalanceTemp",
+    "fixture" : "temp_m40.tif",
+    "value" : 5000
+  },
+  {
+    "field" : "whiteBalanceTint",
+    "fixture" : "tint_p50.tif",
+    "value" : 50
+  }
+]

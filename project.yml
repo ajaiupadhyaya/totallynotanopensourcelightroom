@@ -47,6 +47,16 @@ targets:
     platform: macOS
     sources:
       - path: Tests
+        # Fixture READMEs/manifests aren't bundle resources — tests locate
+        # them on disk via #filePath, relative to the source tree. Letting
+        # xcodegen glob them into the target's Resources phase causes
+        # filename collisions once more than one fixture dir has a
+        # README.md (flattened Resources copy has no subdirectories), and
+        # would make the generated project depend on whichever personal
+        # fixture files (RAW samples, parity TIFFs) happen to be present
+        # locally when `xcodegen generate` runs.
+        excludes:
+          - "Fixtures/**"
     dependencies:
       - target: PhotoEditor
     settings:

@@ -30,6 +30,15 @@ signing/
 Tests/Fixtures/RAW/*
 !Tests/Fixtures/RAW/README.md
 
+# Parity fixtures — personal-photo TIFF exports from Lightroom, not
+# committed; the manifest (generated, not a photo) and README are kept
+Tests/Fixtures/Parity/*.tif
+!Tests/Fixtures/Parity/README.md
+!Tests/Fixtures/Parity/manifest.json
+
+# Generated XMP presets — reproducible from scripts/make-parity-presets.swift
+scripts/parity-presets/
+
 # Worktrees (isolated workspaces)
 .worktrees/
 # SDD plan workspaces
