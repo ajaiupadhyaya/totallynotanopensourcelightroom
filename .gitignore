@@ -25,3 +25,8 @@ signing/
 
 # SDD scratch
 .superpowers/
+
+# Worktrees (isolated workspaces)
+.worktrees/
+# SDD plan workspaces
+.superpowers/
