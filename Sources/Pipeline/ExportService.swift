@@ -161,7 +161,7 @@ struct ExportService {
         to destination: URL,
         entryID: UUID? = nil
     ) throws {
-        guard let source = ImageDecoder.loadFullImage(from: sourceURL) else {
+        guard let source = ImageDecoder.loadSource(from: sourceURL, maxDimension: nil) else {
             throw ExportError.sourceUnreadable(sourceURL)
         }
 

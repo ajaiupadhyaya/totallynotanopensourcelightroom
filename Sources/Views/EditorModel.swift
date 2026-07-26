@@ -50,6 +50,11 @@ final class EditorModel {
     /// True when the original file could not be found/decoded.
     private(set) var isMissingFile = false
 
+    /// The decoded preview source, keeping RAW provenance so sensor-domain
+    /// edits (white balance, exposure, boost) can reach `CIRAWFilter`.
+    private var sourceImage: SourceImage?
+    /// The decoded full-resolution source, loaded lazily on zoom/export.
+    private var fullSourceImage: SourceImage?
     private var source: CIImage?
     private var fullSource: CIImage?
     private let renderer = EditRenderer()
@@ -782,25 +787,41 @@ final class EditorModel {
     // MARK: Rendering & IO
 
     private func loadSource() {
-        guard let image = ImageDecoder.loadPreviewImage(from: entry.fileURL) else {
+        guard let loaded = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: 1600) else {
             isMissingFile = true
+            sourceImage = nil
+            fullSourceImage = nil
             source = nil
             fullSource = nil
             return
         }
-        source = image
+        sourceImage = loaded
+        source = loaded.image
+        fullSourceImage = nil
         fullSource = nil
+        adoptAsShotWhiteBalanceIfNeeded(from: loaded)
     }
 
-    private func activeRenderSource() -> CIImage? {
-        guard let source else { return nil }
+    /// First open of a RAW under PV2: the stack's WB defaults become the
+    /// file's as-shot neutral instead of an assumed 6500 K.
+    private func adoptAsShotWhiteBalanceIfNeeded(from loaded: SourceImage) {
+        guard case .raw(let filter) = loaded,
+              editStack.processVersion >= 2, !editStack.rawWBInitialized else { return }
+        editStack.whiteBalanceTemp = Double(filter.neutralTemperature)
+        editStack.whiteBalanceTint = Double(filter.neutralTint)
+        editStack.rawWBInitialized = true
+    }
+
+    private func activeRenderSource() -> SourceImage? {
+        guard let sourceImage else { return nil }
         if (zoomLevel ?? 0) >= 1.0 {
-            if fullSource == nil {
-                fullSource = ImageDecoder.loadFullImage(from: entry.fileURL)
+            if fullSourceImage == nil {
+                fullSourceImage = ImageDecoder.loadSource(from: entry.fileURL, maxDimension: nil)
+                fullSource = fullSourceImage?.image
             }
-            return fullSource ?? source
+            return fullSourceImage ?? sourceImage
         }
-        return source
+        return sourceImage
     }
 
     /// Builds the develop graph for the preview.
@@ -813,7 +834,7 @@ final class EditorModel {
     /// 512 px tile instead of the photograph. Core Image already tiles
     /// internally when it rasterizes, so the graph must never be tiled by hand.
     private func renderEditedImage(
-        from renderSource: CIImage, stack: EditStack
+        from renderSource: SourceImage, stack: EditStack
     ) -> CIImage {
         renderer.render(
             source: renderSource, stack: stack,
