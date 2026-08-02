@@ -86,11 +86,17 @@ enum Conformance {
             return (byte(r), byte(g), byte(b))
         }
         if left {
-            // High-frequency checker for sharpening and luminance NR, a
-            // mid-frequency ripple for clarity, and a deterministic chroma
-            // jitter so colour noise reduction has colour noise to remove.
-            let checker = ((x / 2) + (y / 2)) % 2 == 0 ? 0.10 : -0.10
-            let l = 0.5 + checker + 0.15 * sin(u * .pi * 4)
+            // Low-amplitude luminance noise plus a chroma jitter, over a
+            // mid-frequency ripple: grain for sharpening to amplify and for
+            // noise reduction to remove, colour noise for chroma reduction,
+            // and a broad wave for clarity's much larger radius.
+            //
+            // The amplitude is deliberately small. An earlier version used a
+            // ±0.10 checker, and edge-preserving noise reduction correctly
+            // left it alone — a detail that large is signal, not noise — which
+            // read as the control being dead when it was working exactly as
+            // designed. A fixture has to look like the thing it is measuring.
+            let l = 0.5 + lumaNoise(x: x, y: y) + 0.15 * sin(u * .pi * 4)
             let jitter = chromaJitter(x: x, y: y)
             return (byte(l + jitter), byte(l), byte(l - jitter))
         }
@@ -98,7 +104,7 @@ enum Conformance {
         return (byte(l), byte(l), byte(min(1.0, l + 0.06)))
     }
 
-    /// A deterministic ±0.06 red/blue jitter.
+    /// A deterministic ±0.06 red/blue jitter — chroma noise.
     ///
     /// Deterministic because a fixture that changes between runs turns a real
     /// regression into a coin flip — the same reason PV2's grain is a fixed
@@ -106,6 +112,13 @@ enum Conformance {
     private static func chromaJitter(x: Int, y: Int) -> Double {
         let h = (x &* 73_856_093) ^ (y &* 19_349_663)
         return (Double(abs(h) % 1000) / 1000.0 - 0.5) * 0.12
+    }
+
+    /// A deterministic ±0.035 luminance jitter, at the amplitude real sensor
+    /// noise actually has.
+    private static func lumaNoise(x: Int, y: Int) -> Double {
+        let h = (x &* 40_503_311) ^ (y &* 83_492_791)
+        return (Double(abs(h) % 1000) / 1000.0 - 0.5) * 0.07
     }
 
     private static func hsl(hue: Double, saturation: Double,

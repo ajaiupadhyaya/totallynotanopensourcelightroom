@@ -116,4 +116,70 @@ final class EffectsCalibrationTests: XCTestCase {
         let out = rendered { $0.grainAmount = 0 }
         XCTAssertEqual(Calibration.displayValue(of: out, x: 64, y: 64), 0.6, accuracy: 0.01)
     }
+
+    // MARK: Presence and detail
+    //
+    // These use the ``Conformance`` probe rather than a flat patch: a control
+    // that acts on detail cannot be measured on an image that has none.
+
+    /// Negative Texture must soften.
+    ///
+    /// It did nothing at all. `CIUnsharpMask` declares `CIAttributeMin: 0` on
+    /// its intensity, so every negative value was clamped to zero and the
+    /// whole left half of the slider was dead — you could drag Texture to
+    /// −100 and the photo would not change by one bit.
+    func testNegativeTextureSoftens() {
+        let neutral = Conformance.localContrast(Conformance.render { _ in })
+        let soft = Conformance.localContrast(Conformance.render { $0.texture = -100 })
+        XCTAssertLessThan(soft, neutral - 0.002,
+                          "Texture −100 left local contrast at \(soft) vs \(neutral).")
+    }
+
+    /// Negative Clarity must soften, for the same reason and by the same
+    /// mechanism — at clarity's much larger radius.
+    func testNegativeClaritySoftens() {
+        let neutral = Conformance.localContrast(Conformance.render { _ in })
+        let soft = Conformance.localContrast(Conformance.render { $0.clarity = -100 })
+        XCTAssertLessThan(soft, neutral - 0.001,
+                          "Clarity −100 left local contrast at \(soft) vs \(neutral).")
+    }
+
+    /// Texture and Clarity have to be continuous through zero: half the
+    /// slider must be about half the effect, not a cliff between two
+    /// unrelated implementations.
+    func testSoftenIsMonotonicAcrossTheNegativeHalf() {
+        let values = [0.0, -25.0, -50.0, -75.0, -100.0].map { amount in
+            Conformance.localContrast(Conformance.render { $0.texture = amount })
+        }
+        for i in 1..<values.count {
+            XCTAssertLessThan(values[i], values[i - 1] + 0.0005,
+                              "Texture softening is not monotonic: \(values)")
+        }
+        XCTAssertLessThan(values[4], values[0] - 0.004, "−100 barely differs from 0.")
+    }
+
+    /// Luminance noise reduction must reduce high-frequency detail.
+    ///
+    /// It increased it. `CINoiseReduction.sharpness` re-sharpens after
+    /// denoising and was pinned at Apple's default of 0.4, which sharpened
+    /// harder than the denoise smoothed — so raising the slider made the image
+    /// crisper, which is the opposite of what it says on it.
+    func testLuminanceNoiseReductionSmooths() {
+        let neutral = Conformance.localContrast(Conformance.render { _ in })
+        let reduced = Conformance.localContrast(
+            Conformance.render { $0.luminanceNoiseReduction = 100 }
+        )
+        XCTAssertLessThan(reduced, neutral - 0.002,
+                          "Luminance NR 100 left local contrast at \(reduced) vs \(neutral).")
+    }
+
+    /// Sharpening still sharpens — the fix to the negative half must not have
+    /// touched the positive one, which shares the same function.
+    func testSharpeningStillSharpens() {
+        let neutral = Conformance.localContrast(Conformance.render { _ in })
+        let sharp = Conformance.localContrast(Conformance.render { $0.sharpenAmount = 100 })
+        XCTAssertGreaterThan(sharp, neutral + 0.002)
+        let textured = Conformance.localContrast(Conformance.render { $0.texture = 100 })
+        XCTAssertGreaterThan(textured, neutral + 0.002)
+    }
 }

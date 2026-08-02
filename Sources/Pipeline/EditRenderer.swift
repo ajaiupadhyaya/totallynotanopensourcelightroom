@@ -201,12 +201,52 @@ struct EditRenderer {
         return result
     }
 
+    /// Unsharp mask, with a negative half that works.
+    ///
+    /// `CIUnsharpMask` declares `CIAttributeMin: 0` on its intensity, so every
+    /// negative value was silently clamped to zero and the entire soft half of
+    /// Texture and Clarity did nothing at all — the same class of defect as
+    /// PV1's positive Highlights, and invisible for the same reason: the code
+    /// did exactly what it was written to do.
+    ///
+    /// The negative side blends *toward* a blurred copy at the same radius,
+    /// which is the image the positive side subtracts. That keeps the control
+    /// continuous through zero instead of being two unrelated effects sharing
+    /// a slider: −100 is the full blur, +100 the full sharpen, and the
+    /// midpoint of either half is half of it.
     private func unsharpMask(_ image: CIImage, radius: Double, intensity: Double) -> CIImage {
+        guard intensity != 0 else { return image }
+        guard intensity > 0 else {
+            return softenTowardBlur(image, radius: radius,
+                                    amount: min(-intensity, 1))
+        }
         let filter = CIFilter.unsharpMask()
         filter.inputImage = image
         filter.radius = Float(radius)
         filter.intensity = Float(intensity)
         return filter.outputImage ?? image
+    }
+
+    /// Mixes `image` toward a Gaussian blur of itself by `amount`, `0...1`.
+    ///
+    /// The blur runs on a clamped copy and is cropped back, so the frame edge
+    /// blurs against its own border rather than against transparent black —
+    /// which would darken every edge as the slider went down.
+    private func softenTowardBlur(_ image: CIImage, radius: Double,
+                                  amount: Double) -> CIImage {
+        let extent = image.extent
+        guard !extent.isInfinite else { return image }
+
+        let blur = CIFilter.gaussianBlur()
+        blur.inputImage = image.clampedToExtent()
+        blur.radius = Float(radius)
+        guard let blurred = blur.outputImage?.cropped(to: extent) else { return image }
+
+        let mix = CIFilter.mix()
+        mix.inputImage = blurred
+        mix.backgroundImage = image
+        mix.amount = Float(amount)
+        return mix.outputImage?.cropped(to: extent) ?? image
     }
 
     /// An *approximation* of haze removal.
@@ -317,10 +357,19 @@ struct EditRenderer {
         if stack.luminanceNoiseReduction > 0 {
             let filter = CIFilter.noiseReduction()
             filter.inputImage = result
-            // CINoiseReduction's useful noiseLevel range is small; 0.05 at full
-            // strength is already heavy-handed.
-            filter.noiseLevel = Float(stack.luminanceNoiseReduction / 100.0 * 0.05)
-            filter.sharpness = 0.4
+            // `noiseLevel` is a *threshold*, not a strength: detail quieter
+            // than it is smoothed away and everything louder is left alone,
+            // which is why hard edges survive even at the top of the range.
+            // Mapping the slider to 0…0.05 put most of its travel below the
+            // amplitude of ordinary sensor noise, so the bottom two-thirds did
+            // nothing. 0…0.10 spans the whole transition instead.
+            filter.noiseLevel = Float(stack.luminanceNoiseReduction / 100.0 * 0.10)
+            // Sharpness re-sharpens the image after denoising, and Apple's
+            // default of 0.4 sharpens harder than the denoise smooths: raising
+            // Luminance NR to 100 measurably *increased* high-frequency detail,
+            // so the slider did the opposite of its label. Sharpening is the
+            // Sharpening slider's job; this one only smooths.
+            filter.sharpness = 0
             result = filter.outputImage ?? result
         }
 

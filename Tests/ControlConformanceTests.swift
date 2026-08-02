@@ -43,13 +43,22 @@ struct ControlCase {
     /// anything.
     let minimumChange: Double
 
+    /// How much of the *frame* has to change before a setting counts as
+    /// having done something.
+    ///
+    /// Lower this only for a control that acts on a genuinely small part of
+    /// the probe, and say which part in a comment. Lowering it to silence a
+    /// failure converts a finding into a lie.
+    let minimumVisibleChange: Double
+
     init(name: String, key: String,
          setup: @escaping (inout EditStack) -> Void = { _ in },
          low: @escaping (inout EditStack) -> Void,
          high: @escaping (inout EditStack) -> Void,
          measure: @escaping ([UInt8]) -> Double,
          sign: Int,
-         minimumChange: Double = 0.002) {
+         minimumChange: Double = 0.002,
+         minimumVisibleChange: Double = 0.0015) {
         self.name = name
         self.key = key
         self.setup = setup
@@ -58,6 +67,7 @@ struct ControlCase {
         self.measure = measure
         self.sign = sign
         self.minimumChange = minimumChange
+        self.minimumVisibleChange = minimumVisibleChange
     }
 }
 
@@ -142,7 +152,13 @@ extension ControlCase {
         ControlCase(name: "Luminance Noise Reduction", key: "luminanceNoiseReduction",
                     low: { $0.luminanceNoiseReduction = 25 },
                     high: { $0.luminanceNoiseReduction = 100 },
-                    measure: Conformance.localContrast, sign: -1),
+                    measure: Conformance.localContrast, sign: -1,
+                    // Edge-preserving by design: it changes only the noise,
+                    // which lives in one of the probe's four quadrants. A
+                    // quarter-strength setting acting on a quarter of the
+                    // frame is a small frame-wide number even when the noise
+                    // itself visibly softens.
+                    minimumVisibleChange: 0.0008),
         ControlCase(name: "Colour Noise Reduction", key: "colorNoiseReduction",
                     low: { $0.colorNoiseReduction = 25 },
                     high: { $0.colorNoiseReduction = 100 },
@@ -171,7 +187,13 @@ extension ControlCase {
                     setup: { $0.vignetteAmount = -100 },
                     low: { $0.vignetteHighlights = 25 },
                     high: { $0.vignetteHighlights = 100 },
-                    measure: Conformance.cornerLuma, sign: +1),
+                    measure: Conformance.cornerLuma, sign: +1,
+                    // This control only lets *bright* corner content punch back
+                    // through the darkening, and exactly one of the probe's
+                    // four corners is bright (the ramp's black end, the colour
+                    // bands and the noise field are not). A quarter strength on
+                    // a quarter of the corners is legitimately a small number.
+                    minimumVisibleChange: 0.0005),
         ControlCase(name: "Grain Amount", key: "grainAmount",
                     low: { $0.grainAmount = 25 }, high: { $0.grainAmount = 100 },
                     measure: Conformance.localContrast, sign: +1),
@@ -237,7 +259,7 @@ final class ControlConformanceTests: XCTestCase {
                 }
                 let delta = Conformance.difference(neutral, variant)
                 XCTAssertGreaterThan(
-                    delta, 0.0015,
+                    delta, control.minimumVisibleChange,
                     "\(control.name) at its \(label) changes the image by \(delta), "
                     + "which is indistinguishable from doing nothing."
                 )
