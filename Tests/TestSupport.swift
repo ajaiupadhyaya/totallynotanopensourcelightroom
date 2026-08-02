@@ -37,6 +37,45 @@ enum TestSupport {
         return url
     }
 
+    /// Writes a PNG with real edges in it, and returns its URL.
+    ///
+    /// A solid-grey fixture cannot exercise anything that responds to detail.
+    /// Focus peaking, for one, marks in-focus edges — run it on a flat patch
+    /// and it correctly draws nothing, which reads as the feature being broken
+    /// when it is working exactly as designed.
+    static func makeTempDetailPNG(size: Int = 64) throws -> URL {
+        let bytesPerPixel = 4
+        let rowBytes = size * bytesPerPixel
+        var pixels = [UInt8](repeating: 0, count: size * rowBytes)
+        for y in 0..<size {
+            for x in 0..<size {
+                let i = y * rowBytes + x * bytesPerPixel
+                // Hard-edged blocks: high local contrast at a scale focus
+                // peaking and the detail controls both respond to.
+                let value: UInt8 = ((x / 8) + (y / 8)) % 2 == 0 ? 40 : 215
+                pixels[i] = value
+                pixels[i + 1] = value
+                pixels[i + 2] = value
+                pixels[i + 3] = 255
+            }
+        }
+        let context = CGContext(
+            data: &pixels, width: size, height: size, bitsPerComponent: 8,
+            bytesPerRow: rowBytes, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+        let cgImage = try XCTUnwrap(context?.makeImage())
+
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("petest-detail-\(UUID().uuidString).png")
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.png.identifier as CFString, 1, nil
+        ))
+        CGImageDestinationAddImage(destination, cgImage, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        return url
+    }
+
     /// Average brightness of a CGImage by box-filtering it down to one pixel.
     static func averageBrightness(_ cgImage: CGImage) -> Double {
         var pixel = [UInt8](repeating: 0, count: 4)

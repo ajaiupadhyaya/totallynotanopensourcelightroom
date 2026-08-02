@@ -2,6 +2,39 @@
 
 All notable changes to PhotoEditor are documented here.
 
+## Unreleased
+
+### Fixed
+
+Three defects found by a new conformance suite that renders a test chart with
+every control at both ends and checks that the picture actually changed. All
+three are Process Version 2 only; PV1 is frozen and renders exactly as before,
+so no existing photo changes.
+
+- **Negative Texture and Clarity did nothing at all.** `CIUnsharpMask`
+  refuses a negative intensity — it clamps to zero — so the entire left half
+  of both sliders was dead. You could drag Clarity to −100 and not one bit of
+  the photo would change. The soft half now blends toward a blurred copy at
+  the same radius the sharp half subtracts, so the control runs continuously
+  from full blur at −100 to full sharpen at +100.
+- **Luminance NR sharpened instead of smoothing.** Core Image's noise
+  reduction re-sharpens after denoising, and the sharpening was pinned at a
+  strength that beat the denoise: raising the slider made the photo *crisper*.
+  Sharpening is the Sharpening slider's job.
+- **Most of the Luminance NR slider was below the noise floor.** Its parameter
+  is a threshold, not a strength, and the slider was mapped across a range
+  whose bottom two thirds sat under the amplitude of ordinary sensor noise,
+  where it removed nothing. It now spans the whole useful transition.
+
+### Added
+
+- **A conformance suite** covering every field of the edit stack. For each
+  control it checks that neutral is a bit-exact no-op, that both extremes
+  visibly change the image, and that the direction matches the label — and a
+  completeness check reflects over the edit stack, so a new control cannot be
+  added without either being covered or being explicitly assigned to the suite
+  that covers it. Developer-facing.
+
 ## 2.2.0 — 2026-07-26
 
 A second develop engine, opt-in per photo. An already-edited photo keeps
