@@ -63,6 +63,7 @@
 		6DD0F963DC7D62FD68584DFB /* Effects.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = 895885E0242C92B208130DFC /* Effects.ci.metal */; };
 		6F99A4F9B42E6CDA9575E040 /* ExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */; };
 		71F8DD407A0625EC745D4E3D /* WorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78988AE124F31D425DB32C2F /* WorkflowTests.swift */; };
+		73188E04A73DF0E4B4FE1A83 /* PaperResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3847B8AE37C226DB227816C /* PaperResponse.swift */; };
 		7338731C6C7BD32B8F3190AE /* FilmNegativeConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */; };
 		735BEA9F720108E3B924B556 /* MaskMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E14E1A0F0166E0308D4C1C9 /* MaskMigrationTests.swift */; };
 		73D7E31333173A0549FFEBDF /* FilmNegativeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */; };
@@ -82,6 +83,7 @@
 		89A613D5A074DA09CA8EE428 /* SubjectMaskProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873E87A006C281863ABF1DBD /* SubjectMaskProvider.swift */; };
 		8D020FCB3BC901D9023F9630 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EFB4F1CD3CF945C5503145A4 /* Assets.xcassets */; };
 		91D2B5ADD90FF74D56FF5078 /* RetouchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */; };
+		9229703A758891B7304277C1 /* PaperResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */; };
 		923E24859305CF8D1E1577FC /* Defringe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B1C63E06502A5AD187DA403 /* Defringe.swift */; };
 		94499EB2537C24B80DA746E7 /* MaskCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */; };
 		94D724351379DB477A5F2E19 /* DevelopedSourceCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */; };
@@ -235,6 +237,7 @@
 		9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentPanel.swift; sourceTree = "<group>"; };
 		A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSnapshot.swift; sourceTree = "<group>"; };
 		A24E17192240663CA3BE4181 /* CanvasToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasToolTests.swift; sourceTree = "<group>"; };
+		A3847B8AE37C226DB227816C /* PaperResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponse.swift; sourceTree = "<group>"; };
 		A43954DA441D273C7823E7F1 /* WorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceModel.swift; sourceTree = "<group>"; };
 		A58C8023259214599AAA4498 /* SnapshotPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotPanel.swift; sourceTree = "<group>"; };
 		A8C6195D005B7B3428A2DC0A /* Tone.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Tone.ci.metal; sourceTree = "<group>"; };
@@ -279,6 +282,7 @@
 		F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositorTests.swift; sourceTree = "<group>"; };
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
 		F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTImporter.swift; sourceTree = "<group>"; };
+		F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponseTests.swift; sourceTree = "<group>"; };
 		FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopPreset.swift; sourceTree = "<group>"; };
 		FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsStages.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -381,6 +385,7 @@
 				350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */,
 				B41EC8A0826BF47AA06B55F5 /* MLMaskTests.swift */,
 				C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */,
+				F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */,
 				3E01E5EE55A503A9D7E901B2 /* ParitySupport.swift */,
 				BEB35AA9AE71ECBD87479578 /* ParityTests.swift */,
 				4DEBA8C2FB709B20C9CB1D15 /* PerformanceTests.swift */,
@@ -406,6 +411,7 @@
 				89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */,
 				6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */,
 				D7C39D72A549DFE7D38FA03F /* FilmStock.swift */,
+				A3847B8AE37C226DB227816C /* PaperResponse.swift */,
 			);
 			path = Film;
 			sourceTree = "<group>";
@@ -662,6 +668,7 @@
 				735BEA9F720108E3B924B556 /* MaskMigrationTests.swift in Sources */,
 				E067EC5BFBF5E3270C124B86 /* MaskOverlayTests.swift in Sources */,
 				3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */,
+				9229703A758891B7304277C1 /* PaperResponseTests.swift in Sources */,
 				D741F8510976B87C69632E4C /* ParitySupport.swift in Sources */,
 				4EBE75FACDC69EC3DCE3F640 /* ParityTests.swift in Sources */,
 				C8073E4F79144D80D057908A /* PerformanceTests.swift in Sources */,
@@ -742,6 +749,7 @@
 				4820C5A435581193CA4C5AEB /* MetalCanvasView.swift in Sources */,
 				5EE7C970E1D0449A3733E5A5 /* OpticsPanel.swift in Sources */,
 				DEB91BC97F5C141246AD4371 /* PanelSection.swift in Sources */,
+				73188E04A73DF0E4B4FE1A83 /* PaperResponse.swift in Sources */,
 				6CC19951ABC1EC858CC9A1A8 /* PatchMatchInpainter.swift in Sources */,
 				310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */,
 				E773B9FE625A1E81218CE4A5 /* PhotoMetadata.swift in Sources */,
