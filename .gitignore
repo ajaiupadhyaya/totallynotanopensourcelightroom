@@ -42,3 +42,6 @@ scripts/parity-presets/
 .worktrees/
 # SDD plan workspaces
 .superpowers/
+
+# Harness-managed worktrees
+.claude/worktrees/
