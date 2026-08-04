@@ -22,8 +22,27 @@ final class FilmDensityConverterTests: XCTestCase {
     /// this test is the contract that they agree. It renders a horizontal
     /// linear ramp through the real render stage and compares every column
     /// against `PaperResponse.develop`.
+    ///
+    /// Run twice: once at the identity fold (contrast 2 → gradeScale 1.0,
+    /// exposure 0 → printOffset 0) and once away from it (contrast 3,
+    /// exposure 1). The two CPU-side foldings in `FilmDensityConverter`
+    /// (`gamma × gradeScale`, `printOffset = exposure·log10(2)`) are
+    /// otherwise untested by this file — every other settings object here
+    /// leaves both at their identity value, so a wrong fold (grade applied to
+    /// `dmax` instead of `gamma`, `pow(2, ·)` instead of `log10(2)`, a sign
+    /// flip) would leave the whole suite green.
     func testKernelAgreesWithTheSwiftModel() {
-        let settings = densitySettings()
+        assertKernelAgreesWithSwiftModel(densitySettings())
+
+        var graded = densitySettings()
+        graded.print.contrast = 3
+        graded.print.exposure = 1
+        assertKernelAgreesWithSwiftModel(graded)
+    }
+
+    private func assertKernelAgreesWithSwiftModel(
+        _ settings: FilmNegativeSettings, file: StaticString = #filePath, line: UInt = #line
+    ) {
         let width = 256
         // A neutral ramp of transmittances scaled by the (linear) base color,
         // spanning base (x=width-1) down to deep density (x=0).
@@ -31,18 +50,26 @@ final class FilmDensityConverterTests: XCTestCase {
         let dminLin = (PaperResponse.srgbDecode(settings.baseColor.red),
                        PaperResponse.srgbDecode(settings.baseColor.green),
                        PaperResponse.srgbDecode(settings.baseColor.blue))
+        // Mirrors FilmDensityConverter's own CPU-side folding exactly, so this
+        // helper exercises whatever `settings.print` carries, not just the
+        // identity case.
+        let grade = PaperResponse.gradeScale(settings.print.contrast)
+        let gammaEffective = (settings.print.gamma.red * grade,
+                              settings.print.gamma.green * grade,
+                              settings.print.gamma.blue * grade)
+        let printOffset = settings.print.exposure * log10(2.0)
+        let dmax = (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue)
+        let p = PaperResponse.kneeP(shoulder: settings.print.shoulder)
+        let q = PaperResponse.kneeQ(toe: settings.print.toe)
+        let satScale = 1.0 + settings.print.saturation / 100.0
         var expected = [(Double, Double, Double)]()
         for x in 0..<width {
             let frac = Double(x) / Double(width - 1)          // 0…1
             let transmit = pow(10.0, -2.5 * (1 - frac))        // density 2.5 … 0
             let t = (dminLin.0 * transmit, dminLin.1 * transmit, dminLin.2 * transmit)
             expected.append(PaperResponse.develop(
-                t, dminLinear: dminLin,
-                dmax: (2, 2, 2),
-                gammaEffective: (settings.print.gamma.red, settings.print.gamma.green,
-                                 settings.print.gamma.blue),
-                printOffset: 0, p: PaperResponse.kneeP(shoulder: 40),
-                q: PaperResponse.kneeQ(toe: 30), satScale: 1.12))
+                t, dminLinear: dminLin, dmax: dmax, gammaEffective: gammaEffective,
+                printOffset: printOffset, p: p, q: q, satScale: satScale))
             pixels[x * 4 + 0] = Float(t.0)
             pixels[x * 4 + 1] = Float(t.1)
             pixels[x * 4 + 2] = Float(t.2)
@@ -62,9 +89,11 @@ final class FilmDensityConverterTests: XCTestCase {
                        colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB))
         for x in 0..<width {
             XCTAssertEqual(Double(buffer[x * 4 + 0]), expected[x].0, accuracy: 2e-3,
-                           "red diverges from PaperResponse at column \(x)")
-            XCTAssertEqual(Double(buffer[x * 4 + 1]), expected[x].1, accuracy: 2e-3)
-            XCTAssertEqual(Double(buffer[x * 4 + 2]), expected[x].2, accuracy: 2e-3)
+                           "red diverges from PaperResponse at column \(x)", file: file, line: line)
+            XCTAssertEqual(Double(buffer[x * 4 + 1]), expected[x].1, accuracy: 2e-3,
+                           file: file, line: line)
+            XCTAssertEqual(Double(buffer[x * 4 + 2]), expected[x].2, accuracy: 2e-3,
+                           file: file, line: line)
         }
     }
 
@@ -93,25 +122,51 @@ final class FilmDensityConverterTests: XCTestCase {
     }
 
     /// A stack decoded from old JSON is on `.matrix` and must render through
-    /// the old converter bit-for-bit — the density engine must be unreachable
-    /// for it. Compared against a render with a hand-built matrix settings
-    /// value, which *is* the frozen path.
+    /// the old converter, not the density engine. Proven two ways: (1) the
+    /// dispatch actually branches on `conversionModel` — flipping it to
+    /// `.density` on the *same* settings must change the render, or this
+    /// whole test would pass even if the dispatch ignored the field; (2) the
+    /// matrix render matches the closed form `FilmNegativeConverter`'s own
+    /// doc comment gives for unit-gain inversion.
     func testMatrixStacksStillRenderThroughTheFrozenPath() throws {
         let old = #"{"isEnabled": true, "type": "colorNegative"}"#.data(using: .utf8)!
         let decoded = try JSONDecoder().decode(FilmNegativeSettings.self, from: old)
         XCTAssertEqual(decoded.conversionModel, .matrix)
 
         let scan = TestSupport.solidImage(red: 0.6, green: 0.4, blue: 0.3)
-        let viaDispatch = FilmNegativeConverter.convert(scan, settings: decoded)
-        var matrix = decoded
-        let a = TestSupport.readColor(viaDispatch, context: context)
-        // Same settings through the direct legacy invert must be identical.
-        matrix.conversionModel = .matrix
-        let b = TestSupport.readColor(FilmNegativeConverter.convert(scan, settings: matrix),
-                                      context: context)
-        XCTAssertEqual(a.red, b.red, accuracy: 0)
-        XCTAssertEqual(a.green, b.green, accuracy: 0)
-        XCTAssertEqual(a.blue, b.blue, accuracy: 0)
+        let matrixResult = TestSupport.readColor(
+            FilmNegativeConverter.convert(scan, settings: decoded), context: context)
+
+        // (1) The branch is load-bearing: same settings, only the model
+        // flipped, must render differently — otherwise this test would pass
+        // even with `if settings.conversionModel == .density && ...` deleted.
+        var density = decoded
+        density.conversionModel = .density
+        let densityResult = TestSupport.readColor(
+            FilmNegativeConverter.convert(scan, settings: density), context: context)
+        let totalDivergence = abs(matrixResult.red - densityResult.red)
+            + abs(matrixResult.green - densityResult.green)
+            + abs(matrixResult.blue - densityResult.blue)
+        XCTAssertGreaterThan(totalDivergence, 0.05,
+                             "the matrix and density renders must differ, or the dispatch isn't " +
+                             "actually branching on conversionModel")
+
+        // (2) Pin the matrix render against the closed form: unit gain
+        // collapses `balanced = -(g/b)·x + g` to `1 − x/b`, evaluated in the
+        // gamma-encoded domain the legacy converter brackets its math in
+        // (`enc` mirrors the CILinearToSRGBToneCurve round trip the pipeline
+        // itself does, rather than assuming the raw literal is already its
+        // own encoding).
+        let base = decoded.baseColor
+        func enc(_ x: Double) -> Double { PaperResponse.srgbEncode(PaperResponse.srgbDecode(x)) }
+        let expected = (red: 1 - enc(0.6) / base.red,
+                        green: 1 - enc(0.4) / base.green,
+                        blue: 1 - enc(0.3) / base.blue)
+        // 0.01: the legacy path's exact CIColorMatrix + tone-curve filter
+        // chain need not be bit-identical to this pure-math closed form.
+        XCTAssertEqual(matrixResult.red, expected.red, accuracy: 0.01)
+        XCTAssertEqual(matrixResult.green, expected.green, accuracy: 0.01)
+        XCTAssertEqual(matrixResult.blue, expected.blue, accuracy: 0.01)
     }
 
     /// B&W under the density model comes back neutral, same promise as the
