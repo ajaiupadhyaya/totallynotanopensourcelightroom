@@ -37,6 +37,12 @@ enum FilmNegativeConverter {
     static func convert(_ image: CIImage, settings: FilmNegativeSettings) -> CIImage {
         guard settings.isEnabled else { return image }
 
+        // The print engine. Slide film has nothing to invert, so it keeps the
+        // legacy non-inverting path regardless of model.
+        if settings.conversionModel == .density && settings.type.requiresInversion {
+            return FilmDensityConverter.convert(image, settings: settings)
+        }
+
         var result = image
 
         // Work on gamma-encoded values (see the type doc).

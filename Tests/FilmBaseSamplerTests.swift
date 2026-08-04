@@ -85,6 +85,11 @@ final class FilmBaseSamplerTests: XCTestCase {
         settings.isEnabled = true
         settings.type = .colorNegative
         settings.baseColor = sampled
+        // This test's 0.5 target is the single-matrix inversion's exact
+        // arithmetic (see FilmNegativeConverter). `FilmNegativeSettings()`
+        // defaults to `.density` (Task 3's print engine) — pin the model
+        // this test was written to check.
+        settings.conversionModel = .matrix
 
         let converted = FilmNegativeConverter.convert(
             TestSupport.solidImage(red: subject.red, green: subject.green, blue: subject.blue),
