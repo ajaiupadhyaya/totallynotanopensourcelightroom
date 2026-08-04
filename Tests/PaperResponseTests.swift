@@ -59,35 +59,51 @@ final class PaperResponseTests: XCTestCase {
     /// which scales all inter-channel differences by the same factor — so the
     /// channel ordering and the ratios of differences are invariant, and HSV
     /// hue is exactly preserved. This is where "not sigmoid" is written down.
+    ///
+    /// The reference value is the *pre-rolloff* straight-line fraction
+    /// `(s.1−s.2)/(s.0−s.2)`, computed independently in closed form below —
+    /// not a fraction taken in transmittance or density space, which the
+    /// paper curve's own (nonlinear) compression would not preserve, and not
+    /// the post-rolloff output fraction itself, which would make the
+    /// assertion circular. `s` is exactly what the rolloff's common-weight
+    /// lerp is claimed to leave invariant, so it's the only quantity that
+    /// actually exercises the claim.
     func testDevelopPreservesHueThroughTheShoulder() {
         let dmin = (0.9, 0.55, 0.30)
         let dmax = (2.0, 2.0, 2.0)
         let gamma = (1.2, 1.2, 1.2)
-        // A saturated red at three densities climbing into the shoulder.
+        // A patch with three genuinely distinct channels (red densest, green
+        // mid, blue thinnest) at three densities climbing into the shoulder.
+        // Two channels sharing an exponent would make out.1 == out.2
+        // identically and the hue check below trivially 0 ≈ 0 — it must not
+        // degenerate that way for this test to mean anything.
         var lastSat = Double.infinity
         for d in [1.6, 2.0, 2.4] {
-            // Transmittance for a red patch: red channel dense, others thin
-            // (more red exposure means more red-specific density, i.e. less
-            // red transmittance — see testDevelopMapsBaseToNearBlackAndDmaxToNearWhite
-            // for why lower transmittance is the channel that prints brighter).
-            let t = (dmin.0 * pow(10, -d), dmin.1 * pow(10, -(d - 0.9)), dmin.2 * pow(10, -(d - 0.9)))
+            let t = (dmin.0 * pow(10, -d), dmin.1 * pow(10, -(d - 0.6)), dmin.2 * pow(10, -(d - 0.9)))
             let out = PaperResponse.develop(t, dminLinear: dmin, dmax: dmax,
                                             gammaEffective: gamma, printOffset: 0,
                                             p: PaperResponse.kneeP(shoulder: 40),
                                             q: PaperResponse.kneeQ(toe: 30),
                                             satScale: 1.0)
-            // Red stays the max channel (ordering preserved)…
+            // Red stays the max channel, green stays the middle channel —
+            // ordering preserved, strictly (no shared exponent to make this
+            // pass by accidental equality).
             XCTAssertGreaterThan(out.0, out.1)
-            XCTAssertGreaterThanOrEqual(out.1, out.2)
-            // …hue angle is invariant: (g−b)/(r−b) is the HSV hue fraction in
-            // the red-to-yellow sextant, and a common-weight lerp toward
-            // neutral cannot move it. Compared via t/dmin ratios — the
-            // dmin-normalized quantity the density formula actually uses —
-            // so per-channel dmin differences don't leak into the comparison.
-            let ratioT = (t.0 / dmin.0, t.1 / dmin.1, t.2 / dmin.2)
-            let hueFraction = (out.1 - out.2) / max(out.0 - out.2, 1e-9)
-            let inHue = (ratioT.1 - ratioT.2) / max(ratioT.0 - ratioT.2, 1e-9)
-            XCTAssertEqual(hueFraction, inHue, accuracy: 0.02)
+            XCTAssertGreaterThan(out.1, out.2)
+            // The pre-rolloff straight-line value per channel, in closed
+            // form: s = (dmin/t)^g · 10^(−g·dmax), i.e. straightLine() with
+            // printOffset 0, reproduced independently rather than calling
+            // through develop() so this is a check against the model, not
+            // against itself.
+            func straightLine(_ t: Double, _ dmin: Double, _ dmax: Double, _ g: Double) -> Double {
+                pow(dmin / t, g) * pow(10, -g * dmax)
+            }
+            let s = (straightLine(t.0, dmin.0, dmax.0, gamma.0),
+                     straightLine(t.1, dmin.1, dmax.1, gamma.1),
+                     straightLine(t.2, dmin.2, dmax.2, gamma.2))
+            let hueFraction = (out.1 - out.2) / (out.0 - out.2)
+            let preRolloffFraction = (s.1 - s.2) / (s.0 - s.2)
+            XCTAssertEqual(hueFraction, preRolloffFraction, accuracy: 1e-12)
             // …and saturation falls as it climbs.
             let sat = (out.0 - out.2) / max(out.0, 1e-9)
             XCTAssertLessThan(sat, lastSat)
