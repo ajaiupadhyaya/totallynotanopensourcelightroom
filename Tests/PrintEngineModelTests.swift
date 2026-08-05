@@ -59,17 +59,50 @@ final class PrintEngineModelTests: XCTestCase {
     }
 
     /// The eyedropper on a density-model photo re-solves with the sampled
-    /// base — a better Dmin should immediately improve Dmax and gamma too.
+    /// base — a better Dmin should immediately improve Dmax, gamma, and
+    /// exposure too.
+    ///
+    /// Needs a fixture with real tonal structure, not the flat-grey default:
+    /// on a flat image every possible sample coincides with Auto's own
+    /// percentile estimate, so a test built on it can't tell "the re-solve
+    /// ran and changed nothing because the numbers happen to agree" apart
+    /// from "the re-solve never ran at all" — asserting only `baseOrigin ==
+    /// .sampled` would stay green even with the re-solve deleted, since
+    /// `applySampledBase` writes that field unconditionally.
+    ///
+    /// `makeTempDetailPNG`'s checkerboard (see `TestSupport`) gives two
+    /// distinct block values, 40 and 215, evenly split — so Auto's unsampled
+    /// 98th-percentile Dmin estimate lands in the bright (215) group. The
+    /// corner sampled below is the dark (40) group instead (verified
+    /// empirically against `EditorModel`'s actual bottom-left-origin
+    /// `CIImage` orientation — the *other* diagonal corner coincides with
+    /// the bright estimate and would silently reintroduce the vacuous case),
+    /// so the sampled base is genuinely far from what Auto already had, and
+    /// every print-side output the re-solve touches has to move.
     func testEyedropperResolvesWithSampledBase() throws {
-        let model = try TestSupport.makeEditorModel()
+        let url = try TestSupport.makeTempDetailPNG()
+        let catalog = try TestSupport.inMemoryCatalog()
+        let entry = TestSupport.makeEntry(fileURL: url)
+        try catalog.save(entry)
+        let model = EditorModel(entry: entry, catalog: catalog,
+                                thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+
         model.autoConvertNegative()
-        let estimated = model.editStack.filmNegative.print.dmax
-        model.sampleFilmBase(inUnitRect: CGRect(x: 0, y: 0, width: 0.1, height: 0.1))
+        let solvedDmax = model.editStack.filmNegative.print.dmax
+        let solvedGamma = model.editStack.filmNegative.print.gamma
+        let solvedExposure = model.editStack.filmNegative.print.exposure
+
+        model.sampleFilmBase(inUnitRect: CGRect(x: 0, y: 0.9, width: 0.1, height: 0.1))
+
         XCTAssertEqual(model.editStack.filmNegative.baseOrigin, .sampled)
-        // On the flat grey fixture the numbers may coincide; the invariant is
-        // that the solve reran against the sampled base without crashing and
-        // origin is now .sampled.
-        _ = estimated
+        // dmax/gamma/exposure are written only by the density re-solve —
+        // applySampledBase itself never touches them — so this fails if the
+        // `conversionModel == .density` re-solve gate is ever deleted.
+        let resolveRan = model.editStack.filmNegative.print.dmax != solvedDmax
+            || model.editStack.filmNegative.print.gamma != solvedGamma
+            || model.editStack.filmNegative.print.exposure != solvedExposure
+        XCTAssertTrue(resolveRan,
+                      "sampling a base far from Auto's estimate should move the re-solved print values")
     }
 
     /// Calibrated stocks persist their print character through the catalog.
