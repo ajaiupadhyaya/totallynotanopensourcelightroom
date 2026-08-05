@@ -273,10 +273,10 @@ are arbitrary" is a claim anyone can check against a single screen of code.
 
 | Constant | Default | Why |
 | --- | --- | --- |
-| `shoulderP` at Shoulder 0 / 100 | `64` → `2` | 64 is visually a hard clip; 2 is a very long rolloff |
-| `toeQ` at Toe 0 / 100 | `64` → `3` | same family, same reasoning |
-| Shoulder default | `40` (`p ≈ 8`) | a visible but unobtrusive knee |
-| Toe default | `30` (`q ≈ 16`) | a lifted black in the region the user's lab scans sit |
+| `shoulderP` at Shoulder 0 / 100 | `64` → `2`, log-mapped: `p = 64·(2/64)^(s/100)` | 64 compresses n=1 by 1.1% (visually a clip); 2 compresses it to 0.71 (a long rolloff) |
+| `toeQ` at Toe 0 / 100 | `512` → `24`, log-mapped: `q = 512·(24/512)^(t/100)` | the black floor is `1 − 2^(−1/q)`: 0.0014 linear at 512 (imperceptible), 0.028 at 24 (a heavy fog); the earlier 64→3 range was mis-derived and put the floor at 0.21 linear |
+| Shoulder default | `40` (`p ≈ 16`) | a visible but unobtrusive knee |
+| Toe default | `30` (`q ≈ 204`, floor ≈ 0.0034 linear ≈ 5.6% sRGB) | a lifted black in the region the user's lab scans sit |
 | `shoulderStart` | `0.75` | rolloff engages in the top quarter, not the midtones |
 | `highlightDesat` | `0.9` | paper white is reached, but not so abruptly that it reads as a clip |
 | `printSaturation` default | `+12` | C-41 papers are more saturated than a straight solve |

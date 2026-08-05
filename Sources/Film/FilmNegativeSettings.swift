@@ -34,6 +34,19 @@ struct FilmNegativeSettings: Codable, Equatable {
     /// Per-channel gain applied during inversion to neutralize residual cast.
     var channelGains: FilmColor = .white
 
+    /// Which conversion engine renders this photo. Initialized `.density` so
+    /// new conversions get the print engine; decoded `.matrix` so every photo
+    /// edited before this field existed keeps its exact rendering forever.
+    var conversionModel: FilmConversionModel = .density
+
+    /// Where ``baseColor`` came from (assumed / estimated / sampled) — shown
+    /// in the panel. Supersedes ``isBaseSampled``, which is kept in sync for
+    /// older call sites and for decoding stacks that predate this field.
+    var baseOrigin: FilmBaseOrigin = .assumed
+
+    /// The print-engine parameters. Ignored by the matrix path.
+    var print = PrintSettings()
+
     /// Exposure lift applied after inversion, in EV. Negatives rarely invert
     /// to a well-placed exposure on the first try.
     var exposure: Double = 0
@@ -67,6 +80,9 @@ struct FilmNegativeSettings: Codable, Equatable {
         stockName = c.lenient(.stockName, nil)
         baseColor = c.lenient(.baseColor, Self.defaultColorNegativeBase)
         isBaseSampled = c.lenient(.isBaseSampled, false)
+        conversionModel = c.lenient(.conversionModel, .matrix)
+        baseOrigin = c.lenient(.baseOrigin, isBaseSampled ? .sampled : .assumed)
+        print = c.lenient(.print, PrintSettings())
         channelGains = c.lenient(.channelGains, .white)
         exposure = c.lenient(.exposure, 0)
         stockContrast = c.lenient(.stockContrast, 0)

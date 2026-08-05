@@ -31,6 +31,13 @@ final class FilmNegativeTests: XCTestCase {
         settings.isEnabled = true
         settings.type = .colorNegative
         settings.baseColor = base
+        // This whole suite is a round trip through the single-matrix
+        // inversion documented above — pin it explicitly. `FilmNegativeSettings()`
+        // now defaults to `.density` (the print engine, Task 3), so leaving
+        // this unset would silently point every test here at a different
+        // conversion model with different math, not "the same frozen path
+        // this file has always exercised."
+        settings.conversionModel = .matrix
         mutate(&settings)
         return settings
     }

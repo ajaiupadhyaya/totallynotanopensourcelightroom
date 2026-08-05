@@ -6,6 +6,7 @@ struct FilmPanel: View {
     @Bindable var model: EditorModel
 
     @State private var isShowingCalibration = false
+    @State private var isShowingTrims = false
 
     private var film: FilmNegativeSettings { model.editStack.filmNegative }
 
@@ -23,6 +24,20 @@ struct FilmPanel: View {
             ))
 
             if film.isEnabled {
+                if film.conversionModel == .matrix && film.type.requiresInversion {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("This photo uses the original matrix conversion. "
+                             + "Updating re-solves it through the print engine — "
+                             + "the current look is snapshotted first and stays "
+                             + "one click away.")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Theme.secondaryText)
+                        PlateButton(title: "Update Conversion") {
+                            model.updateConversion()
+                        }
+                    }
+                }
+
                 TabStrip(
                     options: [
                         (FilmType.colorNegative, "C-41"),
@@ -38,17 +53,20 @@ struct FilmPanel: View {
 
                 stockControls
 
-                AdjustmentSlider(title: "Film Exposure",
-                                 value: $model.editStack.filmNegative.exposure,
-                                 range: -3...3, format: "%.2f EV", neutral: 0)
-
-                if film.type != .blackAndWhiteNegative {
-                    AdjustmentSlider(title: "Stock Contrast",
-                                     value: $model.editStack.filmNegative.stockContrast,
-                                     range: -100...100, format: "%.0f", neutral: 0)
-                    AdjustmentSlider(title: "Stock Saturation",
-                                     value: $model.editStack.filmNegative.stockSaturation,
-                                     range: -100...100, format: "%.0f", neutral: 0)
+                if film.conversionModel == .density && film.type.requiresInversion {
+                    printControls
+                } else {
+                    AdjustmentSlider(title: "Film Exposure",
+                                     value: $model.editStack.filmNegative.exposure,
+                                     range: -3...3, format: "%.2f EV", neutral: 0)
+                    if film.type != .blackAndWhiteNegative {
+                        AdjustmentSlider(title: "Stock Contrast",
+                                         value: $model.editStack.filmNegative.stockContrast,
+                                         range: -100...100, format: "%.0f", neutral: 0)
+                        AdjustmentSlider(title: "Stock Saturation",
+                                         value: $model.editStack.filmNegative.stockSaturation,
+                                         range: -100...100, format: "%.0f", neutral: 0)
+                    }
                 }
             }
         }
@@ -58,6 +76,15 @@ struct FilmPanel: View {
     }
 
     // MARK: Film base
+
+    /// Which measurement the conversion is trusting — the honesty caption.
+    private var baseOriginCaption: String {
+        switch film.baseOrigin {
+        case .assumed: "assumed default"
+        case .estimated: "estimated from this scan"
+        case .sampled: "sampled from this scan"
+        }
+    }
 
     private var filmBaseControls: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -71,16 +98,22 @@ struct FilmPanel: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Film Base")
                         .font(Theme.controlLabel)
-                    Text(model.hasSampledBase ? "sampled from this scan" : "assumed default")
+                    Text(baseOriginCaption)
                         .font(.system(size: 9.5, design: .monospaced))
-                        .foregroundStyle(model.hasSampledBase
-                                         ? AnyShapeStyle(Theme.secondaryText)
-                                         : AnyShapeStyle(Theme.filmEdge))
+                        .foregroundStyle(film.baseOrigin == .assumed
+                                         ? AnyShapeStyle(Theme.filmEdge)
+                                         : AnyShapeStyle(Theme.secondaryText))
                 }
 
                 Spacer()
 
-                PlateButton(title: "Auto") { model.sampleFilmBase() }
+                PlateButton(title: "Auto") {
+                    if film.conversionModel == .density {
+                        model.autoConvertNegative()
+                    } else {
+                        model.sampleFilmBase()
+                    }
+                }
 
                 PlateButton(title: model.canvasPicker == .filmBase ? "Click…" : "Pick") {
                     model.canvasPicker = model.canvasPicker == .filmBase ? nil : .filmBase
@@ -175,6 +208,85 @@ struct FilmPanel: View {
                 .font(.system(size: 9.5, design: .monospaced))
                 .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 2)
+        }
+        .padding(8)
+        .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
+    }
+
+    /// The print engine's front controls — the terms a printer would use.
+    private var printControls: some View {
+        VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            AdjustmentSlider(title: "Print Exposure",
+                             value: $model.editStack.filmNegative.print.exposure,
+                             range: -3...3, format: "%.2f EV", neutral: 0)
+            AdjustmentSlider(title: "Print Contrast",
+                             value: $model.editStack.filmNegative.print.contrast,
+                             range: 0...5, format: "Grade %.1f", neutral: 2)
+            AdjustmentSlider(title: "Shoulder",
+                             value: $model.editStack.filmNegative.print.shoulder,
+                             range: 0...100, format: "%.0f", neutral: 40)
+            AdjustmentSlider(title: "Toe",
+                             value: $model.editStack.filmNegative.print.toe,
+                             range: 0...100, format: "%.0f", neutral: 30)
+            if film.type != .blackAndWhiteNegative {
+                AdjustmentSlider(title: "Print Saturation",
+                                 value: $model.editStack.filmNegative.print.saturation,
+                                 range: -50...50, format: "%.0f", neutral: 12)
+                // Filtration is a color cast; on B&W the mono clamp after the
+                // kernel (below) strips it, so it would move nothing. Same
+                // gate as Print Saturation, same reason.
+                AdjustmentSlider(title: "Print Warmth",
+                                 value: $model.editStack.filmNegative.print.warmth,
+                                 range: -100...100, format: "%.0f", neutral: 24)
+                AdjustmentSlider(title: "Print Tint",
+                                 value: $model.editStack.filmNegative.print.tint,
+                                 range: -100...100, format: "%.0f", neutral: -8)
+            }
+
+            PlateButton(title: isShowingTrims ? "Hide Per-Channel" : "Per-Channel…") {
+                isShowingTrims.toggle()
+            }
+            if isShowingTrims { channelTrims }
+        }
+    }
+
+    /// The crossover controls. Behind a disclosure because nobody wants to
+    /// drive three gammas by hand as a first move — but they are the whole
+    /// reason this engine exists, so they are here.
+    private var channelTrims: some View {
+        VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            Text("BASE (D-MIN)").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.baseColor.red,
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.red)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.baseColor.green,
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.green)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.baseColor.blue,
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.blue)
+
+            Text("WHITE POINT (D-MAX)").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.print.dmax.red,
+                             range: 0.2...4, format: "%.2f", neutral: 2)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.print.dmax.green,
+                             range: 0.2...4, format: "%.2f", neutral: 2)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.print.dmax.blue,
+                             range: 0.2...4, format: "%.2f", neutral: 2)
+
+            Text("PAPER GAMMA").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.print.gamma.red,
+                             range: 0.2...3, format: "%.2f", neutral: 1)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.print.gamma.green,
+                             range: 0.2...3, format: "%.2f", neutral: 1)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.print.gamma.blue,
+                             range: 0.2...3, format: "%.2f", neutral: 1)
         }
         .padding(8)
         .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))

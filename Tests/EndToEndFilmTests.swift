@@ -163,6 +163,12 @@ final class EndToEndFilmTests: XCTestCase {
         stack.filmNegative.isEnabled = true
         stack.filmNegative.type = .colorNegative
         stack.filmNegative.baseColor = sampled
+        // This test's accuracy budget (and its "invert to black" / hue
+        // assertions) is the single-matrix inversion's math specifically.
+        // `FilmNegativeSettings()` defaults to `.density` (Task 3's print
+        // engine, tuned by its own gamma/dmax, not this fixture's channel
+        // gains) — pin the model this end-to-end scene was built to verify.
+        stack.filmNegative.conversionModel = .matrix
 
         let renderer = EditRenderer(context: context)
         let positive = renderer.render(source: source, stack: stack)
@@ -209,6 +215,10 @@ final class EndToEndFilmTests: XCTestCase {
         var stack = EditStack()
         stack.filmNegative.isEnabled = true
         stack.filmNegative.baseColor = sampled
+        // Same reasoning as the test above: this is a matrix-engine accuracy
+        // check, so pin the model explicitly rather than ride the `.density`
+        // default.
+        stack.filmNegative.conversionModel = .matrix
 
         let positive = EditRenderer(context: context).render(source: source, stack: stack)
 
