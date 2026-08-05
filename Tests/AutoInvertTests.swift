@@ -50,6 +50,22 @@ final class AutoInvertTests: XCTestCase {
             XCTAssertLessThan(abs(lab.a), 5.0, "\(grey) has a cast: a*=\(lab.a)")
             XCTAssertLessThan(abs(lab.b), 5.0, "\(grey) has a cast: b*=\(lab.b)")
         }
+
+        // Neutrality alone is direction-blind: a fully-inverted print of a
+        // neutral scene is still neutral at every patch, just backwards (this
+        // is not hypothetical — deleting AutoInvert's density re-sort produces
+        // exactly that, and the neutrality checks above stay green). Assert
+        // tone ORDER too, so a black-for-white inversion cannot pass silently.
+        let toneOrder = ["black", "shadowGrey", "midGrey", "lightGrey", "white"]
+        let levels = toneOrder.map { name -> Double in
+            let patch = FilmSim.scene().first { $0.name == name }!.linear
+            let out = develop(patch, with: solution, printSettings: flat)
+            return max(out.0, max(out.1, out.2))
+        }
+        for i in 1..<levels.count {
+            XCTAssertGreaterThan(levels[i], levels[i - 1],
+                "\(toneOrder[i]) (\(levels[i])) should print lighter than \(toneOrder[i - 1]) (\(levels[i - 1]))")
+        }
     }
 
     /// The matrix model's best case on the same fixture: base divided out
@@ -120,6 +136,16 @@ final class AutoInvertTests: XCTestCase {
     }
 
     /// Median density lands at the target midtone — the printEV bisection.
+    ///
+    /// `printExposure` is a bisection midpoint of bounds that only narrow, so
+    /// `isNaN` and range-membership can never fail on their own — they don't
+    /// test the property this test is named for. The real, falsifiable claim
+    /// is that DEVELOPING the scan's actual median tone with the solved
+    /// parameters lands on `PaperResponse.targetMid`, so this recomputes the
+    /// median-density transmittance independently (the same way `AutoInvert`
+    /// measured it: `dminLinear` recovered from the reported `baseColor`,
+    /// median density from a fresh percentile pass over the scan) rather than
+    /// trusting the solver's own internal bookkeeping.
     func testPrintExposurePlacesTheMedianAtMiddleGrey() throws {
         let scan = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas)
@@ -127,6 +153,36 @@ final class AutoInvertTests: XCTestCase {
                                                       context: context))
         XCTAssertFalse(solution.printExposure.isNaN)
         XCTAssertTrue((-8.0...8.0).contains(solution.printExposure))
+
+        let pixels = try XCTUnwrap(AutoInvert.linearPixels(of: scan, side: AutoInvert.sampleSide,
+                                                           context: context))
+        let dminLinear = (PaperResponse.srgbDecode(solution.baseColor.red),
+                          PaperResponse.srgbDecode(solution.baseColor.green),
+                          PaperResponse.srgbDecode(solution.baseColor.blue))
+        func density(_ t: Double, _ dmin: Double) -> Double {
+            log10(max(dmin, 1e-4) / max(t, PaperResponse.transmittanceFloor))
+        }
+        let reds = pixels.map { density($0.0, dminLinear.0) }.sorted()
+        let greens = pixels.map { density($0.1, dminLinear.1) }.sorted()
+        let blues = pixels.map { density($0.2, dminLinear.2) }.sorted()
+        let medianD = (AutoInvert.percentile(reds, 0.5), AutoInvert.percentile(greens, 0.5),
+                       AutoInvert.percentile(blues, 0.5))
+        let medianT = (dminLinear.0 * pow(10, -medianD.0), dminLinear.1 * pow(10, -medianD.1),
+                       dminLinear.2 * pow(10, -medianD.2))
+
+        let defaults = PrintSettings()
+        let out = PaperResponse.develop(
+            medianT, dminLinear: dminLinear,
+            dmax: (solution.dmax.red, solution.dmax.green, solution.dmax.blue),
+            gammaEffective: (solution.gamma.red, solution.gamma.green, solution.gamma.blue),
+            printOffset: solution.printExposure * log10(2.0),
+            p: PaperResponse.kneeP(shoulder: defaults.shoulder),
+            q: PaperResponse.kneeQ(toe: defaults.toe),
+            satScale: 1.0)
+        let maxChannel = max(out.0, max(out.1, out.2))
+        // 0.005 tolerance absorbs printExposure's 2-decimal-place rounding.
+        XCTAssertEqual(maxChannel, PaperResponse.targetMid, accuracy: 0.005,
+            "solved printExposure should place the median density at display middle grey: got \(maxChannel)")
     }
 
     /// A flat scan has no tonal range to solve against: every term that
