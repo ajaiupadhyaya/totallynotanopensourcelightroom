@@ -28,6 +28,24 @@ so no existing photo changes.
 
 ### Added
 
+- **A print engine for negatives.** Conversion now works the way an enlarger
+  does: per-channel density from the film base, a paper response with a real
+  toe and shoulder, and a highlight rolloff that desaturates toward white
+  without shifting hue. Per-channel paper gammas fix crossover — the
+  cyan-shadows/warm-highlights cast the old single-gain model provably could
+  not remove (there is a test that documents the difference). One Auto button
+  solves the whole conversion from the scan, deterministically, and every
+  value it writes stays an ordinary slider. Existing photos are untouched:
+  the matrix conversion is frozen exactly like Process Version 1, and
+  switching is an explicit, snapshotted, undoable Update Conversion action.
+  Auto measures the cropped frame when a crop exists — crop to the negative,
+  then convert, the way a printer masks the easel — and ignores pixels that
+  can only be backlight (clipped white, or bluer than any orange-masked film
+  can be), so sprocket holes and lightbox borders no longer poison the solve.
+  Print filtration adds Warmth and Tint, the enlarger color pack, defaulting
+  to a gentle lab-print warmth (chosen against real scans, pinned by a test);
+  double-click restores the house look.
+
 - **A conformance suite** covering every field of the edit stack. For each
   control it checks that neutral is a bit-exact no-op, that both extremes
   visibly change the image, and that the direction matches the label — and a
