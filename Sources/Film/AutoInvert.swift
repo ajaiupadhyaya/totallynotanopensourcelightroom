@@ -45,13 +45,13 @@ enum AutoInvert {
     /// the film itself.
     private static let backlightLevel = 0.9
 
-    /// Below this fraction of the frame, the backlight-exclusion filter (or
-    /// the chroma gate below) is refused rather than trusted: a scan that is
-    /// *mostly* backlight, or whose chroma is inconsistent with a masked
-    /// negative over nearly the whole frame, would otherwise solve
-    /// confidently off a handful of surviving pixels. Falling back to the
-    /// unfiltered set and flagging the degradation is more honest than a
-    /// precise-looking number built on noise.
+    /// Below this fraction of the frame, a candidate pixel population is
+    /// refused rather than trusted — whether that's the clip-only fallback
+    /// or the chroma-gated hypothesis set below: a scan that is *mostly*
+    /// backlight, or whose chroma-gated survivors are a sliver of the frame,
+    /// would otherwise solve confidently off a handful of pixels. Falling
+    /// back to a larger, less-filtered set and flagging the degradation is
+    /// more honest than a precise-looking number built on noise.
     private static let minimumUsableFraction = 0.05
 
     /// Above this ratio of blue to red (linear transmittance), a pixel is too
@@ -73,7 +73,34 @@ enum AutoInvert {
     /// which is exactly why `backlightLevel` alone misses it), bare lightbox,
     /// and — usefully — a neutral holder mask, where `r ≈ g ≈ b` puts
     /// blue/red right at 1.0, comfortably over this ceiling too.
+    ///
+    /// Applied speculatively (see `solve`'s gate-then-validate step): every
+    /// scan gets this filter tried on it, and the result is kept only if the
+    /// population that survives validates its own premise.
     private static let chromaGateBlueToRedRatio = 0.9
+
+    /// A candidate pixel population's chroma, judged the same way
+    /// `FilmBaseSampler.inferType` judges the panel's base color: a
+    /// throwaway Dmin estimate (98th percentile per channel) over the
+    /// population, normalized so overall brightness drops out, then
+    /// `maxChannel − minChannel`. Above 0.18 reads as an orange-masked base;
+    /// at or below reads as clear (B&W/slide) or, for a population that
+    /// isn't really film at all, coincidentally neutral.
+    private static func chromaSpread(of pixels: [(Double, Double, Double)]) -> Double {
+        let dmin = (percentile(pixels.map(\.0).sorted(), PaperResponse.dminPercentile),
+                   percentile(pixels.map(\.1).sorted(), PaperResponse.dminPercentile),
+                   percentile(pixels.map(\.2).sorted(), PaperResponse.dminPercentile))
+        return chromaSpread(FilmColor(red: PaperResponse.srgbEncode(dmin.0),
+                                      green: PaperResponse.srgbEncode(dmin.1),
+                                      blue: PaperResponse.srgbEncode(dmin.2)))
+    }
+
+    /// The same spread computation, directly on an already-known color (the
+    /// user's sampled base) rather than estimating one from pixels.
+    private static func chromaSpread(_ color: FilmColor) -> Double {
+        let normalized = color.normalized
+        return normalized.maxChannel - min(normalized.red, min(normalized.green, normalized.blue))
+    }
 
     /// - Parameter sampledBase: the user's eyedropper (or Phase 3 rebate)
     ///   measurement, display-encoded. Non-nil wins over the percentile
@@ -85,50 +112,77 @@ enum AutoInvert {
 
         var degraded: [String] = []
 
-        // 0. Drop clipped-backlight pixels before any percentile is taken —
-        // see `backlightLevel`. Every downstream statistic (Dmin when
-        // estimated, Dmax, D_low, the median-EV anchor) is computed from
-        // `pixels`, so this one filter protects all of them at once, not just
-        // the Dmin estimate.
-        let backlightExcluded = rawPixels.filter {
-            min($0.0, min($0.1, $0.2)) < backlightLevel
+        // 0. Gate-then-validate (not detect-then-gate — that was circular:
+        // the unclipped-but-cool backlight this gate exists to remove also
+        // contaminates any Dmin candidate estimated *before* gating, so a
+        // detection step run first can be fooled by the very thing it's
+        // trying to detect). Two populations are built without any mask
+        // decision at all:
+        //
+        // - `clipOnly`: survives just the backlight clip filter (round 1's
+        //   original behavior) — the B&W/slide/neutral-base fallback.
+        // - `candidateB`: survives BOTH the clip filter and the chroma gate
+        //   (`blue < chromaGateBlueToRedRatio · red`) at once — computed
+        //   speculatively, on every scan, with no prior judgment about
+        //   whether this scan even looks masked.
+        //
+        // The hypothesis "this is masked film, and B is its film pixels" is
+        // then validated against B's OWN evidence: if B is a usable fraction
+        // of the frame AND a throwaway Dmin estimated FROM B still reads as
+        // orange-masked (`chromaSpread(of:) > 0.18`, `FilmBaseSampler
+        // .inferType`'s own threshold), the surviving population supports
+        // the assumption that was used to build it, and B is adopted for the
+        // entire solve — Dmin (unless sampled), every density, Dmax, D_low,
+        // gamma, and the median-EV anchor. If it doesn't validate (B is a
+        // sliver of the frame, or what's left is itself chroma-neutral —
+        // evidence the "orange" reading was backlight bleed, not film), fall
+        // back to `clipOnly`: chroma-gating a genuinely clear base would only
+        // strip real image data, not backlight, since a clear base has
+        // nothing distinguishing it from backlight along this axis.
+        //
+        // A user-sampled base overrides the hypothesis test entirely, in
+        // both directions: its own chroma spread — not B's — decides masked
+        // or not, the same way it already wins for Dmin. An eyedropper on
+        // real, physical film is stronger evidence than any statistic.
+        let clipOnly = rawPixels.filter { min($0.0, min($0.1, $0.2)) < backlightLevel }
+        let clipOnlyUsable = Double(clipOnly.count) >= Double(rawPixels.count) * minimumUsableFraction
+        let candidateB = rawPixels.filter {
+            min($0.0, min($0.1, $0.2)) < backlightLevel && $0.2 < chromaGateBlueToRedRatio * $0.0
         }
+        let candidateBUsable = Double(candidateB.count) >= Double(rawPixels.count) * minimumUsableFraction
+
         var pixels: [(Double, Double, Double)]
-        if Double(backlightExcluded.count) >= Double(rawPixels.count) * minimumUsableFraction {
-            pixels = backlightExcluded
+        if let sampledBase {
+            if chromaSpread(sampledBase) > 0.18 {
+                // The user has told us it's masked film: adopt B if there's
+                // enough of it to trust, otherwise fall back and say so —
+                // the claim and the pixels disagree.
+                if candidateBUsable {
+                    pixels = candidateB
+                } else {
+                    pixels = clipOnlyUsable ? clipOnly : rawPixels
+                    degraded.append("scan chroma inconsistent with a masked negative")
+                }
+            } else {
+                // The user has told us it's NOT masked film (a real sample
+                // of clear/neutral base) — no point testing a hypothesis
+                // already disproven by direct measurement.
+                if clipOnlyUsable {
+                    pixels = clipOnly
+                } else {
+                    pixels = rawPixels
+                    degraded.append("scan is mostly backlight")
+                }
+            }
+        } else if candidateBUsable, chromaSpread(of: candidateB) > 0.18 {
+            // Hypothesis confirmed: what survives the gate still looks like
+            // orange-masked film on its own terms.
+            pixels = candidateB
+        } else if clipOnlyUsable {
+            pixels = clipOnly
         } else {
             pixels = rawPixels
             degraded.append("scan is mostly backlight")
-        }
-
-        // 0b. The film-chroma gate — only on a masked color negative (a B&W
-        // or slide base is legitimately neutral-bright, so gating on chroma
-        // there would exclude real film). Mask presence is inferred exactly
-        // the way `FilmBaseSampler.inferType` decides it for the panel: from
-        // the sampled base when the caller supplied one (it wins here too,
-        // same as the Dmin decision below), otherwise from a throwaway Dmin
-        // estimate over the backlight-excluded set — this candidate is used
-        // ONLY to answer "is this a masked negative?", not carried forward;
-        // step 1 below computes the real, authoritative Dmin over whatever
-        // `pixels` ends up being after this gate.
-        let maskCheckBase: FilmColor
-        if let sampledBase {
-            maskCheckBase = sampledBase
-        } else {
-            let candidateDmin = (percentile(pixels.map(\.0).sorted(), PaperResponse.dminPercentile),
-                                 percentile(pixels.map(\.1).sorted(), PaperResponse.dminPercentile),
-                                 percentile(pixels.map(\.2).sorted(), PaperResponse.dminPercentile))
-            maskCheckBase = FilmColor(red: PaperResponse.srgbEncode(candidateDmin.0),
-                                      green: PaperResponse.srgbEncode(candidateDmin.1),
-                                      blue: PaperResponse.srgbEncode(candidateDmin.2))
-        }
-        if FilmBaseSampler.inferType(from: maskCheckBase) == .colorNegative {
-            let chromaGated = pixels.filter { $0.2 < chromaGateBlueToRedRatio * $0.0 }
-            if Double(chromaGated.count) >= Double(pixels.count) * minimumUsableFraction {
-                pixels = chromaGated
-            } else {
-                degraded.append("scan chroma inconsistent with a masked negative")
-            }
         }
 
         // 1. Dmin per channel — sampled if available, else the 98th
