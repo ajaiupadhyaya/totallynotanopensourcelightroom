@@ -670,11 +670,63 @@ final class EditorModel {
     /// a base has been sampled.
     private(set) var stockMatches: [StockMatch] = []
 
-    /// Turns on negative conversion and does the sensible first pass: sample
-    /// the film base off the scan, infer the family from it, and rank stocks.
+    /// Turns on negative conversion. Density-model photos get the full Auto
+    /// solve; matrix-model photos keep the original sample-and-rank behavior.
     func enableFilmNegative() {
-        editStack.filmNegative.isEnabled = true
-        sampleFilmBase()
+        if editStack.filmNegative.conversionModel == .density {
+            autoConvertNegative()
+        } else {
+            editStack.filmNegative.isEnabled = true
+            sampleFilmBase()
+        }
+    }
+
+    /// The Auto button: solve the whole conversion off the scan and write it
+    /// as ONE stack assignment — one undo step, like every other gesture.
+    ///
+    /// All mutations, including the stock-family inference, land on the local
+    /// `film` var before the single assignment below — mirroring
+    /// ``upgradeToProcessVersion2()``'s pattern. (A second `editStack.filmNegative`
+    /// write after the main assignment would still coalesce into one commit,
+    /// since the debounced commit diffs the *final* `editStack` against
+    /// `lastCommittedStack` rather than per-assignment — but it would also
+    /// trigger a second, wasted `renderPreview()`/`scheduleCommit()` pass via
+    /// `editStack`'s `didSet`. One assignment avoids that.)
+    func autoConvertNegative() {
+        guard let source else { return }
+        var film = editStack.filmNegative
+        film.isEnabled = true
+        let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
+        guard let solution = AutoInvert.solve(scan: source, sampledBase: sampled,
+                                              context: renderer.context) else { return }
+        film.baseColor = solution.baseColor
+        film.baseOrigin = solution.baseOrigin
+        film.isBaseSampled = solution.baseOrigin == .sampled
+        film.print.dmax = solution.dmax
+        film.print.gamma = solution.gamma
+        film.print.exposure = solution.printExposure
+
+        // Same courtesy as the matrix path: infer the family off the measured
+        // base, folded into the same local var so it lands in the single
+        // assignment below rather than a second one.
+        if film.stockID == nil {
+            film.type = FilmBaseSampler.inferType(from: solution.baseColor)
+        }
+        editStack.filmNegative = film
+
+        stockMatches = FilmBaseSampler.rankStocks(matching: solution.baseColor,
+                                                  in: filmStocks)
+    }
+
+    /// Matrix → print engine, as an explicit, snapshotted, undoable action —
+    /// the same guarantees as the Process badge. The current look stays one
+    /// click away in Snapshots forever.
+    func updateConversion() {
+        guard editStack.filmNegative.isEnabled,
+              editStack.filmNegative.conversionModel == .matrix else { return }
+        _ = saveSnapshot(named: "Before Print Engine")
+        editStack.filmNegative.conversionModel = .density
+        autoConvertNegative()
     }
 
     /// Samples the film base from the **untouched scan** — not the rendered
@@ -711,6 +763,10 @@ final class EditorModel {
     func applyFilmStock(_ stock: FilmStock) {
         editStack.filmNegative.apply(stock, keepSampledBase: hasSampledBase)
         editStack.filmNegative.isEnabled = true
+        if editStack.filmNegative.conversionModel == .density {
+            if let grade = stock.printContrast { editStack.filmNegative.print.contrast = grade }
+            if let sat = stock.printSaturation { editStack.filmNegative.print.saturation = sat }
+        }
     }
 
     /// Saves the current film settings as a reusable calibrated profile.
@@ -731,6 +787,8 @@ final class EditorModel {
             channelGains: film.channelGains,
             contrast: film.stockContrast,
             saturation: film.stockSaturation,
+            printContrast: film.conversionModel == .density ? film.print.contrast : nil,
+            printSaturation: film.conversionModel == .density ? film.print.saturation : nil,
             isCustom: true
         )
         do {
@@ -757,12 +815,20 @@ final class EditorModel {
     private func applySampledBase(_ base: FilmColor) {
         editStack.filmNegative.baseColor = base
         editStack.filmNegative.isBaseSampled = true
+        editStack.filmNegative.baseOrigin = .sampled
         if editStack.filmNegative.stockID == nil {
             editStack.filmNegative.type = FilmBaseSampler.inferType(from: base)
         }
         stockMatches = FilmBaseSampler.rankStocks(
             matching: base, in: filmStocks, type: editStack.filmNegative.type
         )
+
+        // On the print engine a better Dmin should immediately improve the
+        // whole solve — the sampled base feeds straight back through Auto.
+        if editStack.filmNegative.conversionModel == .density,
+           editStack.filmNegative.isEnabled {
+            autoConvertNegative()
+        }
     }
 
     private func reloadFilmStocks() {

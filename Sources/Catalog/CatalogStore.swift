@@ -112,6 +112,15 @@ final class CatalogStore {
             try db.create(index: "idx_editSnapshot_entryID",
                           on: EditSnapshot.databaseTableName, columns: ["entryID"])
         }
+        // Print-engine character for calibrated stocks. Nullable: a stock
+        // saved before the print engine simply has no density character, and
+        // applying it leaves the solved values alone.
+        migrator.registerMigration("v7_stockPrintCharacter") { db in
+            try db.alter(table: "filmStock") { t in
+                t.add(column: "printContrast", .double)
+                t.add(column: "printSaturation", .double)
+            }
+        }
         return migrator
     }
 

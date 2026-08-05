@@ -69,6 +69,12 @@ struct FilmStock: Codable, Equatable, Identifiable, FetchableRecord, Persistable
     /// Saturation nudge, `-100...100`.
     var saturation: Double
 
+    /// Print-engine character (paper grade / print saturation), captured when
+    /// a stock is calibrated under the density model. Nil on built-ins and on
+    /// stocks calibrated before the print engine existed.
+    var printContrast: Double? = nil
+    var printSaturation: Double? = nil
+
     /// True for profiles the user calibrated from their own scan.
     var isCustom: Bool = false
 
