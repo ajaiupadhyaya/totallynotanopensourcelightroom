@@ -722,6 +722,17 @@ final class EditorModel {
         film.print.gamma = solution.gamma
         film.print.exposure = solution.printExposure
 
+        // Zero the legacy (matrix-era) EV lift. It was a placement aid for a
+        // model with no notion of a print exposure of its own; the density
+        // engine places exposure itself (`print.exposure`, solved above), and
+        // the field is invisible in the density panel (`FilmPanel` only shows
+        // it on the matrix branch) — so a stale nonzero value here is pure
+        // dead weight that silently fights the solve with an EV the user can
+        // no longer see or clear. Any pre-Auto look is preserved separately,
+        // in the "Before Print Engine" snapshot `updateConversion` takes
+        // before calling this.
+        film.exposure = 0
+
         // Same courtesy as the matrix path: infer the family off the measured
         // base, folded into the same local var so it lands in the single
         // assignment below rather than a second one.
@@ -739,7 +750,8 @@ final class EditorModel {
     /// click away in Snapshots forever.
     func updateConversion() {
         guard editStack.filmNegative.isEnabled,
-              editStack.filmNegative.conversionModel == .matrix else { return }
+              editStack.filmNegative.conversionModel == .matrix,
+              editStack.filmNegative.type.requiresInversion else { return }
         _ = saveSnapshot(named: "Before Print Engine")
         editStack.filmNegative.conversionModel = .density
         autoConvertNegative()

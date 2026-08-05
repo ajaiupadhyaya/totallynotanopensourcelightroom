@@ -24,7 +24,7 @@ struct FilmPanel: View {
             ))
 
             if film.isEnabled {
-                if film.conversionModel == .matrix {
+                if film.conversionModel == .matrix && film.type.requiresInversion {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("This photo uses the original matrix conversion. "
                              + "Updating re-solves it through the print engine — "

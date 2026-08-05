@@ -62,6 +62,55 @@ final class PrintEngineModelTests: XCTestCase {
         XCTAssertEqual(model.snapshots.count, count, "no snapshot, nothing to update")
     }
 
+    /// Slide film is already a positive — `FilmDensityConverter`'s inversion
+    /// dispatch requires `type.requiresInversion`, so a slide-type matrix
+    /// stack renders identically under either engine. Offering "Update
+    /// Conversion" there would still snapshot and run a real (if pointless)
+    /// solve, so `updateConversion()` must be a complete no-op on it — same
+    /// guard as `FilmPanel`'s note, defended again here so the action isn't
+    /// only as safe as the view that happens to call it.
+    func testUpdateConversionIsANoOpOnSlideMatrixStacks() throws {
+        var stack = EditStack()
+        stack.filmNegative.isEnabled = true
+        stack.filmNegative.conversionModel = .matrix
+        stack.filmNegative.type = .slide
+        let model = try TestSupport.makeEditorModel(editStack: stack)
+        let before = model.editStack
+        let snapshotsBefore = model.snapshots.count
+
+        model.updateConversion()
+
+        XCTAssertEqual(model.editStack, before, "slide stacks under matrix should be untouched")
+        XCTAssertEqual(model.editStack.filmNegative.conversionModel, .matrix)
+        XCTAssertEqual(model.snapshots.count, snapshotsBefore, "no snapshot, nothing to update")
+    }
+
+    /// The legacy Film Exposure field (`filmNegative.exposure`) is a
+    /// matrix-era placement aid, invisible in the density panel, that
+    /// `FilmDensityConverter` still applies as a post-kernel EV lift
+    /// (Sources/Film/FilmDensityConverter.swift). A matrix photo carrying a
+    /// nonzero legacy exposure that runs Update Conversion must not carry
+    /// that stale, invisible lift into the density solve — Auto places
+    /// exposure itself (`print.exposure`), and a leftover EV would silently
+    /// fight it. The pre-update look (legacy exposure included) must still
+    /// be recoverable from the snapshot Update Conversion takes.
+    func testUpdateConversionClearsLegacyExposureButSnapshotPreservesIt() throws {
+        var stack = EditStack()
+        stack.filmNegative.isEnabled = true
+        stack.filmNegative.conversionModel = .matrix
+        stack.filmNegative.exposure = 1.5
+        let model = try TestSupport.makeEditorModel(editStack: stack)
+
+        model.updateConversion()
+
+        XCTAssertEqual(model.editStack.filmNegative.conversionModel, .density)
+        XCTAssertEqual(model.editStack.filmNegative.exposure, 0,
+                       "the stale matrix-era EV lift must not survive into the density solve")
+        XCTAssertEqual(model.snapshots.first { $0.name == "Before Print Engine" }?
+            .editStack.filmNegative.exposure, 1.5,
+            "the pre-update look, legacy exposure included, must stay recoverable")
+    }
+
     /// The eyedropper on a density-model photo re-solves with the sampled
     /// base — a better Dmin should immediately improve Dmax, gamma, and
     /// exposure too.
