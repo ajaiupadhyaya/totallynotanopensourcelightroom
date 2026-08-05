@@ -139,9 +139,22 @@ final class PrintEngineModelTests: XCTestCase {
     ///
     /// Built from `FilmSim`'s own patch grid (its natural Dmax, printed as a
     /// diagnostic while verifying Fix 1's no-op, is ~(1.64, 1.85, 2.08)) with
-    /// the composite's holder driven deliberately far past that (~2.6–3.3),
+    /// the composite's holder driven deliberately far past that (~2.6–3.0),
     /// so "the holder no longer sets Dmax" is a real, large before/after
     /// move, not a coin flip near the boundary.
+    ///
+    /// The holder is deliberately given a slight red-warm tint (see
+    /// `makeHolderMaskedNegativePNG`), not the perfectly neutral near-black
+    /// this fixture used before Fix 3 existed. A perfectly neutral holder
+    /// (`r ≈ g ≈ b`) is now excluded by Fix 3's chroma gate on its own —
+    /// confirmed directly: with a neutral holder byte, this test's `blind`
+    /// and `cropped` Dmax became bit-identical (both landed on what used to
+    /// be only the cropped answer), because the chroma gate had already done
+    /// the crop's job. That's Fix 3 working, not a bug, but it stops this
+    /// test from isolating Fix 2 — a warm-tinted holder survives the chroma
+    /// gate (its blue/red ratio sits at ≈0.33, comfortably under the 0.9
+    /// gate) while remaining exactly as dense a contaminant, so only the
+    /// *crop* removes it here.
     func testAutoConvertMeasuresTheCroppedFrameNotTheFullOne() throws {
         let (url, centerCropRect) = try Self.makeHolderMaskedNegativePNG()
         let catalog = try TestSupport.inMemoryCatalog()
@@ -212,14 +225,20 @@ final class PrintEngineModelTests: XCTestCase {
         let cellW = max(1, centerSize / cols)
         let cellH = max(1, centerSize / rows)
 
-        // A near-black holder byte, ALREADY display-encoded (this is what
-        // gets written straight to the file — a physical black plastic
-        // holder as a camera would actually capture it, not a linear
-        // transmittance run through the encoder). One 8-bit step above pure
-        // black decodes to a linear value whose density is well past the
-        // patch grid's own densest patch in every channel (see the test's
-        // doc comment for the margin).
-        let holderByte: UInt8 = 1
+        // Near-black holder bytes, ALREADY display-encoded (this is what
+        // gets written straight to the file — a physical holder as a camera
+        // would actually capture it, not a linear transmittance run through
+        // the encoder). Slightly red-warm rather than perfectly neutral —
+        // see the test's doc comment for why: a perfectly neutral near-black
+        // (r=g=b) is excluded by Fix 3's chroma gate on its own (blue/red =
+        // 1.0, over its 0.9 ceiling), which would stop this fixture from
+        // isolating Fix 2. At (3, 1, 1) the blue/red ratio is ≈0.33 — well
+        // under the gate, so the chroma gate leaves it alone — while still
+        // decoding to a density well past the patch grid's own densest patch
+        // in every channel (see the test's doc comment for the margin).
+        let holderRedByte: UInt8 = 3
+        let holderGreenByte: UInt8 = 1
+        let holderBlueByte: UInt8 = 1
 
         func encodeByte(_ linear: Double) -> UInt8 {
             let s = PaperResponse.srgbEncode(min(max(linear, 0), 1))
@@ -243,7 +262,7 @@ final class PrintEngineModelTests: XCTestCase {
                     pixels[i + 1] = encodeByte(t.1)
                     pixels[i + 2] = encodeByte(t.2)
                 } else {
-                    pixels[i] = holderByte; pixels[i + 1] = holderByte; pixels[i + 2] = holderByte
+                    pixels[i] = holderRedByte; pixels[i + 1] = holderGreenByte; pixels[i + 2] = holderBlueByte
                 }
                 pixels[i + 3] = 255
             }
