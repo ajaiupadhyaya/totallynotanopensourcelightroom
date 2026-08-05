@@ -247,17 +247,24 @@ enum AutoInvert {
         let medianT = (dminLinear.0 * pow(10, -medianD.0),
                        dminLinear.1 * pow(10, -medianD.1),
                        dminLinear.2 * pow(10, -medianD.2))
+        // Solved with the shipped look's default knees AND default filtration
+        // — the same reasoning as `p`/`q` below: Auto places the median under
+        // the house rendering the user will actually see, not under a
+        // hypothetical neutral one, so a non-zero shipped warmth/tint doesn't
+        // quietly shift the midtone off target.
         let defaults = PrintSettings()
         let p = PaperResponse.kneeP(shoulder: defaults.shoulder)
         let q = PaperResponse.kneeQ(toe: defaults.toe)
         var lo = -8.0, hi = 8.0
         for _ in 0..<40 {
             let mid = (lo + hi) / 2
+            let offset = PaperResponse.printOffsets(exposureEV: mid, warmth: defaults.warmth,
+                                                     tint: defaults.tint)
             let out = PaperResponse.develop(
                 medianT, dminLinear: dminLinear,
                 dmax: (dmaxV.0, dmaxV.1, dmaxV.2),
                 gammaEffective: (gamma.red, gamma.green, gamma.blue),
-                printOffset: mid * log10(2.0), p: p, q: q, satScale: 1.0)
+                printOffset: offset, p: p, q: q, satScale: 1.0)
             if max(out.0, max(out.1, out.2)) < PaperResponse.targetMid { lo = mid } else { hi = mid }
         }
         let printEV = ((lo + hi) / 2 * 100).rounded() / 100 // stable to read

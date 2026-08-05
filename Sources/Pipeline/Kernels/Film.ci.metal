@@ -31,11 +31,14 @@ static float paper_curve(float n, float p, float q) {
 
 extern "C" float4 film_density_print(coreimage::sample_t s,
                                      float3 dmin, float3 dmax, float3 gam,
-                                     float printOffset, float p, float q,
+                                     float3 printOffset, float p, float q,
                                      float shoulderStart, float highlightDesat,
                                      float satScale) {
     // Stage 1+2: density relative to the base, then the paper's straight line.
     // gam arrives with the grade scale already folded in (CPU side).
+    // printOffset is per-channel: printEV·log10(2) plus filtration (the
+    // enlarger color pack) — see PaperResponse.printOffsets, which mirrors
+    // this fold exactly.
     float3 t = max(s.rgb, float3(1e-5f));
     float3 D = log10(max(dmin, float3(1e-4f)) / t);
     float3 sp = pow(float3(10.0f), gam * (D - dmax) + printOffset);

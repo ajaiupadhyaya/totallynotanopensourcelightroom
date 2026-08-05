@@ -55,6 +55,48 @@ final class PaperResponseTests: XCTestCase {
         XCTAssertEqual(PaperResponse.gradeScale(1), 1 / 1.15, accuracy: 1e-12)
     }
 
+    /// Neutral filtration (0, 0) collapses to the same scalar offset on all
+    /// three channels — the enlarger analogy's "no filter pack" case.
+    func testPrintOffsetsAtNeutralFiltrationIsScalarOnAllChannels() {
+        let base = 1.25 * log10(2.0)
+        let offsets = PaperResponse.printOffsets(exposureEV: 1.25, warmth: 0, tint: 0)
+        XCTAssertEqual(offsets.0, base, accuracy: 1e-12)
+        XCTAssertEqual(offsets.1, base, accuracy: 1e-12)
+        XCTAssertEqual(offsets.2, base, accuracy: 1e-12)
+    }
+
+    /// ±100 warmth/tint is exactly ±0.25 EV, split red vs. blue (warmth) or
+    /// applied to green alone (tint) — the closed form the doc comment
+    /// promises.
+    func testPrintOffsetsFullScaleFiltrationIsQuarterStop() {
+        let full = 0.25 * log10(2.0)
+
+        let warm = PaperResponse.printOffsets(exposureEV: 0, warmth: 100, tint: 0)
+        XCTAssertEqual(warm.0, full, accuracy: 1e-12, "warmth +100 should add a quarter stop to red")
+        XCTAssertEqual(warm.1, 0, accuracy: 1e-12, "warmth must not move green")
+        XCTAssertEqual(warm.2, -full, accuracy: 1e-12, "warmth +100 should remove a quarter stop from blue")
+
+        let cool = PaperResponse.printOffsets(exposureEV: 0, warmth: -100, tint: 0)
+        XCTAssertEqual(cool.0, -full, accuracy: 1e-12)
+        XCTAssertEqual(cool.2, full, accuracy: 1e-12)
+
+        let green = PaperResponse.printOffsets(exposureEV: 0, warmth: 0, tint: 100)
+        XCTAssertEqual(green.0, 0, accuracy: 1e-12, "tint must not move red")
+        XCTAssertEqual(green.1, full, accuracy: 1e-12, "tint +100 should add a quarter stop to green")
+        XCTAssertEqual(green.2, 0, accuracy: 1e-12, "tint must not move blue")
+
+        let magenta = PaperResponse.printOffsets(exposureEV: 0, warmth: 0, tint: -100)
+        XCTAssertEqual(magenta.1, -full, accuracy: 1e-12)
+
+        // Exposure and filtration are additive, not exclusive: exposure sets
+        // the common floor every channel inherits.
+        let combined = PaperResponse.printOffsets(exposureEV: 2, warmth: 100, tint: -100)
+        let base = 2 * log10(2.0)
+        XCTAssertEqual(combined.0, base + full, accuracy: 1e-12)
+        XCTAssertEqual(combined.1, base - full, accuracy: 1e-12)
+        XCTAssertEqual(combined.2, base - full, accuracy: 1e-12)
+    }
+
     /// The rolloff lerps every channel ratio toward 1 by a *common* weight,
     /// which scales all inter-channel differences by the same factor — so the
     /// channel ordering and the ratios of differences are invariant, and HSV
@@ -81,7 +123,7 @@ final class PaperResponseTests: XCTestCase {
         for d in [1.6, 2.0, 2.4] {
             let t = (dmin.0 * pow(10, -d), dmin.1 * pow(10, -(d - 0.6)), dmin.2 * pow(10, -(d - 0.9)))
             let out = PaperResponse.develop(t, dminLinear: dmin, dmax: dmax,
-                                            gammaEffective: gamma, printOffset: 0,
+                                            gammaEffective: gamma, printOffset: (0, 0, 0),
                                             p: PaperResponse.kneeP(shoulder: 40),
                                             q: PaperResponse.kneeQ(toe: 30),
                                             satScale: 1.0)
@@ -123,13 +165,13 @@ final class PaperResponseTests: XCTestCase {
         let q = PaperResponse.kneeQ(toe: 30)
 
         let base = PaperResponse.develop(dmin, dminLinear: dmin, dmax: dmax,
-                                         gammaEffective: gamma, printOffset: 0,
+                                         gammaEffective: gamma, printOffset: (0, 0, 0),
                                          p: p, q: q, satScale: 1.0)
         XCTAssertLessThan(max(base.0, base.1, base.2), 0.02)
 
         let dense = (dmin.0 * pow(10, -2.0), dmin.1 * pow(10, -2.0), dmin.2 * pow(10, -2.0))
         let white = PaperResponse.develop(dense, dminLinear: dmin, dmax: dmax,
-                                          gammaEffective: gamma, printOffset: 0,
+                                          gammaEffective: gamma, printOffset: (0, 0, 0),
                                           p: p, q: q, satScale: 1.0)
         XCTAssertGreaterThan(min(white.0, white.1, white.2), 0.9)
     }
@@ -144,7 +186,7 @@ final class PaperResponseTests: XCTestCase {
         for t in cases {
             let out = PaperResponse.develop(t, dminLinear: dmin, dmax: (2, 2, 2),
                                             gammaEffective: (1.2, 1.2, 1.2),
-                                            printOffset: 0, p: 16, q: 204, satScale: 1.12)
+                                            printOffset: (0, 0, 0), p: 16, q: 204, satScale: 1.12)
             for c in [out.0, out.1, out.2] {
                 XCTAssertFalse(c.isNaN); XCTAssertFalse(c.isInfinite)
                 XCTAssertGreaterThanOrEqual(c, 0); XCTAssertLessThan(c, 1.0)

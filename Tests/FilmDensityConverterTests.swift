@@ -24,19 +24,25 @@ final class FilmDensityConverterTests: XCTestCase {
     /// against `PaperResponse.develop`.
     ///
     /// Run twice: once at the identity fold (contrast 2 → gradeScale 1.0,
-    /// exposure 0 → printOffset 0) and once away from it (contrast 3,
-    /// exposure 1). The two CPU-side foldings in `FilmDensityConverter`
-    /// (`gamma × gradeScale`, `printOffset = exposure·log10(2)`) are
-    /// otherwise untested by this file — every other settings object here
-    /// leaves both at their identity value, so a wrong fold (grade applied to
-    /// `dmax` instead of `gamma`, `pow(2, ·)` instead of `log10(2)`, a sign
-    /// flip) would leave the whole suite green.
+    /// exposure 0, warmth/tint 0 → printOffset (0,0,0) on every channel) and
+    /// once away from it (contrast 3, exposure 1, warmth 24, tint −8). The
+    /// CPU-side foldings in `FilmDensityConverter` (`gamma × gradeScale`,
+    /// `printOffset = printOffsets(exposureEV:warmth:tint:)`) are otherwise
+    /// untested by this file — every other settings object here leaves them
+    /// all at their identity value, so a wrong fold (grade applied to `dmax`
+    /// instead of `gamma`, `pow(2, ·)` instead of `log10(2)`, a sign flip, or
+    /// the float3 printOffset collapsing back to one scalar) would leave the
+    /// whole suite green. Nonzero warmth/tint here is what actually exercises
+    /// the per-channel float3 fold at non-identity values — a run with both
+    /// still at 0 would pass even if the kernel silently ignored them.
     func testKernelAgreesWithTheSwiftModel() {
         assertKernelAgreesWithSwiftModel(densitySettings())
 
         var graded = densitySettings()
         graded.print.contrast = 3
         graded.print.exposure = 1
+        graded.print.warmth = 24
+        graded.print.tint = -8
         assertKernelAgreesWithSwiftModel(graded)
     }
 
@@ -57,7 +63,9 @@ final class FilmDensityConverterTests: XCTestCase {
         let gammaEffective = (settings.print.gamma.red * grade,
                               settings.print.gamma.green * grade,
                               settings.print.gamma.blue * grade)
-        let printOffset = settings.print.exposure * log10(2.0)
+        let printOffset = PaperResponse.printOffsets(exposureEV: settings.print.exposure,
+                                                      warmth: settings.print.warmth,
+                                                      tint: settings.print.tint)
         let dmax = (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue)
         let p = PaperResponse.kneeP(shoulder: settings.print.shoulder)
         let q = PaperResponse.kneeQ(toe: settings.print.toe)

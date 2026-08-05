@@ -67,6 +67,33 @@ enum PaperResponse {
         pow(1.15, grade - 2.0)
     }
 
+    /// Print exposure plus filtration, resolved to the three per-channel
+    /// log-domain offsets `develop` takes as `printOffset`.
+    ///
+    /// The enlarger analogy: a real color enlarger places a dichroic filter
+    /// pack (cyan/magenta/yellow, or the printer's shorthand of "more red" /
+    /// "more green") in the light path below the negative. Every filtration
+    /// value moves exposure between complementary channels rather than
+    /// adding light overall — dial in more red and blue drops to match, so
+    /// filtration warms or cools the print without changing its overall
+    /// brightness the way `exposureEV` does. `warmth` is the red–blue pack;
+    /// `tint` is the green–magenta pack (typically minus-green/minus-magenta
+    /// on a real color head, but signed here as green-positive to match the
+    /// panel and ``Conformance/greenMagenta``).
+    ///
+    /// ±100 = ±0.25 EV full scale: enough to read as a clear, deliberate cast
+    /// at the extreme without being able to overpower a three-stop exposure
+    /// mistake — filtration is meant to trim the house look, not rescue a
+    /// bad scan.
+    static func printOffsets(exposureEV: Double, warmth: Double, tint: Double)
+        -> (Double, Double, Double) {
+        let base = exposureEV * log10(2.0)
+        let full = 0.25 * log10(2.0)
+        return (base + warmth / 100.0 * full,
+                base + tint / 100.0 * full,
+                base - warmth / 100.0 * full)
+    }
+
     // MARK: The curve
 
     /// Identity for small x, asymptote 1 for large x, strictly increasing,
@@ -103,8 +130,11 @@ enum PaperResponse {
 
     /// The complete density-to-print develop for one linear-transmittance
     /// pixel. `gammaEffective` is the per-channel gamma with the grade scale
-    /// already folded in; `printOffset` is `printEV · log10(2)`; `satScale` is
-    /// `1 + printSaturation / 100`.
+    /// already folded in; `printOffset` is the per-channel log-domain
+    /// exposure — `printEV · log10(2)` plus filtration, see
+    /// ``printOffsets(exposureEV:warmth:tint:)`` — one value per channel so
+    /// warmth/tint can move red and blue in opposite directions; `satScale`
+    /// is `1 + printSaturation / 100`.
     ///
     /// Stage order (spec §The model): density → straight line → paper on the
     /// max-channel norm → hue-preserving rolloff. The norm is `max`, not a
@@ -114,16 +144,17 @@ enum PaperResponse {
                         dminLinear: (Double, Double, Double),
                         dmax: (Double, Double, Double),
                         gammaEffective: (Double, Double, Double),
-                        printOffset: Double,
+                        printOffset: (Double, Double, Double),
                         p: Double, q: Double,
                         satScale: Double) -> (Double, Double, Double) {
-        func straightLine(_ t: Double, _ dmin: Double, _ dmax: Double, _ g: Double) -> Double {
+        func straightLine(_ t: Double, _ dmin: Double, _ dmax: Double, _ g: Double,
+                          _ offset: Double) -> Double {
             let density = log10(max(dmin, 1e-4) / max(t, transmittanceFloor))
-            return pow(10.0, g * (density - dmax) + printOffset)
+            return pow(10.0, g * (density - dmax) + offset)
         }
-        let s = (straightLine(t.0, dminLinear.0, dmax.0, gammaEffective.0),
-                 straightLine(t.1, dminLinear.1, dmax.1, gammaEffective.1),
-                 straightLine(t.2, dminLinear.2, dmax.2, gammaEffective.2))
+        let s = (straightLine(t.0, dminLinear.0, dmax.0, gammaEffective.0, printOffset.0),
+                 straightLine(t.1, dminLinear.1, dmax.1, gammaEffective.1, printOffset.1),
+                 straightLine(t.2, dminLinear.2, dmax.2, gammaEffective.2, printOffset.2))
         let n = max(s.0, max(s.1, s.2))
         var ratio = n > 0 ? (s.0 / n, s.1 / n, s.2 / n) : (1.0, 1.0, 1.0)
         // Hue-preserving saturation: scale the ratio around 1. Clamped at zero

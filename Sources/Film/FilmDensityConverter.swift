@@ -30,6 +30,8 @@ enum FilmDensityConverter {
         }
 
         let grade = PaperResponse.gradeScale(p.contrast)
+        let printOffset = PaperResponse.printOffsets(exposureEV: p.exposure,
+                                                      warmth: p.warmth, tint: p.tint)
         var result = kernel.apply(
             extent: image.extent,
             arguments: [
@@ -38,7 +40,7 @@ enum FilmDensityConverter {
                 CIVector(x: p.dmax.red, y: p.dmax.green, z: p.dmax.blue),
                 CIVector(x: p.gamma.red * grade, y: p.gamma.green * grade,
                          z: p.gamma.blue * grade),
-                Float(p.exposure * log10(2.0)),
+                CIVector(x: printOffset.0, y: printOffset.1, z: printOffset.2),
                 Float(PaperResponse.kneeP(shoulder: p.shoulder)),
                 Float(PaperResponse.kneeQ(toe: p.toe)),
                 Float(PaperResponse.shoulderStart),

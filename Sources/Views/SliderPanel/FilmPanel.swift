@@ -232,6 +232,15 @@ struct FilmPanel: View {
                 AdjustmentSlider(title: "Print Saturation",
                                  value: $model.editStack.filmNegative.print.saturation,
                                  range: -50...50, format: "%.0f", neutral: 12)
+                // Filtration is a color cast; on B&W the mono clamp after the
+                // kernel (below) strips it, so it would move nothing. Same
+                // gate as Print Saturation, same reason.
+                AdjustmentSlider(title: "Print Warmth",
+                                 value: $model.editStack.filmNegative.print.warmth,
+                                 range: -100...100, format: "%.0f", neutral: 0)
+                AdjustmentSlider(title: "Print Tint",
+                                 value: $model.editStack.filmNegative.print.tint,
+                                 range: -100...100, format: "%.0f", neutral: 0)
             }
 
             PlateButton(title: isShowingTrims ? "Hide Per-Channel" : "Per-Channel…") {

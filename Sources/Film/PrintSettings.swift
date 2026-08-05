@@ -66,6 +66,16 @@ struct PrintSettings: Codable, Equatable {
     /// the crossover fix — the degree of freedom the matrix model lacks.
     var gamma = DensityTriple.unit
 
+    /// Print filtration on the red–blue axis, −100…100. The enlarger color
+    /// pack: positive warms the print (more red exposure, less blue). Applied
+    /// after the solve, so Auto stays a neutral measurement and this carries
+    /// the house look. ±100 = ±0.25 EV split between red and blue.
+    var warmth: Double = 0
+
+    /// Print filtration on the green–magenta axis, −100…100. Positive is
+    /// green, negative magenta. Same units as ``warmth``.
+    var tint: Double = 0
+
     init() {}
 
     /// Lenient, field by field, for the same reason as the parent type.
@@ -79,5 +89,7 @@ struct PrintSettings: Codable, Equatable {
         saturation = c.lenient(.saturation, 12)
         dmax = c.lenient(.dmax, DensityTriple(red: 2, green: 2, blue: 2))
         gamma = c.lenient(.gamma, .unit)
+        warmth = c.lenient(.warmth, 0)
+        tint = c.lenient(.tint, 0)
     }
 }

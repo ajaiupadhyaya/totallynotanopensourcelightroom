@@ -167,6 +167,14 @@ final class FilmControlConformanceTests: XCTestCase {
     //   interior/exterior mean-convergence numbers, and a falsification check
     //   that a pure brightness offset (no contrast change at all) does NOT
     //   fool `interiorStdDevLuma` the way it fooled the whole-frame one.
+    //
+    // - Print Warmth and Print Tint (Task 8): both matched their doc
+    //   comment's reasoned sign — measured, not assumed. At warmth=80
+    //   (against the baseStack() reference, warmth=0), `Conformance.warmth`
+    //   moved neutral=−0.000498 → high=0.007908, delta=+0.008406 — sign
+    //   **+1**. At tint=80, `Conformance.greenMagenta` moved
+    //   neutral=0.001991 → high=0.011142, delta=+0.009151 — sign **+1**. See
+    //   task-8-filtration-report.md for the full record.
     static let cases: [FilmControlCase] = [
         .init(name: "Print Exposure", key: "print.exposure",
               low: { $0.filmNegative.print.exposure -= 1.5 },
@@ -197,6 +205,19 @@ final class FilmControlConformanceTests: XCTestCase {
               low: { $0.filmNegative.print.saturation = -40 },
               high: { $0.filmNegative.print.saturation = 40 },
               measure: Conformance.meanSaturation, sign: +1),
+        // Print Warmth/Tint: signs measured against the actual renderer, same
+        // discipline as the rest of this table (see the block comment above)
+        // — +1 for both, confirmed empirically, not just assumed from the
+        // doc comment's stated polarity. See task-8-filtration-report.md for
+        // the measured deltas.
+        .init(name: "Print Warmth", key: "print.warmth",
+              low: { $0.filmNegative.print.warmth = -80 },
+              high: { $0.filmNegative.print.warmth = 80 },
+              measure: Conformance.warmth, sign: +1),
+        .init(name: "Print Tint", key: "print.tint",
+              low: { $0.filmNegative.print.tint = -80 },
+              high: { $0.filmNegative.print.tint = 80 },
+              measure: Conformance.greenMagenta, sign: +1),
         .init(name: "White Point Red", key: "print.dmax",
               low: { $0.filmNegative.print.dmax.red -= 0.4 },
               high: { $0.filmNegative.print.dmax.red += 0.4 },

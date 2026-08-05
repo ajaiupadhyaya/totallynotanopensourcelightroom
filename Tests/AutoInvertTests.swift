@@ -20,7 +20,9 @@ final class AutoInvertTests: XCTestCase {
             dmax: (solution.dmax.red, solution.dmax.green, solution.dmax.blue),
             gammaEffective: (solution.gamma.red * grade, solution.gamma.green * grade,
                              solution.gamma.blue * grade),
-            printOffset: solution.printExposure * log10(2.0),
+            printOffset: PaperResponse.printOffsets(exposureEV: solution.printExposure,
+                                                     warmth: printSettings.warmth,
+                                                     tint: printSettings.tint),
             p: PaperResponse.kneeP(shoulder: printSettings.shoulder),
             q: PaperResponse.kneeQ(toe: printSettings.toe),
             satScale: 1.0 + printSettings.saturation / 100.0)
@@ -39,7 +41,7 @@ final class AutoInvertTests: XCTestCase {
         // Judge with the look controls neutralized: shoulder/toe off, flat
         // saturation — this test is about the SOLVE, not the house rendering.
         var flat = PrintSettings()
-        flat.shoulder = 0; flat.toe = 0; flat.saturation = 0
+        flat.shoulder = 0; flat.toe = 0; flat.saturation = 0; flat.warmth = 0; flat.tint = 0
 
         for grey in ["shadowGrey", "midGrey", "lightGrey"] {
             let patch = FilmSim.scene().first { $0.name == grey }!.linear
@@ -78,7 +80,7 @@ final class AutoInvertTests: XCTestCase {
         let solution = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: nil,
                                                       context: context))
         var flat = PrintSettings()
-        flat.shoulder = 0; flat.toe = 0; flat.saturation = 0
+        flat.shoulder = 0; flat.toe = 0; flat.saturation = 0; flat.warmth = 0; flat.tint = 0
 
         // Matrix best case, computed in its own gamma-encoded domain: for each
         // channel, out = g·(1 − enc(t)/enc(base)); solve g so midGrey lands
@@ -175,7 +177,8 @@ final class AutoInvertTests: XCTestCase {
             medianT, dminLinear: dminLinear,
             dmax: (solution.dmax.red, solution.dmax.green, solution.dmax.blue),
             gammaEffective: (solution.gamma.red, solution.gamma.green, solution.gamma.blue),
-            printOffset: solution.printExposure * log10(2.0),
+            printOffset: PaperResponse.printOffsets(exposureEV: solution.printExposure,
+                                                     warmth: defaults.warmth, tint: defaults.tint),
             p: PaperResponse.kneeP(shoulder: defaults.shoulder),
             q: PaperResponse.kneeQ(toe: defaults.toe),
             satScale: 1.0)
