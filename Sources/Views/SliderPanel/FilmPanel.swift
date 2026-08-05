@@ -228,10 +228,10 @@ struct FilmPanel: View {
             AdjustmentSlider(title: "Toe",
                              value: $model.editStack.filmNegative.print.toe,
                              range: 0...100, format: "%.0f", neutral: 30)
-            if model.editStack.filmNegative.type != .blackAndWhiteNegative {
+            if film.type != .blackAndWhiteNegative {
                 AdjustmentSlider(title: "Print Saturation",
                                  value: $model.editStack.filmNegative.print.saturation,
-                                 range: -50...50, format: "%.0f", neutral: 0)
+                                 range: -50...50, format: "%.0f", neutral: 12)
             }
 
             PlateButton(title: isShowingTrims ? "Hide Per-Channel" : "Per-Channel…") {
@@ -249,13 +249,13 @@ struct FilmPanel: View {
             Text("BASE (D-MIN)").sectionLabel()
             AdjustmentSlider(title: "Red",
                              value: $model.editStack.filmNegative.baseColor.red,
-                             range: 0.05...1, format: "%.3f", neutral: 0.05)
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.red)
             AdjustmentSlider(title: "Green",
                              value: $model.editStack.filmNegative.baseColor.green,
-                             range: 0.05...1, format: "%.3f", neutral: 0.05)
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.green)
             AdjustmentSlider(title: "Blue",
                              value: $model.editStack.filmNegative.baseColor.blue,
-                             range: 0.05...1, format: "%.3f", neutral: 0.05)
+                             range: 0.05...1, format: "%.3f", neutral: FilmNegativeSettings.defaultColorNegativeBase.blue)
 
             Text("WHITE POINT (D-MAX)").sectionLabel()
             AdjustmentSlider(title: "Red",
