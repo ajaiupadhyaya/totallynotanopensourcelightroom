@@ -30,15 +30,54 @@ enum AutoInvert {
     /// measurable tonal range in that channel.
     private static let minimumDensityRange = 0.05
 
+    /// Linear level, in every channel at once, above which a pixel is treated
+    /// as clipped backlight rather than film.
+    ///
+    /// No genuine film pixel is near-white in ALL THREE channels at once: light
+    /// through even a thin orange mask keeps blue far down (a clear C-41 base
+    /// measures well under this in blue), and even a clear B&W base sits
+    /// visibly below raw, unfiltered backlight. A pixel whose darkest channel
+    /// is still ≥ this level is not being seen *through* any film at all — it
+    /// is a sprocket hole, the gap around a floating frame, or bare lightbox
+    /// shining straight into the sensor. Left in, that population becomes the
+    /// scan's brightest, densest-reading material and can steal the very
+    /// statistics (Dmin, Dmax, the median) the solve is trying to measure off
+    /// the film itself.
+    private static let backlightLevel = 0.9
+
+    /// Below this fraction of the frame, the backlight-exclusion filter is
+    /// refused rather than trusted: a scan that is *mostly* backlight (an
+    /// almost-empty holder, say) would otherwise solve confidently off a
+    /// handful of surviving pixels. Falling back to the unfiltered set and
+    /// flagging the degradation is more honest than a precise-looking number
+    /// built on noise.
+    private static let minimumUsableFraction = 0.05
+
     /// - Parameter sampledBase: the user's eyedropper (or Phase 3 rebate)
     ///   measurement, display-encoded. Non-nil wins over the percentile
     ///   estimate: actual clear film beats any statistic.
     static func solve(scan: CIImage, sampledBase: FilmColor?,
                       context: CIContext) -> AutoInvertSolution? {
-        guard let pixels = linearPixels(of: scan, side: sampleSide, context: context),
-              !pixels.isEmpty else { return nil }
+        guard let rawPixels = linearPixels(of: scan, side: sampleSide, context: context),
+              !rawPixels.isEmpty else { return nil }
 
         var degraded: [String] = []
+
+        // 0. Drop clipped-backlight pixels before any percentile is taken —
+        // see `backlightLevel`. Every downstream statistic (Dmin when
+        // estimated, Dmax, D_low, the median-EV anchor) is computed from
+        // `pixels`, so this one filter protects all of them at once, not just
+        // the Dmin estimate.
+        let backlightExcluded = rawPixels.filter {
+            min($0.0, min($0.1, $0.2)) < backlightLevel
+        }
+        let pixels: [(Double, Double, Double)]
+        if Double(backlightExcluded.count) >= Double(rawPixels.count) * minimumUsableFraction {
+            pixels = backlightExcluded
+        } else {
+            pixels = rawPixels
+            degraded.append("scan is mostly backlight")
+        }
 
         // 1. Dmin per channel — sampled if available, else the 98th
         // percentile (NOT the maximum: on a lightbox scan the top of the

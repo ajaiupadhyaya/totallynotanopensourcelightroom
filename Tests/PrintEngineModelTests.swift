@@ -1,3 +1,7 @@
+import CoreGraphics
+import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 import XCTest
 @testable import PhotoEditor
 
@@ -122,5 +126,143 @@ final class PrintEngineModelTests: XCTestCase {
         fresh.applyFilmStock(stock)
         XCTAssertEqual(fresh.editStack.filmNegative.print.contrast, 3.0)
         XCTAssertEqual(fresh.editStack.filmNegative.print.saturation, 20)
+    }
+
+    // MARK: Crop-aware Auto (Fix 2)
+
+    /// Reproduces the medium-format corpus defect directly: a real negative
+    /// holder mask is the densest thing in the frame, so a blind (uncropped)
+    /// solve lets it set Dmax and dominate the median instead of the film.
+    /// `autoConvertNegative` measures the geometry-cropped scan so that a
+    /// user's crop — the one signal in the whole stack that says exactly
+    /// which pixels are film — excludes the holder from the measurement.
+    ///
+    /// Built from `FilmSim`'s own patch grid (its natural Dmax, printed as a
+    /// diagnostic while verifying Fix 1's no-op, is ~(1.64, 1.85, 2.08)) with
+    /// the composite's holder driven deliberately far past that (~2.6–3.3),
+    /// so "the holder no longer sets Dmax" is a real, large before/after
+    /// move, not a coin flip near the boundary.
+    func testAutoConvertMeasuresTheCroppedFrameNotTheFullOne() throws {
+        let (url, centerCropRect) = try Self.makeHolderMaskedNegativePNG()
+        let catalog = try TestSupport.inMemoryCatalog()
+
+        // Blind: no crop set, so Auto measures the full frame — holder border
+        // included, exactly the corpus defect.
+        let blindEntry = TestSupport.makeEntry(fileURL: url)
+        try catalog.save(blindEntry)
+        let blindModel = EditorModel(entry: blindEntry, catalog: catalog,
+                                     thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+        blindModel.autoConvertNegative()
+        let blindDmax = blindModel.editStack.filmNegative.print.dmax
+        let blindExposure = blindModel.editStack.filmNegative.print.exposure
+
+        // Cropped: same file, a crop already set to the center (film-only)
+        // region before Auto ever runs — the darkroom order, crop then convert.
+        var croppedStack = EditStack()
+        croppedStack.geometry.cropRect = centerCropRect
+        let croppedEntry = TestSupport.makeEntry(fileURL: url, editStack: croppedStack)
+        try catalog.save(croppedEntry)
+        let croppedModel = EditorModel(entry: croppedEntry, catalog: catalog,
+                                       thumbnails: TestSupport.tempThumbnails(), commitDelay: 60)
+        croppedModel.autoConvertNegative()
+        let croppedDmax = croppedModel.editStack.filmNegative.print.dmax
+        let croppedExposure = croppedModel.editStack.filmNegative.print.exposure
+
+        // Printed unconditionally so the measured before/after numbers are on
+        // the record without re-running anything (same discipline as
+        // RealScanTests' per-frame diagnostics).
+        print("CROP-AWARE-AUTO blind:   dmax=\(blindDmax) exposure=\(blindExposure)")
+        print("CROP-AWARE-AUTO cropped: dmax=\(croppedDmax) exposure=\(croppedExposure)")
+
+        XCTAssertNotEqual(blindDmax, croppedDmax,
+                          "cropping out the holder should change the measured white point")
+        XCTAssertNotEqual(blindExposure, croppedExposure,
+                          "cropping out the holder should change the solved print exposure")
+
+        // The holder is denser than anything in the real image, so excluding
+        // it must LOWER every channel's measured Dmax, not merely change it.
+        XCTAssertLessThan(croppedDmax.red, blindDmax.red,
+                          "red Dmax should drop once the holder is cropped out")
+        XCTAssertLessThan(croppedDmax.green, blindDmax.green,
+                          "green Dmax should drop once the holder is cropped out")
+        XCTAssertLessThan(croppedDmax.blue, blindDmax.blue,
+                          "blue Dmax should drop once the holder is cropped out")
+    }
+
+    /// Builds an 8-bit sRGB PNG: `FilmSim`'s scene patch grid confined to the
+    /// center half of the frame (by area, a quarter of it — `[0.25, 0.75]` in
+    /// both axes), surrounded by a solid near-black border simulating a
+    /// physical negative-holder mask. Returns the file URL and the unit-space
+    /// crop rect that exactly bounds the center region.
+    ///
+    /// Pixel values are written as sRGB-encoded transmittance, the same way a
+    /// real scan file stores a negative — not `FilmSim.negativeImage`'s raw
+    /// linear buffer, which is built for in-memory `CIImage` fixtures read
+    /// straight back through `AutoInvert.linearPixels` and would decode wrong
+    /// if it round-tripped through an ordinary (gamma-tagged) PNG file.
+    private static func makeHolderMaskedNegativePNG(size: Int = 200) throws -> (url: URL, centerCropRect: CGRect) {
+        let dmin = FilmSim.c41Base
+        let gammas = FilmSim.crossoverGammas
+        let patches = FilmSim.scene()
+        let cols = 5, rows = 2
+
+        let centerCropRect = CGRect(x: 0.25, y: 0.25, width: 0.5, height: 0.5)
+        let centerStart = size / 4
+        let centerSize = size / 2
+        let cellW = max(1, centerSize / cols)
+        let cellH = max(1, centerSize / rows)
+
+        // A near-black holder byte, ALREADY display-encoded (this is what
+        // gets written straight to the file — a physical black plastic
+        // holder as a camera would actually capture it, not a linear
+        // transmittance run through the encoder). One 8-bit step above pure
+        // black decodes to a linear value whose density is well past the
+        // patch grid's own densest patch in every channel (see the test's
+        // doc comment for the margin).
+        let holderByte: UInt8 = 1
+
+        func encodeByte(_ linear: Double) -> UInt8 {
+            let s = PaperResponse.srgbEncode(min(max(linear, 0), 1))
+            return UInt8((min(max(s, 0), 1) * 255).rounded())
+        }
+
+        let bytesPerPixel = 4
+        let rowBytes = size * bytesPerPixel
+        var pixels = [UInt8](repeating: 0, count: size * rowBytes)
+        for y in 0..<size {
+            for x in 0..<size {
+                let i = y * rowBytes + x * bytesPerPixel
+                let inCenterX = x >= centerStart && x < centerStart + centerSize
+                let inCenterY = y >= centerStart && y < centerStart + centerSize
+                if inCenterX && inCenterY {
+                    let cx = x - centerStart, cy = y - centerStart
+                    let col = min(cx / cellW, cols - 1), row = min(cy / cellH, rows - 1)
+                    let patch = patches[row * cols + col].linear
+                    let t = FilmSim.transmittance(of: patch, dmin: dmin, gammas: gammas)
+                    pixels[i] = encodeByte(t.0)
+                    pixels[i + 1] = encodeByte(t.1)
+                    pixels[i + 2] = encodeByte(t.2)
+                } else {
+                    pixels[i] = holderByte; pixels[i + 1] = holderByte; pixels[i + 2] = holderByte
+                }
+                pixels[i + 3] = 255
+            }
+        }
+
+        let context = CGContext(
+            data: &pixels, width: size, height: size, bitsPerComponent: 8,
+            bytesPerRow: rowBytes, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+        let cgImage = try XCTUnwrap(context?.makeImage())
+
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("petest-holder-\(UUID().uuidString).png")
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.png.identifier as CFString, 1, nil
+        ))
+        CGImageDestinationAddImage(destination, cgImage, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        return (url, centerCropRect)
     }
 }

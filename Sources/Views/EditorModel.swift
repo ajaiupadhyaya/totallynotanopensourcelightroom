@@ -692,12 +692,28 @@ final class EditorModel {
     /// `lastCommittedStack` rather than per-assignment — but it would also
     /// trigger a second, wasted `renderPreview()`/`scheduleCommit()` pass via
     /// `editStack`'s `didSet`. One assignment avoids that.)
+    ///
+    /// Measures the geometry-cropped scan, not the full frame, when a crop is
+    /// set. This is the actual darkroom workflow — you crop to the frame,
+    /// *then* convert — and the crop is the one signal in the whole stack that
+    /// says exactly which pixels are film: on a medium-format scan the
+    /// negative-holder mask surrounding a floating frame is the densest thing
+    /// in the image, and left in, it captures Dmax and the median instead of
+    /// the photograph, exposing for the holder while the real image lands dark
+    /// with a color cast. Cropping first removes that material from the
+    /// measurement the same way it removes sprocket holes and rebate on a
+    /// 35mm scan. Only the *measurement* is cropped — the render path is
+    /// unchanged: film negative conversion still runs on the full frame, and
+    /// `Geometry`'s own crop (applied after conversion, see
+    /// ``DevelopedSourceCache``) masks the rest at display/export time, same
+    /// as ever.
     func autoConvertNegative() {
         guard let source else { return }
+        let measured = GeometryTransform.apply(source, geometry: editStack.geometry)
         var film = editStack.filmNegative
         film.isEnabled = true
         let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
-        guard let solution = AutoInvert.solve(scan: source, sampledBase: sampled,
+        guard let solution = AutoInvert.solve(scan: measured, sampledBase: sampled,
                                               context: renderer.context) else { return }
         film.baseColor = solution.baseColor
         film.baseOrigin = solution.baseOrigin
