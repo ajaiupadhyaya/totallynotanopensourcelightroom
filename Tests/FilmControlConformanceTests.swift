@@ -51,6 +51,38 @@ final class FilmControlConformanceTests: XCTestCase {
         return buffer
     }
 
+    /// `FilmSim.negativeImage`'s own patch grid, in pixels, at `probeSize`
+    /// (128): `border = size/10 = 12`, `cellW·cols = 100`, `cellH·rows = 104`
+    /// — symmetric margins on every edge, so this is orientation-safe. Used
+    /// by ``interiorStdDevLuma(_:)`` to exclude the unexposed-rebate border
+    /// (~36.5% of the frame — see `PrintEngineSupport.negativeImage`'s doc
+    /// comment) from a measurement that is otherwise dominated by it.
+    private static let interiorRect = (x: 12, y: 12, width: 100, height: 104)
+
+    /// `stdDevLuma`, scoped to ``interiorRect`` — the probe's actual scene
+    /// patches, excluding the bare-film-base border.
+    ///
+    /// Whole-frame `stdDevLuma` is unusable for Print Contrast: the border is
+    /// a second, near-black population sitting alongside the scene, and
+    /// whole-frame variance is dominated by *how far apart* those two
+    /// populations' means are, not by how much contrast the paper curve adds
+    /// within the scene itself. Cropping to the scene-only region measures
+    /// what "contrast" actually means for this control. Kept in the same
+    /// `([UInt8]) -> Double` shape as every other measure by baking the rect
+    /// in as a capture rather than a parameter.
+    private static func interiorStdDevLuma(_ px: [UInt8]) -> Double {
+        var values: [Double] = []
+        values.reserveCapacity(interiorRect.width * interiorRect.height)
+        for y in interiorRect.y..<(interiorRect.y + interiorRect.height) {
+            for x in interiorRect.x..<(interiorRect.x + interiorRect.width) {
+                values.append(Conformance.luma(px, at: (y * probeSize + x) * 4))
+            }
+        }
+        let mean = values.reduce(0, +) / Double(values.count)
+        return (values.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(values.count))
+            .squareRoot()
+    }
+
     /// One print/film control's declared contract with the density renderer.
     ///
     /// Unlike `ControlCase` (Tests/ControlConformanceTests.swift), there is no
@@ -109,31 +141,32 @@ final class FilmControlConformanceTests: XCTestCase {
     // Every sign below was measured against the actual renderer (probe
     // rendered, each `Conformance` measure printed, the diagnostic then
     // deleted) rather than taken on the brief's reasoning alone — see
-    // task-7-report.md for the full table. Two findings from that pass:
+    // task-7-report.md for the full table, including a fix-round correction.
     //
     // - Shoulder, Toe, and White Point Red matched the brief's reasoned signs
     //   exactly (all confirmed numerically).
     //
-    // - Print Contrast did NOT: the brief reasoned stdDevLuma would rise with
-    //   contrast (sign +1). A grade sweep (0.5...4.5 in steps) instead showed
-    //   stdDevLuma peaking almost exactly AT the solved default (grade ≈2.0,
-    //   0.4133) and decreasing on BOTH sides — 0.3884 at 0.5, 0.3619 at 4.5.
-    //   The reason: `PaperResponse.develop`'s grade curve is anchored at the
-    //   highlight (the exponent `g·(density − dmax)` vanishes when density
-    //   equals the solved `dmax`), so raising grade only steepens the shadow/
-    //   midtone falloff — confirmed here by the median dropping steadily from
-    //   0.83 (grade 0.5) to 0.19 (grade 4.5) while the 98th percentile stays
-    //   pinned at the clip (0.999999...) across the entire sweep. On a probe
-    //   whose frame is ~36% unexposed rebate border (already near-black at
-    //   every grade — see task-4-report.md), pushing grade past the solved
-    //   default crushes progressively more of the midtones down toward that
-    //   same near-black mass rather than gaining new highlight spread (the
-    //   highlight has nowhere left to go), so whole-frame variance falls.
-    //   This is the *engine* doing exactly what an anchored-highlight paper
-    //   curve should do; the brief's naive "more contrast ⇒ more spread"
-    //   intuition is what breaks down once a large near-black rebate area is
-    //   in frame. Verified sign: −1, not +1. Reported as a finding, not
-    //   silently flipped — see the report for the measured table.
+    // - Print Contrast: the brief reasoned whole-frame stdDevLuma would rise
+    //   with contrast (sign +1). A first pass measured whole-frame stdDevLuma
+    //   FALLING at the high end (0.4133 at grade 2.0 → 0.3619 at grade 4.5)
+    //   and concluded the sign should flip to −1. That conclusion was wrong,
+    //   caught in review: whole-frame stdDevLuma on this probe is dominated
+    //   by a between-mode artifact, not by contrast. The frame is two
+    //   populations — the scene patches and a ~36.5% unexposed-rebate border
+    //   (see `PrintEngineSupport.negativeImage`) — and raising grade dims the
+    //   scene's mean faster than it can dim the already-near-black border
+    //   floor, so the two populations' means converge and the *between-group*
+    //   spread that had been inflating whole-frame variance shrinks. That
+    //   masks the real, opposite effect happening *inside* the scene: the
+    //   engine's actual contrast is rising with grade the whole time.
+    //   Measured on ``interiorStdDevLuma(_:)`` (the scene patches only, border
+    //   excluded): 0.2678 at grade 0.5 → 0.2971 at grade 2.0 → 0.3250 at
+    //   grade 4.5 — monotonically rising, exactly the brief's sign. Verified
+    //   sign: **+1**, matching the brief; the whole-frame *statistic* was the
+    //   wrong tool, not the control. See the report for the full sweep, the
+    //   interior/exterior mean-convergence numbers, and a falsification check
+    //   that a pure brightness offset (no contrast change at all) does NOT
+    //   fool `interiorStdDevLuma` the way it fooled the whole-frame one.
     static let cases: [FilmControlCase] = [
         .init(name: "Print Exposure", key: "print.exposure",
               low: { $0.filmNegative.print.exposure -= 1.5 },
@@ -142,7 +175,7 @@ final class FilmControlConformanceTests: XCTestCase {
         .init(name: "Print Contrast", key: "print.contrast",
               low: { $0.filmNegative.print.contrast = 0.5 },
               high: { $0.filmNegative.print.contrast = 4.5 },
-              measure: Conformance.stdDevLuma, sign: -1),
+              measure: FilmControlConformanceTests.interiorStdDevLuma, sign: +1),
         .init(name: "Shoulder", key: "print.shoulder",
               low: { $0.filmNegative.print.shoulder = 0 },
               high: { $0.filmNegative.print.shoulder = 100 },

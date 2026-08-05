@@ -44,8 +44,10 @@ enum FilmSim {
     }
 
     /// The scene patches as a rendered negative, plus a border of bare film
-    /// base — the rebate every real scan should include. The border is 20% of
-    /// the area, comfortably above the solver's 2% Dmin percentile.
+    /// base — the rebate every real scan should include. Each edge is trimmed
+    /// by `size/10`, so the border is not 20% of the area but ~36% (the
+    /// interior keeps ~80% of each dimension, ~64% of the area) — comfortably
+    /// above the solver's 2% Dmin percentile either way.
     static func negativeImage(dmin: (Double, Double, Double),
                               gammas: (Double, Double, Double),
                               size: Int = 200) -> CIImage {
