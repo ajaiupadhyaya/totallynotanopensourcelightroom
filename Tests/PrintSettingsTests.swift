@@ -32,6 +32,8 @@ final class PrintSettingsTests: XCTestCase {
         settings.print.contrast = 3.5
         settings.print.dmax = DensityTriple(red: 2.4, green: 2.2, blue: 2.0)
         settings.print.gamma = DensityTriple(red: 1.1, green: 1.2, blue: 1.35)
+        settings.print.warmth = 60
+        settings.print.tint = -35
         settings.baseOrigin = .estimated
         let data = try JSONEncoder().encode(settings)
         let back = try JSONDecoder().decode(FilmNegativeSettings.self, from: data)
@@ -46,11 +48,28 @@ final class PrintSettingsTests: XCTestCase {
         XCTAssertEqual(decoded.exposure, 1.5)
         XCTAssertEqual(decoded.contrast, 2)
         XCTAssertEqual(decoded.dmax, DensityTriple(red: 2, green: 2, blue: 2))
+        // The lenient fallback must match the property initializer's house
+        // default (Task 8, Phase C), or an old stack missing these keys would
+        // decode to a different look than a freshly-created one.
+        XCTAssertEqual(decoded.warmth, 24)
+        XCTAssertEqual(decoded.tint, -8)
     }
 
     /// The neutral-edit check must not report a fresh stack as edited just
     /// because these new fields exist with non-zero defaults.
     func testFreshStackIsStillANeutralEdit() {
         XCTAssertTrue(EditStack().isNeutralEdit)
+    }
+
+    /// The house look, chosen on visual inspection of a rendered warmth/tint
+    /// sweep against the user's own corpus (Task 8, Phase C) — a deliberate
+    /// trim of this engine's default look, not a rescue tuned to any one
+    /// scan. Pinned as its own test so a future accidental default change
+    /// (e.g. a careless edit to the property initializer without its
+    /// lenient-decode twin) fails loudly here rather than only showing up as
+    /// a diffuse RealScanTests luma shift.
+    func testHouseDefaultFiltrationIsWarmth24TintNegative8() {
+        XCTAssertEqual(PrintSettings().warmth, 24)
+        XCTAssertEqual(PrintSettings().tint, -8)
     }
 }

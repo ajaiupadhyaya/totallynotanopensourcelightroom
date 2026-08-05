@@ -237,10 +237,10 @@ struct FilmPanel: View {
                 // gate as Print Saturation, same reason.
                 AdjustmentSlider(title: "Print Warmth",
                                  value: $model.editStack.filmNegative.print.warmth,
-                                 range: -100...100, format: "%.0f", neutral: 0)
+                                 range: -100...100, format: "%.0f", neutral: 24)
                 AdjustmentSlider(title: "Print Tint",
                                  value: $model.editStack.filmNegative.print.tint,
-                                 range: -100...100, format: "%.0f", neutral: 0)
+                                 range: -100...100, format: "%.0f", neutral: -8)
             }
 
             PlateButton(title: isShowingTrims ? "Hide Per-Channel" : "Per-Channel…") {

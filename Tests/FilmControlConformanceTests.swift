@@ -168,13 +168,38 @@ final class FilmControlConformanceTests: XCTestCase {
     //   that a pure brightness offset (no contrast change at all) does NOT
     //   fool `interiorStdDevLuma` the way it fooled the whole-frame one.
     //
-    // - Print Warmth and Print Tint (Task 8): both matched their doc
+    // - Print Warmth and Print Tint (Task 8, Phase A): both matched their doc
     //   comment's reasoned sign — measured, not assumed. At warmth=80
-    //   (against the baseStack() reference, warmth=0), `Conformance.warmth`
-    //   moved neutral=−0.000498 → high=0.007908, delta=+0.008406 — sign
-    //   **+1**. At tint=80, `Conformance.greenMagenta` moved
-    //   neutral=0.001991 → high=0.011142, delta=+0.009151 — sign **+1**. See
-    //   task-8-filtration-report.md for the full record.
+    //   (against the then-neutral baseStack() reference, warmth=0),
+    //   `Conformance.warmth` moved neutral=−0.000498 → high=0.007908,
+    //   delta=+0.008406 — sign **+1**. At tint=80, `Conformance.greenMagenta`
+    //   moved neutral=0.001991 → high=0.011142, delta=+0.009151 — sign **+1**.
+    //
+    // - Re-measured for Task 8, Phase C, once `baseStack()` itself carries the
+    //   new house default filtration (warmth=24, tint=−8) rather than neutral:
+    //   Print Tint's leg (still low=−80/high=80) needed no change — at
+    //   tint=80 against the new (warmth=24, tint=−8) reference,
+    //   `Conformance.greenMagenta` moved 0.002893 → 0.007221, delta=+0.004328,
+    //   comfortably clearing the 0.002 floor with the same **+1** sign.
+    //   Print Warmth's old high=80 leg, though, now measured only
+    //   neutral=−0.000310 → 0.000253, delta=+0.000563 — under the 0.002
+    //   floor. Mechanism, swept and confirmed rather than guessed: once the
+    //   baseline itself already carries real warmth, red is already the
+    //   dominant (max) channel feeding
+    //   `PaperResponse.develop`'s max-channel normalization for much of this
+    //   probe's tonal range, so out.0 stays pinned near `paper(n,…)` while
+    //   pushing warmth further mostly raises `n` itself and, via the
+    //   highlight-shoulder's hue-preserving desaturation, pulls blue *up*
+    //   toward that same value — narrowing R−B rather than widening it. A
+    //   sweep from warmth 24→100 was non-monotonic in whole-frame
+    //   `Conformance.warmth` for exactly this reason (e.g. delta only
+    //   +0.000812 at warmth=70, +0.001000 at warmth=90) before clearing the
+    //   floor at the slider's actual maximum: warmth=100 measured
+    //   delta=+0.002681, sign **+1**, matching the doc comment. Leg raised to
+    //   100 (still "at the end of the control's range as the panel actually
+    //   offers it," per `FilmControlCase`'s own contract) rather than
+    //   loosening the floor. See task-8-filtration-report.md, Phase C, for
+    //   the full sweep.
     static let cases: [FilmControlCase] = [
         .init(name: "Print Exposure", key: "print.exposure",
               low: { $0.filmNegative.print.exposure -= 1.5 },
@@ -212,7 +237,15 @@ final class FilmControlConformanceTests: XCTestCase {
         // the measured deltas.
         .init(name: "Print Warmth", key: "print.warmth",
               low: { $0.filmNegative.print.warmth = -80 },
-              high: { $0.filmNegative.print.warmth = 80 },
+              // high raised to the slider's actual maximum (100, not 80) in
+              // Phase C: against the new (warmth=24, tint=−8) baseStack()
+              // reference, high=80 fell short of the 0.002 floor at only
+              // delta=+0.000563 (the highlight shoulder's desaturation
+              // increasingly cancels further warmth once red is already the
+              // dominant channel for much of this probe — see the block
+              // comment above); high=100 clears it at delta=+0.002681,
+              // sign unchanged at **+1**.
+              high: { $0.filmNegative.print.warmth = 100 },
               measure: Conformance.warmth, sign: +1),
         .init(name: "Print Tint", key: "print.tint",
               low: { $0.filmNegative.print.tint = -80 },
