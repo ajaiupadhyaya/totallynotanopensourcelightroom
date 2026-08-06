@@ -63,7 +63,7 @@ Consequences honored from the existing contracts:
 
 ## Roll model & roll analysis
 
-**Catalog migration v7** — adopt the Phase 3 roadmap schema verbatim so Phase 3 needs no re-migration:
+**Catalog migration v8** — adopt the Phase 3 roadmap schema so Phase 3 needs no re-migration (the roadmap sketched this as "v7", but `v7_stockPrintCharacter` shipped with the print engine; the roll migration is therefore v8):
 
 - `roll` table: id, identifier, film stock, camera body, lens, exposure index, push/pull, developer, dev notes, lab, scan date, created-at. This sub-project populates identifier + stock + created-at from the UI; the rest are nullable columns Phase 3 will fill.
 - `CatalogEntry` gains nullable `rollID` and `frameNumber`.
@@ -77,7 +77,7 @@ Consequences honored from the existing contracts:
 - Per-frame measurement is unchanged (`AutoInvert`'s gated, crop-aware, 256-px linear statistics). Roll analysis aggregates the per-frame statistics across all frames of the roll.
 - **Roll-level constants:** per-channel Dmin (base) and per-channel gamma. Base: a user-sampled rebate base on *any* frame of the roll wins for the whole roll; otherwise a robust aggregate (per-channel minimum-density envelope across frames — the thinnest film seen on the roll is closest to true base). Gamma: solved from roll-aggregated dlow/Dmax distributions, so one frame's red dress cannot bend the roll's curves.
 - **Frame-level variables:** print EV only (median-to-0.18 bisection per frame against the roll constants). No per-frame black offset in this design — if the roll-consistency metric later shows toe mismatch, that is a measured reason to revisit, not a pre-built knob.
-- **Convert Roll** action: one undoable action across the roll. Frames with individually-sampled bases keep them (roadmap semantics). Stored as a `RollConversion` record on the roll so later frames added to the roll adopt it.
+- **Convert Roll** action: one recoverable action across the roll — each frame gets a "Before Roll Conversion" snapshot before its stack is overwritten (the same preservation mechanism as Update Conversion; library-level multi-entry undo does not exist in the app and this sub-project does not invent it). Frames with individually-sampled bases keep them (roadmap semantics). Stored as a `RollConversion` record on the roll so later frames added to the roll adopt it.
 - Single-frame Auto remains: un-rolled frames behave exactly as today; rolled frames reuse roll constants and solve only frame-level terms.
 - The roll-wide apply shares its implementation shape with Phase 4's sync-across-selection (the roadmap requires they be one mechanism); design the apply API as "apply these settings-mutations to this set of entries as one undo step."
 
