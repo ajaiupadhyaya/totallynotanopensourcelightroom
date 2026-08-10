@@ -13,6 +13,12 @@ final class RealScanTests: XCTestCase {
     private static let mediumFormatDir = NSString("~/Desktop/negatives").expandingTildeInPath
     private static let thirtyFiveDir =
         NSString("~/Desktop/all film/film aug 4th 2026").expandingTildeInPath
+    /// A second phone-scan batch (2026-08-09), HEIC rather than JPEG. Worth
+    /// its own corpus rather than folding into the one above: it is a
+    /// different shoot on a different day, so agreeing with it is evidence
+    /// the solve generalizes instead of having been tuned to one afternoon.
+    private static let augustNinthDir =
+        NSString("~/Desktop/all film/Negatives august 9th").expandingTildeInPath
     // Anchored to this source file, not the process's working directory:
     // under `xcodebuild test` the test host's cwd is not the repo root (it
     // resolved to "/", which is read-only), so a bare relative path failed
@@ -37,6 +43,23 @@ final class RealScanTests: XCTestCase {
     /// artifacts to this exact rect (see the fix report) shows clean frame
     /// interior with no holder or white margin on either sample checked.
     private static let mediumFormatDemoCropRect = CGRect(x: 0.30, y: 0.10, width: 0.42, height: 0.75)
+
+    /// The same idea for the 2026-08-09 batch, which is framed much more
+    /// tightly and consistently than the medium-format corpus (the negative
+    /// sits in nearly the same place in every shot).
+    ///
+    /// This rect deliberately **includes the rebate** and excludes only the
+    /// lightbox — "crop to the negative" means masking the easel, not
+    /// cropping to the picture. Measured the other way first, tight to the
+    /// picture area (x 0.30–0.75, y 0.25–0.65), and the solve got materially
+    /// worse than blind: red gamma ran to 3.55 and, on IMG_7080, to 6.91,
+    /// against a neutral near 0.66. That is the engine working as designed —
+    /// with the base cropped away, the brightest surviving pixels are scene
+    /// content rather than unexposed film, so Dmin is estimated off the wrong
+    /// population. Read off the blind artifacts, the film including rebate
+    /// spans roughly x ∈ [0.13, 0.89] and, top-down, y ∈ [0.16, 0.89]; this
+    /// sits inside that on every edge on all five frames.
+    private static let augustNinthDemoCropRect = CGRect(x: 0.17, y: 0.13, width: 0.70, height: 0.68)
 
     private let context = CIContext()
     private let renderer = EditRenderer()
@@ -143,5 +166,22 @@ final class RealScanTests: XCTestCase {
     func test35mmPhoneScanCorpus() throws {
         let files = try Self.firstFilesOrSkip(dir: Self.thirtyFiveDir, suffix: ".jpeg")
         try files.forEach { try convert(url: $0, label: "35-\($0.deletingPathExtension().lastPathComponent)") }
+    }
+
+    /// The 2026-08-09 batch. HEIC exercises a decode path neither other
+    /// corpus does — the same 10-bit-ish phone capture the 35mm corpus has,
+    /// but without a JPEG round trip flattening it first.
+    ///
+    /// Rendered blind and cropped, like the medium-format corpus and for the
+    /// same reason: these are phone photographs of a 6x6 negative on a
+    /// lightbox, so most of the frame is backlight and holder. Blind is kept
+    /// as evidence of what the surround does to the solve, not as a target.
+    func testAugustNinthPhoneScanCorpus() throws {
+        let files = try Self.firstFilesOrSkip(dir: Self.augustNinthDir, suffix: ".heic")
+        try files.forEach {
+            let name = $0.deletingPathExtension().lastPathComponent
+            try convert(url: $0, label: "aug9-\(name)")
+            try convert(url: $0, label: "aug9-\(name)-cropped", cropRect: Self.augustNinthDemoCropRect)
+        }
     }
 }
