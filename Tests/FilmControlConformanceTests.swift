@@ -265,6 +265,45 @@ final class FilmControlConformanceTests: XCTestCase {
               low: { $0.filmNegative.exposure = -1.5 },
               high: { $0.filmNegative.exposure = 1.5 },
               measure: Conformance.meanLuma, sign: +1),
+        // Punch/Fade/Glow/Toe Chroma (Task 3): signs measured against the
+        // actual renderer, same discipline as the rest of this table. At
+        // high=100 against the .linear-solved baseStack() reference:
+        // Punch moved interiorStdDevLuma 0.294014 → 0.307451 (delta
+        // +0.013437) — sign +1; Fade moved percentileLuma(0.02)
+        // 0.087108 → 0.283454 (delta +0.196346) — sign +1; Glow moved
+        // percentileLuma(0.98) 0.996912 → 0.969178 (delta −0.027734) —
+        // sign −1; Toe Chroma moved meanSaturation 0.056686 → 0.036711
+        // (delta −0.019975) — sign −1. All four match the reasoned signs.
+        .init(name: "Punch", key: "print.punch",
+              low: { $0.filmNegative.print.punch = 35 },
+              high: { $0.filmNegative.print.punch = 100 },
+              measure: FilmControlConformanceTests.interiorStdDevLuma, sign: +1),
+        .init(name: "Fade", key: "print.fade",
+              low: { $0.filmNegative.print.fade = 30 },
+              high: { $0.filmNegative.print.fade = 100 },
+              measure: { Conformance.percentileLuma($0, 0.02) }, sign: +1),
+        .init(name: "Glow", key: "print.glow",
+              low: { $0.filmNegative.print.glow = 30 },
+              high: { $0.filmNegative.print.glow = 100 },
+              measure: { Conformance.percentileLuma($0, 0.98) }, sign: -1),
+        .init(name: "Toe Chroma", key: "print.toeChroma",
+              // The whole-frame visible change is genuinely small for this
+              // control: it only compresses chroma where the paper output
+              // sits below toeEnd (0.10) — a thin, near-black slice of this
+              // probe — and the RGBA8 readback quantizes the residual shadow
+              // chroma, so `Conformance.difference` saturates at 0.001287
+              // from slider 80 upward (measured sweep: 40→0.000560,
+              // 60→0.000726, 70→0.001204, 80/90/100→0.001287). Leg moved
+              // further from neutral first (low 40→70, the plan's preferred
+              // fix), which still left both legs under the 0.0015 default;
+              // floor lowered with margin below the smaller measured leg
+              // (0.001204), Toe/Warmth precedent. The control's genuine
+              // effect is proven by the direction test's much larger
+              // meanSaturation delta (−0.019975 against a 0.002 floor).
+              low: { $0.filmNegative.print.toeChroma = 70 },
+              high: { $0.filmNegative.print.toeChroma = 100 },
+              measure: Conformance.meanSaturation, sign: -1,
+              minimumVisibleChange: 0.0008),
     ]
 
     /// Fields deliberately not covered here, each with the suite that does
@@ -282,6 +321,8 @@ final class FilmControlConformanceTests: XCTestCase {
         "channelGains": "matrix engine only — frozen, covered by FilmNegativeTests",
         "stockContrast": "matrix engine only — frozen, covered by FilmNegativeTests",
         "stockSaturation": "matrix engine only — frozen, covered by FilmNegativeTests",
+        "print.renderVersion": "freeze flag, not a control — PaperResponseGoldenTests owns it",
+        "print.toneProfile": "profile selector — its four parameters each have a case above; selection behavior covered by EditorModelTests",
         // "print" itself is not a leaf field: it is decomposed into its own
         // seven fields below (all prefixed "print."), every one of which is
         // covered via `cases` — no print exclusions.

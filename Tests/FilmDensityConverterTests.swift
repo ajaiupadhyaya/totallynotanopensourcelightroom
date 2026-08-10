@@ -44,6 +44,14 @@ final class FilmDensityConverterTests: XCTestCase {
         graded.print.warmth = 24
         graded.print.tint = -8
         assertKernelAgreesWithSwiftModel(graded)
+
+        // Third leg: non-neutral toning (Task 3). Every slider the profile
+        // writes is nonzero, so a kernel that silently ignored the new
+        // punch/fade/glow/toeChroma arguments — or marshaled them in the
+        // wrong order — diverges from the Swift model here.
+        var lab = densitySettings()
+        lab.print.applyToneProfile(.labStandard)
+        assertKernelAgreesWithSwiftModel(lab)
     }
 
     private func assertKernelAgreesWithSwiftModel(
@@ -77,7 +85,11 @@ final class FilmDensityConverterTests: XCTestCase {
             let t = (dminLin.0 * transmit, dminLin.1 * transmit, dminLin.2 * transmit)
             expected.append(PaperResponse.develop(
                 t, dminLinear: dminLin, dmax: dmax, gammaEffective: gammaEffective,
-                printOffset: printOffset, p: p, q: q, satScale: satScale))
+                printOffset: printOffset, p: p, q: q, satScale: satScale,
+                punch: PaperResponse.punchAmount(settings.print.punch),
+                fade: PaperResponse.fadeLift(settings.print.fade),
+                glow: PaperResponse.glowDrop(settings.print.glow),
+                toeChroma: PaperResponse.toeChromaWeight(settings.print.toeChroma)))
             pixels[x * 4 + 0] = Float(t.0)
             pixels[x * 4 + 1] = Float(t.1)
             pixels[x * 4 + 2] = Float(t.2)

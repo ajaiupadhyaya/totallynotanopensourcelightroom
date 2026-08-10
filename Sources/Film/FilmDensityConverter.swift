@@ -46,6 +46,20 @@ enum FilmDensityConverter {
                 Float(PaperResponse.shoulderStart),
                 Float(PaperResponse.highlightDesat),
                 Float(1.0 + p.saturation / 100.0),
+                CIVector(x: 0, y: 0, z: 0),   // trimS — Task 4
+                CIVector(x: 0, y: 0, z: 0),   // trimM — Task 4
+                CIVector(x: 0, y: 0, z: 0),   // trimH — Task 4
+                Float(PaperResponse.punchAmount(p.punch)),
+                Float(PaperResponse.fadeLift(p.fade)),
+                Float(PaperResponse.glowDrop(p.glow)),
+                Float(PaperResponse.toeChromaWeight(p.toeChroma)),
+                Float(PaperResponse.targetMid),
+                Float(PaperResponse.toeStart),
+                Float(PaperResponse.toeEnd),
+                CIVector(x: PaperResponse.zoneShadowEnd,
+                         y: PaperResponse.zoneShadowFade,
+                         z: PaperResponse.zoneHighStart),
+                Float(PaperResponse.zoneHighFull),
             ]
         ) ?? image
 

@@ -72,4 +72,30 @@ final class PrintSettingsTests: XCTestCase {
         XCTAssertEqual(PrintSettings().warmth, 24)
         XCTAssertEqual(PrintSettings().tint, -8)
     }
+
+    /// The freeze asymmetry, same trick as conversionModel: fresh settings are
+    /// renderVersion 2; anything decoded from JSON that predates the field is 1.
+    func testRenderVersionInitializesTwoDecodesOne() throws {
+        XCTAssertEqual(PrintSettings().renderVersion, 2)
+        let old = try JSONDecoder().decode(PrintSettings.self,
+                                           from: #"{"exposure": 1}"#.data(using: .utf8)!)
+        XCTAssertEqual(old.renderVersion, 1)
+        XCTAssertEqual(old.toneProfile, .linear)
+        XCTAssertEqual(old.punch, 0); XCTAssertEqual(old.fade, 0)
+        XCTAssertEqual(old.glow, 0); XCTAssertEqual(old.toeChroma, 0)
+    }
+
+    func testApplyToneProfileWritesTheProfileParameters() {
+        var p = PrintSettings()
+        p.applyToneProfile(.labStandard)
+        XCTAssertEqual(p.toneProfile, .labStandard)
+        XCTAssertEqual(p.punch, FilmToneProfile.labStandard.punch)
+        XCTAssertEqual(p.fade, FilmToneProfile.labStandard.fade)
+        XCTAssertEqual(p.glow, FilmToneProfile.labStandard.glow)
+        XCTAssertEqual(p.toeChroma, FilmToneProfile.labStandard.toeChroma)
+        p.applyToneProfile(.linear)
+        XCTAssertEqual(p.punch, 0, "linear must be exactly today's render")
+        XCTAssertFalse(FilmToneProfile.linear.enablesAutoColorBalance)
+        XCTAssertTrue(FilmToneProfile.labStandard.enablesAutoColorBalance)
+    }
 }

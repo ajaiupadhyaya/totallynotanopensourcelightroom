@@ -589,7 +589,7 @@ Persist `renderVersion`, `toneProfile`, `punch`, `fade`, `glow`, `toeChroma`; mi
   - `PrintSettings.applyToneProfile(_ profile: FilmToneProfile)` (mutating: sets `toneProfile` + the four sliders to the profile's values)
   - Kernel `film_density_print` gains trailing args: `float3 trimS, float3 trimM, float3 trimH, float punch, float fade, float glow, float toeChroma` (Task 4 wires the trims; this task passes zeros)
 
-- [ ] **Step 1: Write failing decode/profile tests**
+- [x] **Step 1: Write failing decode/profile tests**
 
 Append to `Tests/PrintSettingsTests.swift`:
 
@@ -621,9 +621,9 @@ func testApplyToneProfileWritesTheProfileParameters() {
 }
 ```
 
-- [ ] **Step 2: Run to verify compile failure** (`-only-testing:PhotoEditorTests/PrintSettingsTests`).
+- [x] **Step 2: Run to verify compile failure** (`-only-testing:PhotoEditorTests/PrintSettingsTests`).
 
-- [ ] **Step 3: Implement `FilmToneProfile` + fields in `PrintSettings.swift`**
+- [x] **Step 3: Implement `FilmToneProfile` + fields in `PrintSettings.swift`**
 
 Above `PrintSettings`:
 
@@ -718,9 +718,9 @@ And in `init(from:)`, after the `tint` line:
         toeChroma = c.lenient(.toeChroma, 0)
 ```
 
-- [ ] **Step 4: Run PrintSettingsTests** — expected PASS.
+- [x] **Step 4: Run PrintSettingsTests** — expected PASS.
 
-- [ ] **Step 5: Mirror in the kernel and marshal**
+- [x] **Step 5: Mirror in the kernel and marshal**
 
 `Film.ci.metal` — extend the signature and body (mirror of Task 2, same order of operations; keep the doc comments in step with `PaperResponse`):
 
@@ -802,7 +802,7 @@ extern "C" float4 film_density_print(coreimage::sample_t s,
         ) ?? image
 ```
 
-- [ ] **Step 6: Extend the kernel-agreement test to non-neutral toning**
+- [x] **Step 6: Extend the kernel-agreement test to non-neutral toning**
 
 In `Tests/FilmDensityConverterTests.swift`, add a third leg to `testKernelAgreesWithTheSwiftModel` and thread the new params through `assertKernelAgreesWithSwiftModel`'s expected-value computation:
 
@@ -824,7 +824,7 @@ and in the helper, compute `expected` with:
                 toeChroma: PaperResponse.toeChromaWeight(settings.print.toeChroma)))
 ```
 
-- [ ] **Step 7: Conformance rows**
+- [x] **Step 7: Conformance rows**
 
 In `Tests/FilmControlConformanceTests.swift` — the completeness test now fails without these. Append to `cases` (reference is the `.linear`-solved `baseStack()`, so 0-floor sliders use two non-neutral legs):
 
@@ -856,12 +856,12 @@ And to `excluded`:
 
 **Measure before declaring:** render the probe once with each `high` leg and print the four measures (temporary diagnostic, then delete it — house discipline per this file's block comment). If a measured sign contradicts the table above, the declared sign is wrong: fix the table to the measurement and record why in the case's comment. If a delta lands under its floor, first try moving the leg further from neutral (the `FilmControlCase` contract allows any in-range value); only then adjust the floor, with the measured number in the comment (Toe/Warmth precedents).
 
-- [ ] **Step 8: Run the three suites**
+- [x] **Step 8: Run the three suites**
 
 Run: `-only-testing:PhotoEditorTests/FilmDensityConverterTests -only-testing:PhotoEditorTests/FilmControlConformanceTests -only-testing:PhotoEditorTests/PaperResponseGoldenTests`
 Expected: ALL PASS. The goldens pass because every new field defaults/decodes to its identity and the kernel additions are exact no-ops at those values.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Sources/Film/PrintSettings.swift Sources/Film/FilmDensityConverter.swift Sources/Pipeline/Kernels/Film.ci.metal Tests/PrintSettingsTests.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift
