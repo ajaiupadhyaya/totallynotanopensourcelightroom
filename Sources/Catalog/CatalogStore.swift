@@ -232,9 +232,54 @@ final class CatalogStore {
         }
     }
 
+    /// How many entries the catalog holds, without loading any of them.
+    func entryCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM \(CatalogEntry.databaseTableName)") ?? 0
+        }
+    }
+
+    /// One page of the library in the same order ``allEntries()`` produces.
+    ///
+    /// The ordering is expressed in SQL rather than rebuilt in Swift so a grid
+    /// can ask for a screenful instead of the whole library. The group date —
+    /// the master's import date, or the earliest in the group if the master is
+    /// gone — is computed per row, which keeps virtual copies adjacent to the
+    /// file they came from.
+    func recentEntries(limit: Int, offset: Int) throws -> [CatalogEntry] {
+        try dbQueue.read { db in
+            try CatalogEntry.fetchAll(db, sql: """
+                SELECT e.*,
+                       COALESCE(
+                         (SELECT m.dateImported FROM \(CatalogEntry.databaseTableName) m
+                           WHERE m.fileURL = e.fileURL AND m.copyNumber = 0 LIMIT 1),
+                         (SELECT MIN(x.dateImported) FROM \(CatalogEntry.databaseTableName) x
+                           WHERE x.fileURL = e.fileURL)
+                       ) AS groupDate
+                FROM \(CatalogEntry.databaseTableName) e
+                ORDER BY groupDate DESC,
+                         e.fileURL ASC,
+                         e.copyNumber ASC,
+                         e.dateImported ASC,
+                         e.id ASC
+                LIMIT ? OFFSET ?
+                """, arguments: [limit, offset])
+        }
+    }
+
     /// Inserts or updates an entry by primary key.
     func save(_ entry: CatalogEntry) throws {
         try dbQueue.write { db in try entry.save(db) }
+    }
+
+    /// Inserts or updates many entries in a single transaction. Importing a
+    /// folder one ``save(_:)`` at a time pays a transaction — and an fsync —
+    /// per photo, which is the difference between a folder import taking
+    /// seconds and taking minutes.
+    func save(_ entries: [CatalogEntry]) throws {
+        try dbQueue.write { db in
+            for entry in entries { try entry.save(db) }
+        }
     }
 
     /// Fetches a single entry by id, if present.

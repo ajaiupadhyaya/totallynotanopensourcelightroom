@@ -20,6 +20,7 @@
 		10E6675BB4186081D2CB3FA5 /* ConformanceSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C0990746E37E255E346136 /* ConformanceSupport.swift */; };
 		1868DAFC03EF61E6C8AAC25D /* RangeMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */; };
 		1A07019AE01EF5EA8374EF6B /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD897D60EAA5BF2C6D21704E /* EditorModel.swift */; };
+		1D24B32E36F100ADF3CF4701 /* CatalogScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E862E04D9DE878612B0AE08 /* CatalogScaleTests.swift */; };
 		1D5A1CA413710403E332411D /* CurvePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADE0E7375015B3EDE0039A6 /* CurvePanel.swift */; };
 		1F2E47439F4A2C335ECEA0B2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42064BDE271E9B76EFFD6DCC /* Theme.swift */; };
 		1FB8533D3BC7684CD3E9D3EB /* RetouchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC74CACB641569739FD84691 /* RetouchPanel.swift */; };
@@ -255,6 +256,7 @@
 		955FF06504B66581F45A5A7B /* CalibrationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationSupport.swift; sourceTree = "<group>"; };
 		98D365F1176EE97796A58796 /* OpticsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpticsPanel.swift; sourceTree = "<group>"; };
 		9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentPanel.swift; sourceTree = "<group>"; };
+		9E862E04D9DE878612B0AE08 /* CatalogScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogScaleTests.swift; sourceTree = "<group>"; };
 		A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSnapshot.swift; sourceTree = "<group>"; };
 		A24E17192240663CA3BE4181 /* CanvasToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasToolTests.swift; sourceTree = "<group>"; };
 		A3847B8AE37C226DB227816C /* PaperResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponse.swift; sourceTree = "<group>"; };
@@ -383,6 +385,7 @@
 				955FF06504B66581F45A5A7B /* CalibrationSupport.swift */,
 				30B68D5C8D421896627EA502 /* CalibrationTests.swift */,
 				A24E17192240663CA3BE4181 /* CanvasToolTests.swift */,
+				9E862E04D9DE878612B0AE08 /* CatalogScaleTests.swift */,
 				BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */,
 				267388D14FEE2777E922AC35 /* ColorMixerTests.swift */,
 				AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */,
@@ -677,6 +680,7 @@
 				96047658B9B680F93410FFA6 /* CalibrationSupport.swift in Sources */,
 				BA766B47DB98E7CEA6552A06 /* CalibrationTests.swift in Sources */,
 				C9314B0B31F82C1252544841 /* CanvasToolTests.swift in Sources */,
+				1D24B32E36F100ADF3CF4701 /* CatalogScaleTests.swift in Sources */,
 				DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */,
 				504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */,
 				9EC7032CD5145CA66D621C51 /* ColorSuiteTests.swift in Sources */,
