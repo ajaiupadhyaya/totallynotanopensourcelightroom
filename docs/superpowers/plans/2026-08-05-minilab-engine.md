@@ -68,7 +68,7 @@ Record today's rendering — pure-Swift math lattice AND an end-to-end kernel ra
 - Consumes: `PaperResponse.develop(_:dminLinear:dmax:gammaEffective:printOffset:p:q:satScale:)`, `FilmDensityConverter.convert(_:settings:)` exactly as they exist at `db28ada`/`7b4f677`.
 - Produces: two committed JSON fixtures + a test class later tasks must keep green. Later tasks call `develop()` with new **defaulted** parameters, so these call sites never change.
 
-- [ ] **Step 1: Write the golden test class (record-or-assert)**
+- [x] **Step 1: Write the golden test class (record-or-assert)**
 
 ```swift
 import CoreImage
@@ -231,22 +231,22 @@ final class PaperResponseGoldenTests: XCTestCase {
 
 Note the ramp stack carries nonzero `exposure` (legacy EV) and non-default `print` values on purpose: it freezes exactly the semantics Task 5 changes for renderVersion **2**, proving v1 keeps them.
 
-- [ ] **Step 2: Add the file to the project and record**
+- [x] **Step 2: Add the file to the project and record**
 
 Run: `xcodegen generate`
 Run: `TEST_RUNNER_GOLDEN_RECORD=1 xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test -only-testing:PhotoEditorTests/PaperResponseGoldenTests`
 Expected: both tests SKIP with "recorded … commit the fixture"; two JSON files appear under `Tests/Fixtures/Golden/`.
 
-- [ ] **Step 3: Re-run in assert mode to verify green**
+- [x] **Step 3: Re-run in assert mode to verify green**
 
 Run: same command without `TEST_RUNNER_GOLDEN_RECORD=1`.
 Expected: PASS (2 tests).
 
-- [ ] **Step 4: Verify the goldens actually bite**
+- [x] **Step 4: Verify the goldens actually bite**
 
 Temporarily change `PaperResponse.shoulderStart` from `0.75` to `0.76`, re-run the class. Expected: `testSwiftModelMatchesTheGoldenLattice` FAILS. Revert the constant, re-run. Expected: PASS. (Do not skip this — an unfalsifiable golden is decoration.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Tests/PaperResponseGoldenTests.swift Tests/Fixtures/Golden project.yml PhotoEditor.xcodeproj
