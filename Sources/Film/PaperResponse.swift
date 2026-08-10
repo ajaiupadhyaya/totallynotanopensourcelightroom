@@ -44,6 +44,59 @@ enum PaperResponse {
     /// sensor noise, not infinite density.
     static let transmittanceFloor = 1e-5
 
+    // MARK: Minilab constants — the lab rendering layers (Phase 2.5)
+
+    /// Full-scale midtone punch. The S-curve is pn + a·pn(1−pn)(pn−targetMid);
+    /// its worst-case slope is 1 − a·(1 − targetMid) ≈ 1 − 0.82a, so 1.0
+    /// keeps the curve monotone with real margin (proven by test at 100).
+    static let punchFullScale = 1.0
+    /// Full-scale raised paper black ("Fade") — 6% linear, a clearly faded
+    /// print at the extreme, imperceptible per slider tick.
+    static let fadeFullScale = 0.06
+    /// Full-scale lowered paper white ("Glow") — same bound, same reasoning.
+    static let glowFullScale = 0.06
+    /// Toe chroma compression ceiling — the mirror of highlightDesat: reaches
+    /// print-like shadow neutrality without reading as a channel clamp.
+    static let toeChromaFull = 0.9
+    /// Norm band over which the toe compression fades out (fully engaged at
+    /// toeStart, gone by toeEnd). Below the paper floor everything is black
+    /// anyway; 0.10 keeps it out of the mids.
+    static let toeStart = 0.02
+    static let toeEnd = 0.10
+    /// Zone weight edges over the pre-trim paper-output norm: shadows fade
+    /// out across 0.15–0.45, highlights fade in across 0.55–0.85, mids take
+    /// the remainder — complementary smoothsteps, always summing to ≤ 1.
+    static let zoneShadowEnd = 0.15
+    static let zoneShadowFade = 0.45
+    static let zoneHighStart = 0.55
+    static let zoneHighFull = 0.85
+    /// Cast correction full scale: ±100 = ±0.5 EV of per-channel density —
+    /// twice the filtration clamp: enough to remove a real base-estimation
+    /// cast, still bounded against scan-rescue abuse (spec §Cast correction).
+    static let castFullScaleEV = 0.5
+    /// Zone trim full scale: ±0.25 EV, the filtration bound — a taste trim.
+    static let zoneTrimFullScaleEV = 0.25
+
+    static func punchAmount(_ slider: Double) -> Double {
+        min(max(slider, 0), 100) / 100.0 * punchFullScale
+    }
+    static func fadeLift(_ slider: Double) -> Double {
+        min(max(slider, 0), 100) / 100.0 * fadeFullScale
+    }
+    static func glowDrop(_ slider: Double) -> Double {
+        min(max(slider, 0), 100) / 100.0 * glowFullScale
+    }
+    static func toeChromaWeight(_ slider: Double) -> Double {
+        min(max(slider, 0), 100) / 100.0 * toeChromaFull
+    }
+    /// Slider (−100…100) → density offset. 1 EV = log10(2) density.
+    static func castDensity(_ slider: Double) -> Double {
+        min(max(slider, -100), 100) / 100.0 * castFullScaleEV * log10(2.0)
+    }
+    static func zoneTrimDensity(_ slider: Double) -> Double {
+        min(max(slider, -100), 100) / 100.0 * zoneTrimFullScaleEV * log10(2.0)
+    }
+
     // MARK: Slider mappings
 
     /// Shoulder slider 0…100 → knee exponent, log-interpolated 64 → 2.
@@ -85,12 +138,26 @@ enum PaperResponse {
     /// at the extreme without being able to overpower a three-stop exposure
     /// mistake — filtration is meant to trim the house look, not rescue a
     /// bad scan.
-    static func printOffsets(exposureEV: Double, warmth: Double, tint: Double)
+    /// `balancedTint` selects renderVersion 2's tint semantics. In version 1
+    /// the tint leg moves green alone, so dialing tint also moves the print's
+    /// overall log exposure — the doc comment above promised filtration moves
+    /// exposure *between* complementary channels, and on the green–magenta
+    /// axis that was not true. Version 2 splits the complement across red and
+    /// blue, half each, so the three offsets sum to zero and the promise holds
+    /// on both axes. Version 1 keeps the old, unbalanced behaviour verbatim.
+    static func printOffsets(exposureEV: Double, warmth: Double, tint: Double,
+                             balancedTint: Bool = false)
         -> (Double, Double, Double) {
         let base = exposureEV * log10(2.0)
         let full = 0.25 * log10(2.0)
+        let t = tint / 100.0 * full
+        if balancedTint {
+            return (base + warmth / 100.0 * full - t / 2,
+                    base + t,
+                    base - warmth / 100.0 * full - t / 2)
+        }
         return (base + warmth / 100.0 * full,
-                base + tint / 100.0 * full,
+                base + t,
                 base - warmth / 100.0 * full)
     }
 
@@ -146,15 +213,36 @@ enum PaperResponse {
                         gammaEffective: (Double, Double, Double),
                         printOffset: (Double, Double, Double),
                         p: Double, q: Double,
-                        satScale: Double) -> (Double, Double, Double) {
+                        satScale: Double,
+                        shadowTrim: (Double, Double, Double) = (0, 0, 0),
+                        midTrim: (Double, Double, Double) = (0, 0, 0),
+                        highTrim: (Double, Double, Double) = (0, 0, 0),
+                        punch: Double = 0, fade: Double = 0, glow: Double = 0,
+                        toeChroma: Double = 0) -> (Double, Double, Double) {
         func straightLine(_ t: Double, _ dmin: Double, _ dmax: Double, _ g: Double,
                           _ offset: Double) -> Double {
             let density = log10(max(dmin, 1e-4) / max(t, transmittanceFloor))
             return pow(10.0, g * (density - dmax) + offset)
         }
-        let s = (straightLine(t.0, dminLinear.0, dmax.0, gammaEffective.0, printOffset.0),
+        var s = (straightLine(t.0, dminLinear.0, dmax.0, gammaEffective.0, printOffset.0),
                  straightLine(t.1, dminLinear.1, dmax.1, gammaEffective.1, printOffset.1),
                  straightLine(t.2, dminLinear.2, dmax.2, gammaEffective.2, printOffset.2))
+        // Zone trims: weights from the PRE-trim paper-output norm — evaluated
+        // once on the untrimmed value, then applied as folded log offsets
+        // (trim args arrive as gammaEffective × zoneTrimDensity, CPU-folded).
+        if shadowTrim != (0, 0, 0) || midTrim != (0, 0, 0) || highTrim != (0, 0, 0) {
+            let n0 = max(s.0, max(s.1, s.2))
+            let pn0 = paper(n0, p: p, q: q)
+            let wS = 1 - smoothstep(zoneShadowEnd, zoneShadowFade, pn0)
+            let wH = smoothstep(zoneHighStart, zoneHighFull, pn0)
+            let wM = max(1 - wS - wH, 0)
+            func trimmed(_ v: Double, _ tS: Double, _ tM: Double, _ tH: Double) -> Double {
+                v * pow(10.0, wS * tS + wM * tM + wH * tH)
+            }
+            s = (trimmed(s.0, shadowTrim.0, midTrim.0, highTrim.0),
+                 trimmed(s.1, shadowTrim.1, midTrim.1, highTrim.1),
+                 trimmed(s.2, shadowTrim.2, midTrim.2, highTrim.2))
+        }
         let n = max(s.0, max(s.1, s.2))
         var ratio = n > 0 ? (s.0 / n, s.1 / n, s.2 / n) : (1.0, 1.0, 1.0)
         // Hue-preserving saturation: scale the ratio around 1. Clamped at zero
@@ -162,11 +250,20 @@ enum PaperResponse {
         ratio = (max(1 + (ratio.0 - 1) * satScale, 0),
                  max(1 + (ratio.1 - 1) * satScale, 0),
                  max(1 + (ratio.2 - 1) * satScale, 0))
-        let pn = paper(n, p: p, q: q)
+        var pn = paper(n, p: p, q: q)
+        // Punch: a monotone cubic S about the mid target — zero at black,
+        // targetMid, and white, so it adds midtone contrast without moving
+        // the endpoints the fade/glow remap below owns.
+        pn = pn + punch * pn * (1 - pn) * (pn - targetMid)
+        // Fade/glow: the endpoint remap — raised paper black, lowered paper
+        // white. Affine, slope 1 − fade − glow > 0, still strictly < 1.
+        pn = fade + pn * (1 - fade - glow)
         let w = smoothstep(shoulderStart, 1.0, pn) * highlightDesat
-        return (pn * (ratio.0 + (1 - ratio.0) * w),
-                pn * (ratio.1 + (1 - ratio.1) * w),
-                pn * (ratio.2 + (1 - ratio.2) * w))
+        let wToe = (1 - smoothstep(toeStart, toeEnd, pn)) * toeChroma
+        let wAll = min(w + wToe, 1.0)
+        return (pn * (ratio.0 + (1 - ratio.0) * wAll),
+                pn * (ratio.1 + (1 - ratio.1) * wAll),
+                pn * (ratio.2 + (1 - ratio.2) * wAll))
     }
 
     // MARK: sRGB transfer

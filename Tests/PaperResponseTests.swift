@@ -200,4 +200,166 @@ final class PaperResponseTests: XCTestCase {
                            accuracy: 1e-9)
         }
     }
+
+    // MARK: Minilab extensions (Task 2)
+
+    /// Every new develop() parameter at its default is an exact no-op — the
+    /// same outputs as the pre-Minilab model, to the double's last bit. This is
+    /// what lets renderVersion 1 photos keep their rendering through shared code.
+    func testNewParametersDefaultToExactIdentity() {
+        let dmin = (0.55, 0.30, 0.13)
+        for i in 0...60 {
+            let d = Double(i) / 20.0
+            let t = (dmin.0 * pow(10, -d), dmin.1 * pow(10, -d * 1.1), dmin.2 * pow(10, -d * 0.9))
+            let g = log10(PaperResponse.targetBlack) / -2.0
+            let a = PaperResponse.develop(t, dminLinear: dmin, dmax: (2, 2, 2),
+                                          gammaEffective: (g, g, g),
+                                          printOffset: (0.05, 0.02, -0.03),
+                                          p: 16, q: 204, satScale: 1.12)
+            let b = PaperResponse.develop(t, dminLinear: dmin, dmax: (2, 2, 2),
+                                          gammaEffective: (g, g, g),
+                                          printOffset: (0.05, 0.02, -0.03),
+                                          p: 16, q: 204, satScale: 1.12,
+                                          shadowTrim: (0, 0, 0), midTrim: (0, 0, 0),
+                                          highTrim: (0, 0, 0),
+                                          punch: 0, fade: 0, glow: 0, toeChroma: 0)
+            XCTAssertEqual(a.0, b.0); XCTAssertEqual(a.1, b.1); XCTAssertEqual(a.2, b.2)
+        }
+    }
+
+    /// The punch S-curve is monotone at full strength (punchFullScale = 1.0 was
+    /// chosen for exactly this margin: the cubic's worst slope is 1 − a·0.82).
+    func testPunchStaysMonotoneAtFullStrength() {
+        let g = log10(PaperResponse.targetBlack) / -2.0
+        var last = -Double.infinity
+        for i in 0...4000 {
+            let d = Double(i) / 4000.0 * 3.0
+            let t = 0.55 * pow(10, -d)
+            let out = PaperResponse.develop((t, t, t), dminLinear: (0.55, 0.55, 0.55),
+                                            dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                            printOffset: (0, 0, 0), p: 16, q: 204,
+                                            satScale: 1.0,
+                                            punch: PaperResponse.punchAmount(100)).0
+            XCTAssertGreaterThanOrEqual(out, last - 1e-12,
+                                        "punch made the curve non-monotone at density \(d)")
+            last = out
+        }
+    }
+
+    /// Monotonicity alone would still hold if punch did nothing, so prove it
+    /// is load-bearing: it steepens the mids around targetMid — pulling the
+    /// below-mid tone down and pushing the above-mid tone up — which is what
+    /// "midtone contrast" means here.
+    func testPunchSteepensTheMidsAroundTheMidTarget() {
+        let g = log10(PaperResponse.targetBlack) / -2.0
+        func out(_ density: Double, punch: Double) -> Double {
+            let t = 0.55 * pow(10, -density)
+            return PaperResponse.develop((t, t, t), dminLinear: (0.55, 0.55, 0.55),
+                                         dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                         printOffset: (0, 0, 0), p: 16, q: 204,
+                                         satScale: 1.0, punch: punch).0
+        }
+        let amount = PaperResponse.punchAmount(100)
+        // Bracket targetMid: find one density below it and one above.
+        let low = (1...300).map { Double($0) / 100.0 }.first { out($0, punch: 0) > 0.05 }!
+        let high = (1...300).map { Double($0) / 100.0 }.first { out($0, punch: 0) > 0.45 }!
+        XCTAssertLessThan(out(low, punch: amount), out(low, punch: 0),
+                          "punch must pull the below-mid tone down")
+        XCTAssertGreaterThan(out(high, punch: amount), out(high, punch: 0),
+                             "punch must push the above-mid tone up")
+    }
+
+    /// Fade raises paper black; glow lowers paper white; both leave the map
+    /// monotone and strictly below 1.
+    func testFadeAndGlowMoveTheEndpoints() {
+        let g = log10(PaperResponse.targetBlack) / -2.0
+        func out(_ density: Double, fade: Double, glow: Double) -> Double {
+            let t = 0.55 * pow(10, -density)
+            return PaperResponse.develop((t, t, t), dminLinear: (0.55, 0.55, 0.55),
+                                         dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                         printOffset: (0, 0, 0), p: 16, q: 204,
+                                         satScale: 1.0, fade: fade, glow: glow).0
+        }
+        let fadeAmount = PaperResponse.fadeLift(100)
+        XCTAssertGreaterThan(out(0, fade: fadeAmount, glow: 0), out(0, fade: 0, glow: 0),
+                             "fade must lift the black end")
+        let glowAmount = PaperResponse.glowDrop(100)
+        XCTAssertLessThan(out(3, fade: 0, glow: glowAmount), out(3, fade: 0, glow: 0),
+                          "glow must lower the white end")
+        XCTAssertLessThan(out(3, fade: fadeAmount, glow: glowAmount), 1.0)
+    }
+
+    /// Toe chroma compression is hue-preserving by the same argument as the
+    /// highlight rolloff: one weight scales all inter-channel differences. In
+    /// deep shadow the ratios move toward 1; the channel ORDER never flips.
+    func testToeChromaCompressionDesaturatesShadowsWithoutHueFlip() {
+        let g = log10(PaperResponse.targetBlack) / -2.0
+        // A saturated deep-shadow pixel — a THIN negative, density just above
+        // the base. Density is measured from the base, so a *dense* negative
+        // is where the scene was bright: densities near dmax land at paper
+        // white, where the toe weight is zero by construction and this test
+        // could not fail no matter what the toe did.
+        let t = (0.55 * pow(10, -0.40), 0.30 * pow(10, -0.25), 0.13 * pow(10, -0.10))
+        let plain = PaperResponse.develop(t, dminLinear: (0.55, 0.30, 0.13),
+                                          dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                          printOffset: (0, 0, 0), p: 16, q: 204, satScale: 1.0)
+        // Pin the regime: the assertions below are only meaningful while the
+        // fixture actually lands in the toe band.
+        XCTAssertLessThan(max(plain.0, max(plain.1, plain.2)), PaperResponse.toeEnd,
+                          "fixture must land in the toe for this test to test anything")
+        let squeezed = PaperResponse.develop(t, dminLinear: (0.55, 0.30, 0.13),
+                                             dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                             printOffset: (0, 0, 0), p: 16, q: 204,
+                                             satScale: 1.0,
+                                             toeChroma: PaperResponse.toeChromaWeight(100))
+        XCTAssertNotEqual(plain.1, squeezed.1,
+                          "toe chroma did nothing at all — the fixture is not in the toe")
+        func spread(_ c: (Double, Double, Double)) -> Double {
+            max(c.0, max(c.1, c.2)) - min(c.0, min(c.1, c.2))
+        }
+        XCTAssertLessThan(spread(squeezed), spread(plain),
+                          "toe chroma compression must reduce shadow chroma")
+        XCTAssertEqual(plain.0 < plain.1, squeezed.0 < squeezed.1, "channel order flipped")
+        XCTAssertEqual(plain.1 < plain.2, squeezed.1 < squeezed.2, "channel order flipped")
+    }
+
+    /// Zone trims: a shadow trim moves a deep-shadow pixel and leaves a
+    /// highlight pixel essentially alone; vice versa for a high trim. Weights
+    /// come from the PRE-trim paper-output norm (no circularity).
+    func testZoneTrimsAreZoneScoped() {
+        let g = log10(PaperResponse.targetBlack) / -2.0
+        func develop(_ density: Double, shadow: Double, high: Double) -> Double {
+            let t = 0.55 * pow(10, -density)
+            // Pre-folded trim: gammaEffective × density offset, as
+            // FilmDensityConverter will fold it (Task 4).
+            let fold = g * PaperResponse.zoneTrimDensity(shadow)
+            let foldH = g * PaperResponse.zoneTrimDensity(high)
+            return PaperResponse.develop((t, t, t), dminLinear: (0.55, 0.55, 0.55),
+                                         dmax: (2, 2, 2), gammaEffective: (g, g, g),
+                                         printOffset: (0, 0, 0), p: 16, q: 204,
+                                         satScale: 1.0,
+                                         shadowTrim: (fold, fold, fold),
+                                         highTrim: (foldH, foldH, foldH)).0
+        }
+        // Deep shadow (density 0.35 ⇒ pn well under zoneShadowEnd):
+        XCTAssertGreaterThan(develop(0.35, shadow: 100, high: 0), develop(0.35, shadow: 0, high: 0))
+        // Bright highlight (density 2.0 ⇒ pn above zoneHighFull):
+        XCTAssertEqual(develop(2.0, shadow: 100, high: 0), develop(2.0, shadow: 0, high: 0),
+                       accuracy: 1e-6, "shadow trim leaked into the highlights")
+        XCTAssertLessThan(develop(2.0, shadow: 0, high: -100), develop(2.0, shadow: 0, high: 0))
+    }
+
+    /// Balanced tint (renderVersion 2 semantics): green moves one way, red and
+    /// blue each move half the other way — the offsets sum to zero, so tint no
+    /// longer changes overall log-domain exposure. v1 (default) is unchanged.
+    func testBalancedTintPreservesLogExposure() {
+        let v1 = PaperResponse.printOffsets(exposureEV: 0, warmth: 0, tint: 60)
+        XCTAssertEqual(v1.0, 0); XCTAssertGreaterThan(v1.1, 0); XCTAssertEqual(v1.2, 0)
+        let v2 = PaperResponse.printOffsets(exposureEV: 0, warmth: 0, tint: 60,
+                                            balancedTint: true)
+        XCTAssertEqual(v2.0 + v2.1 + v2.2, 0, accuracy: 1e-15)
+        XCTAssertEqual(v2.1, v1.1, accuracy: 1e-15, "green leg must not change")
+        XCTAssertEqual(v2.0, -v1.1 / 2, accuracy: 1e-15)
+        XCTAssertEqual(v2.2, -v1.1 / 2, accuracy: 1e-15)
+    }
 }

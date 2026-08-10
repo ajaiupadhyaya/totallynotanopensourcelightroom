@@ -270,7 +270,7 @@ Add the new curve math to the Swift model only, as **defaulted parameters** that
   - `printOffsets(exposureEV:warmth:tint:balancedTint:)` — new `balancedTint: Bool = false` parameter
   - `develop(...)` gains defaulted params: `shadowTrim/midTrim/highTrim: (Double, Double, Double) = (0, 0, 0)` (pre-folded log-domain offsets, see Task 4), `punch/fade/glow/toeChroma: Double = 0` (amounts, not sliders)
 
-- [ ] **Step 1: Write failing tests for the new math**
+- [x] **Step 1: Write failing tests for the new math**
 
 Append to `Tests/PaperResponseTests.swift`:
 
@@ -345,8 +345,13 @@ func testFadeAndGlowMoveTheEndpoints() {
 /// deep shadow the ratios move toward 1; the channel ORDER never flips.
 func testToeChromaCompressionDesaturatesShadowsWithoutHueFlip() {
     let g = log10(PaperResponse.targetBlack) / -2.0
-    // A saturated deep-shadow pixel: red dense, blue thin.
-    let t = (0.55 * pow(10, -2.6), 0.30 * pow(10, -2.4), 0.13 * pow(10, -2.2))
+    // A saturated deep-shadow pixel — a THIN negative, density just above
+    // the base. PLAN BUG, corrected 2026-08-10: the original fixture used
+    // densities near dmax (-2.6/-2.4/-2.2). Density is measured from the
+    // base, so a *dense* negative is where the scene was bright; those land
+    // at paper white, where the toe weight is zero by construction, and the
+    // test passed with the toe doing literally nothing (spreads bit-equal).
+    let t = (0.55 * pow(10, -0.40), 0.30 * pow(10, -0.25), 0.13 * pow(10, -0.10))
     let plain = PaperResponse.develop(t, dminLinear: (0.55, 0.30, 0.13),
                                       dmax: (2, 2, 2), gammaEffective: (g, g, g),
                                       printOffset: (0, 0, 0), p: 16, q: 204, satScale: 1.0)
@@ -405,12 +410,12 @@ func testBalancedTintPreservesLogExposure() {
 }
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail**
+- [x] **Step 2: Run the new tests to verify they fail**
 
 Run: `xcodebuild … test -only-testing:PhotoEditorTests/PaperResponseTests`
 Expected: COMPILE FAILURE (no such parameters/functions) — that is this cycle's "red".
 
-- [ ] **Step 3: Implement in `PaperResponse.swift`**
+- [x] **Step 3: Implement in `PaperResponse.swift`**
 
 Add to the constants block (each with a doc comment in the house voice — what it is and why the value):
 
@@ -555,12 +560,12 @@ Extend `develop` — the full new body (replaces the current one; the first half
 
 Note: `w` and `wToe` have disjoint supports (pn ≥ 0.75·(1−fade−glow) vs pn ≤ 0.10 + fade), so `min(w + wToe, 1)` never mixes the two regimes; at defaults both are 0 and the return line reduces bit-exactly to the old one (`wAll == w`, and `w`'s formula is unchanged).
 
-- [ ] **Step 4: Run PaperResponseTests + the goldens**
+- [x] **Step 4: Run PaperResponseTests + the goldens**
 
 Run: `xcodebuild … test -only-testing:PhotoEditorTests/PaperResponseTests -only-testing:PhotoEditorTests/PaperResponseGoldenTests`
 Expected: ALL PASS — including both goldens (the identity-at-default proof) and every pre-existing PaperResponse test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Film/PaperResponse.swift Tests/PaperResponseTests.swift
