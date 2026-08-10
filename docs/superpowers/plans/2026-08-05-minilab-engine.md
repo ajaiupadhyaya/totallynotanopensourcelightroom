@@ -1078,7 +1078,7 @@ Task 3/4 installed the v2 branches (`balancedTint: v2`, legacy-EV fold, pivot co
 - Modify: `Sources/Film/FilmDensityConverter.swift` (only the legacy-EV skip below)
 - Test: `Tests/FilmDensityConverterTests.swift`, `Tests/FilmControlConformanceTests.swift`
 
-- [ ] **Step 1: Gate the post-curve legacy EV to v1**
+- [x] **Step 1: Gate the post-curve legacy EV to v1**
 
 In `FilmDensityConverter.convert`, change the legacy-EV block:
 
@@ -1095,7 +1095,7 @@ In `FilmDensityConverter.convert`, change the legacy-EV block:
         }
 ```
 
-- [ ] **Step 2: Write the three semantic proofs**
+- [x] **Step 2: Write the three semantic proofs**
 
 `Tests/FilmDensityConverterTests.swift`:
 
@@ -1160,13 +1160,13 @@ func testGradePivotHoldsTheMidUnderContrast() {
 
 (The balanced-tint proof already exists at the model level from Task 2; the kernel-agreement fourth leg covers it end-to-end.)
 
-- [ ] **Step 3: Run FilmDensityConverterTests** — expected: the two new tests PASS, all old ones PASS, goldens PASS (the v1 ramp golden carries nonzero legacy EV + tint −8, which is exactly what this task must not disturb).
+- [x] **Step 3: Run FilmDensityConverterTests** — expected: the two new tests PASS, all old ones PASS, goldens PASS (the v1 ramp golden carries nonzero legacy EV + tint −8, which is exactly what this task must not disturb).
 
-- [ ] **Step 4: Re-verify conformance and re-measure if needed**
+- [x] **Step 4: Re-verify conformance and re-measure if needed**
 
 Run `FilmControlConformanceTests`. If Print Warmth/Tint (or any case) now fails a floor or flips: re-run with a temporary sweep diagnostic, adjust the leg (preferred) or floor to the measured values, document in the case comment citing this task — the exact Phase C procedure recorded in that file's block comment. Delete the diagnostic.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Film/FilmDensityConverter.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift

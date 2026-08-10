@@ -87,9 +87,11 @@ enum FilmDensityConverter {
             ]
         ) ?? image
 
-        // Film Exposure (the legacy EV lift) still applies if set — it is a
-        // linear-light stop, meaningful on either engine.
-        if settings.exposure != 0 {
+        // renderVersion 1 only: the historical post-curve EV multiply. A
+        // frozen misfeature — it can push paper white past 1.0 — kept
+        // verbatim because v1 photos' appearance depends on it. v2 folds the
+        // same EV into the print exposure above, pre-curve.
+        if settings.exposure != 0 && p.renderVersion < 2 {
             let exposure = CIFilter.exposureAdjust()
             exposure.inputImage = result
             exposure.ev = Float(settings.exposure)

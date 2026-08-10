@@ -191,6 +191,77 @@ final class FilmDensityConverterTests: XCTestCase {
         XCTAssertEqual(rendered.blue, expected.2, accuracy: 2e-3)
     }
 
+    /// renderVersion 2 restores the never-clips contract with a nonzero legacy
+    /// EV: the same +2 EV that pushes a v1 render past 1.0 stays under 1.0 on
+    /// v2, because it now runs through the paper curve.
+    ///
+    /// The probe is a DENSE patch (density 1.7, near Dmax), built in linear
+    /// space: on a negative the dense areas are the print's near-whites, which
+    /// is the only place a post-curve multiply has anything to push past 1.0
+    /// (the base renders near BLACK — see
+    /// ``testBaseRendersNearBlackAndLightboxBelowIt`` — where ×2EV clips
+    /// nothing). On v2 the folded EV lands this patch at ≈0.9999 — under the
+    /// shoulder's strict ceiling; on v1 the same patch renders mid-grey
+    /// (≈0.46) and the frozen post-curve ×4 pushes it to ≈1.8.
+    func testV2FoldsLegacyExposureBeforeThePaperCurve() throws {
+        var v2 = densitySettings()
+        v2.exposure = 2
+        let dminLin = (PaperResponse.srgbDecode(v2.baseColor.red),
+                       PaperResponse.srgbDecode(v2.baseColor.green),
+                       PaperResponse.srgbDecode(v2.baseColor.blue))
+        let transmit = pow(10.0, -1.7)
+        let scan = TestSupport.solidImage(redLinear: dminLin.0 * transmit,
+                                          greenLinear: dminLin.1 * transmit,
+                                          blueLinear: dminLin.2 * transmit)
+        let v2Out = TestSupport.readLinearColor(
+            FilmDensityConverter.convert(scan, settings: v2), context: context)
+        XCTAssertLessThan(max(v2Out.red, max(v2Out.green, v2Out.blue)), 1.0,
+                          "v2 must never clip, even with a stale legacy EV")
+
+        var v1JSON = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(v2)) as! [String: Any]
+        var printDict = v1JSON["print"] as! [String: Any]
+        printDict.removeValue(forKey: "renderVersion") // decode → 1
+        v1JSON["print"] = printDict
+        let v1 = try JSONDecoder().decode(
+            FilmNegativeSettings.self,
+            from: JSONSerialization.data(withJSONObject: v1JSON))
+        XCTAssertEqual(v1.print.renderVersion, 1)
+        let v1Out = TestSupport.readLinearColor(
+            FilmNegativeConverter.convert(scan, settings: v1), context: context)
+        XCTAssertGreaterThan(max(v1Out.red, max(v1Out.green, v1Out.blue)), 1.0,
+                             "the frozen v1 misfeature must stay frozen — the "
+                             + "post-curve ×2EV multiply clips a dense patch past 1.0")
+    }
+
+    /// Grade pivot: with the pivot set to the (synthetic) median density,
+    /// raising Contrast leaves that density's render invariant while still
+    /// steepening the curve around it.
+    func testGradePivotHoldsTheMidUnderContrast() {
+        var settings = densitySettings()
+        let pivotD = 1.1
+        settings.print.gradePivot = DensityTriple(red: pivotD, green: pivotD, blue: pivotD)
+        let dminLin = PaperResponse.srgbDecode(settings.baseColor.red)
+        func render(_ density: Double, contrast: Double) -> Double {
+            var s = settings
+            s.print.contrast = contrast
+            let t = dminLin * pow(10, -density)
+            let g = PaperResponse.srgbDecode(s.baseColor.green) * pow(10, -density)
+            let b = PaperResponse.srgbDecode(s.baseColor.blue) * pow(10, -density)
+            let scan = TestSupport.solidImage(redLinear: t, greenLinear: g, blueLinear: b)
+            return TestSupport.readLinearColor(
+                FilmDensityConverter.convert(scan, settings: s), context: context).red
+        }
+        XCTAssertEqual(render(pivotD, contrast: 4), render(pivotD, contrast: 2),
+                       accuracy: 2e-3, "the pivot density must not move with grade")
+        let below2 = render(0.6, contrast: 2), below4 = render(0.6, contrast: 4)
+        XCTAssertLessThan(below4, below2 - 1e-3,
+                          "grade 4 must darken below the pivot (steeper curve)")
+        let above2 = render(1.6, contrast: 2), above4 = render(1.6, contrast: 4)
+        XCTAssertGreaterThan(above4, above2 + 1e-3,
+                             "grade 4 must brighten above the pivot")
+    }
+
     /// The film base renders near black; brighter-than-base (lightbox)
     /// renders *at or below* it. On a negative the base is the thinnest area.
     func testBaseRendersNearBlackAndLightboxBelowIt() {
