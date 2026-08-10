@@ -52,6 +52,18 @@ final class FilmDensityConverterTests: XCTestCase {
         var lab = densitySettings()
         lab.print.applyToneProfile(.labStandard)
         assertKernelAgreesWithSwiftModel(lab)
+
+        // Fourth leg: cast + zone trim at a non-unit grade (Task 4). Proves
+        // the CPU folds (cast through the effective gamma, trims folded per
+        // channel into the kernel's zone math) and the kernel describe one
+        // model — a converter that folded cast through the un-graded gamma,
+        // or marshaled the trim vectors in the wrong zone order, diverges
+        // from the Swift model here.
+        var cast = densitySettings()
+        cast.print.contrast = 3
+        cast.print.castRed = 40
+        cast.print.shadowTrim.red = 60
+        assertKernelAgreesWithSwiftModel(cast)
     }
 
     private func assertKernelAgreesWithSwiftModel(
@@ -71,9 +83,35 @@ final class FilmDensityConverterTests: XCTestCase {
         let gammaEffective = (settings.print.gamma.red * grade,
                               settings.print.gamma.green * grade,
                               settings.print.gamma.blue * grade)
-        let printOffset = PaperResponse.printOffsets(exposureEV: settings.print.exposure,
-                                                      warmth: settings.print.warmth,
-                                                      tint: settings.print.tint)
+        let v2 = settings.print.renderVersion >= 2
+        var printOffset = PaperResponse.printOffsets(
+            exposureEV: settings.print.exposure + (v2 ? settings.exposure : 0),
+            warmth: settings.print.warmth,
+            tint: settings.print.tint, balancedTint: v2)
+        // Cast folds through the EFFECTIVE gamma; the grade pivot through the
+        // UN-graded gamma — both exactly as FilmDensityConverter folds them.
+        printOffset.0 += gammaEffective.0 * PaperResponse.castDensity(settings.print.castRed)
+        printOffset.1 += gammaEffective.1 * PaperResponse.castDensity(settings.print.castGreen)
+        printOffset.2 += gammaEffective.2 * PaperResponse.castDensity(settings.print.castBlue)
+        if v2, let pivot = settings.print.gradePivot {
+            printOffset.0 += settings.print.gamma.red * (1 - grade)
+                * (pivot.red - settings.print.dmax.red)
+            printOffset.1 += settings.print.gamma.green * (1 - grade)
+                * (pivot.green - settings.print.dmax.green)
+            printOffset.2 += settings.print.gamma.blue * (1 - grade)
+                * (pivot.blue - settings.print.dmax.blue)
+        }
+        // Zone trims arrive at develop() already folded through the effective
+        // gamma, mirroring the converter's kernel marshaling.
+        let shadowTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.red),
+                          gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.green),
+                          gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.blue))
+        let midTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.midTrim.red),
+                       gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.midTrim.green),
+                       gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.midTrim.blue))
+        let highTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.highTrim.red),
+                        gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.highTrim.green),
+                        gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.highTrim.blue))
         let dmax = (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue)
         let p = PaperResponse.kneeP(shoulder: settings.print.shoulder)
         let q = PaperResponse.kneeQ(toe: settings.print.toe)
@@ -86,6 +124,7 @@ final class FilmDensityConverterTests: XCTestCase {
             expected.append(PaperResponse.develop(
                 t, dminLinear: dminLin, dmax: dmax, gammaEffective: gammaEffective,
                 printOffset: printOffset, p: p, q: q, satScale: satScale,
+                shadowTrim: shadowTrim, midTrim: midTrim, highTrim: highTrim,
                 punch: PaperResponse.punchAmount(settings.print.punch),
                 fade: PaperResponse.fadeLift(settings.print.fade),
                 glow: PaperResponse.glowDrop(settings.print.glow),
@@ -115,6 +154,41 @@ final class FilmDensityConverterTests: XCTestCase {
             XCTAssertEqual(Double(buffer[x * 4 + 2]), expected[x].2, accuracy: 2e-3,
                            file: file, line: line)
         }
+    }
+
+    /// Cast folds through the EFFECTIVE gamma (grade included): a +cast on red
+    /// is exactly a density offset, so the render must equal the pure model
+    /// developed with printOffset.red += gammaEffective.red · castDensity.
+    func testCastFoldMatchesTheDensityOffsetSemantics() {
+        var settings = densitySettings()
+        settings.print.contrast = 3            // non-unit grade — the fold's hard case
+        settings.print.castRed = 60
+        let grade = PaperResponse.gradeScale(settings.print.contrast)
+        let dminLin = (PaperResponse.srgbDecode(settings.baseColor.red),
+                       PaperResponse.srgbDecode(settings.baseColor.green),
+                       PaperResponse.srgbDecode(settings.baseColor.blue))
+        let t = (dminLin.0 * 0.1, dminLin.1 * 0.1, dminLin.2 * 0.1)
+        let scan = TestSupport.solidImage(redLinear: t.0, greenLinear: t.1, blueLinear: t.2)
+        let rendered = TestSupport.readLinearColor(
+            FilmDensityConverter.convert(scan, settings: settings), context: context)
+        var offset = PaperResponse.printOffsets(exposureEV: settings.print.exposure,
+                                                warmth: settings.print.warmth,
+                                                tint: settings.print.tint,
+                                                balancedTint: true)
+        offset.0 += settings.print.gamma.red * grade * PaperResponse.castDensity(60)
+        let expected = PaperResponse.develop(
+            t, dminLinear: dminLin,
+            dmax: (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue),
+            gammaEffective: (settings.print.gamma.red * grade,
+                             settings.print.gamma.green * grade,
+                             settings.print.gamma.blue * grade),
+            printOffset: offset,
+            p: PaperResponse.kneeP(shoulder: settings.print.shoulder),
+            q: PaperResponse.kneeQ(toe: settings.print.toe),
+            satScale: 1.0 + settings.print.saturation / 100.0)
+        XCTAssertEqual(rendered.red, expected.0, accuracy: 2e-3)
+        XCTAssertEqual(rendered.green, expected.1, accuracy: 2e-3)
+        XCTAssertEqual(rendered.blue, expected.2, accuracy: 2e-3)
     }
 
     /// The film base renders near black; brighter-than-base (lightbox)

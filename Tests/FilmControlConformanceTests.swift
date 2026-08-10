@@ -304,6 +304,51 @@ final class FilmControlConformanceTests: XCTestCase {
               high: { $0.filmNegative.print.toeChroma = 100 },
               measure: Conformance.meanSaturation, sign: -1,
               minimumVisibleChange: 0.0008),
+        // Cast R/G/B + zone trims (Task 4): signs measured against the actual
+        // renderer, same discipline as the rest of this table. Against the
+        // renderVersion-2 baseStack() reference (balanced tint, warmth=24,
+        // tint=−8): Cast Red at high=80 moved Conformance.warmth
+        // −0.000061 → 0.034547 (delta +0.034609) — sign +1; Cast Green at
+        // high=80 moved Conformance.greenMagenta 0.002271 → 0.025147
+        // (delta +0.022876) — sign +1; Cast Blue at high=80 moved
+        // Conformance.warmth −0.000061 → −0.018922 (delta −0.018861) —
+        // sign −1. All three match the reasoned signs (a +cast on a channel
+        // adds that channel's exposure; more blue = cooler). Both legs of all
+        // six cases clear the default visible-change floor: smallest measured
+        // leg is Mid Trim Red at low=−100, difference 0.001991 vs the 0.0015
+        // floor; every other leg ≥ 0.002406.
+        .init(name: "Cast Red", key: "print.castRed",
+              low: { $0.filmNegative.print.castRed = -80 },
+              high: { $0.filmNegative.print.castRed = 80 },
+              measure: Conformance.warmth, sign: +1),
+        .init(name: "Cast Green", key: "print.castGreen",
+              low: { $0.filmNegative.print.castGreen = -80 },
+              high: { $0.filmNegative.print.castGreen = 80 },
+              measure: Conformance.greenMagenta, sign: +1),
+        .init(name: "Cast Blue", key: "print.castBlue",
+              low: { $0.filmNegative.print.castBlue = -80 },
+              high: { $0.filmNegative.print.castBlue = 80 },
+              measure: Conformance.warmth, sign: -1),
+        // Zone trims: per-zone colour moves whose whole-frame direction
+        // depends on the probe's tonal distribution — change-only (sign 0),
+        // the Paper Gamma Red precedent. Red leg per field. Measured
+        // whole-frame Conformance.warmth deltas for the record (high leg):
+        // Shadow +0.011642, Mid +0.006472, High +0.002738 — but High Trim
+        // Red's LOW leg also moved warmth +0.030120 (the highlight zone is
+        // where the max-channel norm and the shoulder desaturation interact),
+        // so no single whole-frame scalar direction is declared.
+        .init(name: "Shadow Trim Red", key: "print.shadowTrim",
+              low: { $0.filmNegative.print.shadowTrim.red = -100 },
+              high: { $0.filmNegative.print.shadowTrim.red = 100 },
+              measure: Conformance.warmth, sign: 0),
+        .init(name: "Mid Trim Red", key: "print.midTrim",
+              low: { $0.filmNegative.print.midTrim.red = -100 },
+              high: { $0.filmNegative.print.midTrim.red = 100 },
+              measure: Conformance.warmth, sign: 0),
+        .init(name: "High Trim Red", key: "print.highTrim",
+              low: { $0.filmNegative.print.highTrim.red = -100 },
+              high: { $0.filmNegative.print.highTrim.red = 100 },
+              measure: Conformance.warmth, sign: 0),
     ]
 
     /// Fields deliberately not covered here, each with the suite that does
@@ -322,6 +367,7 @@ final class FilmControlConformanceTests: XCTestCase {
         "stockContrast": "matrix engine only — frozen, covered by FilmNegativeTests",
         "stockSaturation": "matrix engine only — frozen, covered by FilmNegativeTests",
         "print.renderVersion": "freeze flag, not a control — PaperResponseGoldenTests owns it",
+        "print.gradePivot": "Auto-solved compensation anchor, not a control — grade-invariance test in FilmDensityConverterTests owns it",
         "print.toneProfile": "profile selector — its four parameters each have a case above; selection behavior covered by EditorModelTests",
         // "print" itself is not a leaf field: it is decomposed into its own
         // seven fields below (all prefixed "print."), every one of which is

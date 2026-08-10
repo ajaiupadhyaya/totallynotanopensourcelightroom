@@ -85,6 +85,19 @@ final class PrintSettingsTests: XCTestCase {
         XCTAssertEqual(old.glow, 0); XCTAssertEqual(old.toeChroma, 0)
     }
 
+    /// The Task 4 fields — cast correction, zone trims, grade pivot — must
+    /// all decode to their mathematical identity from a stack that predates
+    /// them, or an old photo's rendering would shift on upgrade.
+    func testCastAndTrimFieldsDecodeToNeutral() throws {
+        let old = try JSONDecoder().decode(PrintSettings.self,
+                                           from: #"{"exposure": 1}"#.data(using: .utf8)!)
+        XCTAssertEqual(old.castRed, 0); XCTAssertEqual(old.castGreen, 0)
+        XCTAssertEqual(old.castBlue, 0)
+        XCTAssertEqual(old.shadowTrim, .zero); XCTAssertEqual(old.midTrim, .zero)
+        XCTAssertEqual(old.highTrim, .zero)
+        XCTAssertNil(old.gradePivot)
+    }
+
     func testApplyToneProfileWritesTheProfileParameters() {
         var p = PrintSettings()
         p.applyToneProfile(.labStandard)

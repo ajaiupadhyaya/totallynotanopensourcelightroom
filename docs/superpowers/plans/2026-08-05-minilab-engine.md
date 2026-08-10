@@ -886,7 +886,7 @@ The cast and grade-pivot corrections fold into `printOffset` on the CPU (they ar
   - `PrintSettings.gradePivot: DensityTriple?` (init/decode nil; Auto writes it in Task 6)
   - The CPU folds in `FilmDensityConverter` (exact formulas below) — Task 5/6 rely on them.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/PrintSettingsTests.swift`:
 
@@ -943,9 +943,9 @@ func testCastFoldMatchesTheDensityOffsetSemantics() {
 
 If `TestSupport` has no linear-value solid-image/readback helpers, add them beside `solidImage`/`readColor` following those implementations (a 1×1 `.RGBAf` bitmap in `extendedLinearSRGB`, and a `.RGBAf` readback in the same space) — do NOT reuse the sRGB readers for linear values.
 
-- [ ] **Step 2: Run to verify failure** (compile failure on the new fields).
+- [x] **Step 2: Run to verify failure** (compile failure on the new fields).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `PrintSettings.swift` — after `toeChroma`:
 
@@ -1019,7 +1019,7 @@ and replace the three trim placeholders in the arguments array:
 
 Also extend the kernel-agreement helper: fold cast/pivot/trims exactly as above when computing `expected`, and add a fourth leg exercising `castRed = 40, shadowTrim.red = 60, contrast = 3` — the agreement test is what proves the CPU fold and the kernel's zone math describe one model.
 
-- [ ] **Step 4: Conformance rows for the seven new fields**
+- [x] **Step 4: Conformance rows for the seven new fields**
 
 ```swift
         .init(name: "Cast Red", key: "print.castRed",
@@ -1059,9 +1059,9 @@ and:
 
 Same measure-first discipline as Task 3 Step 7: print the actual deltas once, adjust legs/floors from measurement, delete the diagnostic.
 
-- [ ] **Step 5: Run the suites** (`FilmDensityConverterTests`, `FilmControlConformanceTests`, `PaperResponseGoldenTests`, `PrintSettingsTests`). Expected: ALL PASS.
+- [x] **Step 5: Run the suites** (`FilmDensityConverterTests`, `FilmControlConformanceTests`, `PaperResponseGoldenTests`, `PrintSettingsTests`). Expected: ALL PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Film/PrintSettings.swift Sources/Film/FilmDensityConverter.swift Sources/Pipeline/Kernels/Film.ci.metal Tests/PrintSettingsTests.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift

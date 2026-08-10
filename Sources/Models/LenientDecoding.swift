@@ -13,4 +13,14 @@ extension KeyedDecodingContainer {
     func lenient<T: Decodable>(_ key: Key, _ fallback: T) -> T {
         ((try? decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
     }
+
+    /// The Optional-typed variant, for fields whose neutral value is "never
+    /// set" (e.g. `PrintSettings.gradePivot`): absent, null, or unreadable
+    /// decodes to `fallback` — usually `nil` — rather than dropping the whole
+    /// stack. Same contract as above; a separate overload because inferring
+    /// `T` as an Optional through the generic one makes the nested-optional
+    /// flattening an accident of type inference instead of a documented rule.
+    func lenient<T: Decodable>(_ key: Key, _ fallback: T?) -> T? {
+        ((try? decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+    }
 }

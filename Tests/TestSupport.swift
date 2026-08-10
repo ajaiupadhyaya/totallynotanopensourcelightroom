@@ -152,6 +152,52 @@ enum TestSupport {
         return (Double(buffer[0]), Double(buffer[1]), Double(buffer[2]))
     }
 
+    /// A 1×1 solid image whose components are the given LINEAR working-space
+    /// values — the density engine's input convention (`FilmDensityConverter`
+    /// runs on linear transmittances). Built as a `.RGBAf` bitmap tagged
+    /// `extendedLinearSRGB`, so the values pass into the pipeline untouched.
+    /// Deliberately separate from `solidImage(red:green:blue:)`: reusing the
+    /// sRGB builder for linear values would gamma-encode them on the way in —
+    /// exactly the wrong-space bug these helpers exist to keep out of tests.
+    static func solidImage(
+        redLinear: Double, greenLinear: Double, blueLinear: Double
+    ) -> CIImage {
+        let pixels: [Float] = [Float(redLinear), Float(greenLinear), Float(blueLinear), 1]
+        let data = pixels.withUnsafeBufferPointer { Data(buffer: $0) }
+        return CIImage(bitmapData: data, bytesPerRow: 4 * MemoryLayout<Float>.stride,
+                       size: CGSize(width: 1, height: 1), format: .RGBAf,
+                       colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB))
+    }
+
+    /// Reads the **average** LINEAR color over an image's whole extent —
+    /// a `.RGBAf` readback in `extendedLinearSRGB`, the same space
+    /// `solidImage(redLinear:greenLinear:blueLinear:)` builds in. The sRGB
+    /// `readColor` above would gamma-encode the result on the way out.
+    static func readLinearColor(
+        _ image: CIImage, context: CIContext = CIContext()
+    ) -> (red: Double, green: Double, blue: Double) {
+        let extent = image.extent
+        guard !extent.isInfinite, extent.width >= 1, extent.height >= 1 else {
+            return (0, 0, 0)
+        }
+
+        let average = CIFilter.areaAverage()
+        average.inputImage = image
+        average.extent = extent
+        guard let output = average.outputImage else { return (0, 0, 0) }
+
+        var buffer = [Float](repeating: 0, count: 4)
+        context.render(
+            output,
+            toBitmap: &buffer,
+            rowBytes: 4 * MemoryLayout<Float>.stride,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+            format: .RGBAf,
+            colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+        )
+        return (Double(buffer[0]), Double(buffer[1]), Double(buffer[2]))
+    }
+
     static func inMemoryCatalog() throws -> CatalogStore {
         try CatalogStore()
     }

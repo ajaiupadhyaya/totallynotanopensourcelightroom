@@ -32,6 +32,7 @@ struct DensityTriple: Codable, Equatable, Hashable {
     var blue: Double
 
     static let unit = DensityTriple(red: 1, green: 1, blue: 1)
+    static let zero = DensityTriple(red: 0, green: 0, blue: 0)
 }
 
 /// A named rendering family for the print stage — the first choice after
@@ -149,6 +150,28 @@ struct PrintSettings: Codable, Equatable {
     /// the toe's mirror of the highlight rolloff.
     var toeChroma: Double = 0
 
+    /// Cast correction, −100…100 per channel; ±100 = ±0.5 EV of density
+    /// (PaperResponse.castDensity). The ANALYSIS layer: written by the
+    /// neutral picker and auto colour balance, hand-trimmable, independent of
+    /// the ±0.25 EV house filtration above (spec §Cast correction).
+    var castRed: Double = 0
+    var castGreen: Double = 0
+    var castBlue: Double = 0
+
+    /// Zone trims, −100…100 per channel per zone; ±100 = ±0.25 EV, weighted
+    /// by tone zone (PaperResponse.zoneTrimDensity + the zone smoothsteps).
+    /// The deliberate shadow/mid/highlight colour-character controls — these
+    /// rotate colour by design, unlike the hue-preserving tone path.
+    var shadowTrim: DensityTriple = .zero
+    var midTrim: DensityTriple = .zero
+    var highTrim: DensityTriple = .zero
+
+    /// The density each channel's grade pivots around (renderVersion 2):
+    /// Auto writes its solved median so changing Contrast holds the mids
+    /// instead of darkening everything below paper white. nil (never solved)
+    /// preserves the v1 white-point pivot.
+    var gradePivot: DensityTriple?
+
     mutating func applyToneProfile(_ profile: FilmToneProfile) {
         toneProfile = profile
         punch = profile.punch
@@ -178,5 +201,12 @@ struct PrintSettings: Codable, Equatable {
         fade = c.lenient(.fade, 0)
         glow = c.lenient(.glow, 0)
         toeChroma = c.lenient(.toeChroma, 0)
+        castRed = c.lenient(.castRed, 0)
+        castGreen = c.lenient(.castGreen, 0)
+        castBlue = c.lenient(.castBlue, 0)
+        shadowTrim = c.lenient(.shadowTrim, .zero)
+        midTrim = c.lenient(.midTrim, .zero)
+        highTrim = c.lenient(.highTrim, .zero)
+        gradePivot = c.lenient(.gradePivot, nil)
     }
 }
