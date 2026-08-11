@@ -561,7 +561,7 @@ private struct LibraryFilterBar: View {
                             .help("Show every frame")
                         }
                     } else {
-                        Text("\(totalCount) frames")
+                        Text(totalCount == 1 ? "1 frame" : "\(totalCount) frames")
                             .font(Theme.valueFont)
                             .monospacedDigit()
                             .foregroundStyle(Theme.tertiaryText)

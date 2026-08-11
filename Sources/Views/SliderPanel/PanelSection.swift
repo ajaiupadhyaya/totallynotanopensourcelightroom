@@ -85,16 +85,18 @@ struct PanelSection<Content: View>: View {
             withAnimation(Theme.expand) { isExpanded.toggle() }
         } label: {
             HStack(spacing: 0) {
-                // The gutter: stage index, on the spine.
-                Group {
-                    if let index {
-                        Text(index)
-                            .font(Theme.indexFont)
-                            .foregroundStyle(isModified ? Theme.accent : Theme.tertiaryText)
-                    }
-                }
-                .frame(width: Theme.stageGutter, alignment: .leading)
-                .padding(.leading, Theme.panelInset)
+                // The gutter: stage index, on the spine. An unnumbered
+                // section renders an invisible placeholder rather than an
+                // empty Group — modifiers on a view that renders nothing
+                // collapse, which left "Process"'s title 0.5pt from the
+                // panel edge while every numbered section sat on the gutter
+                // (the design audit measured 1px vs 81px).
+                Text(index ?? "00")
+                    .font(Theme.indexFont)
+                    .foregroundStyle(isModified ? Theme.accent : Theme.tertiaryText)
+                    .opacity(index == nil ? 0 : 1)
+                    .frame(width: Theme.stageGutter, alignment: .leading)
+                    .padding(.leading, Theme.panelInset)
 
                 Text(title.uppercased())
                     .sectionLabel(isExpanded || isModified ? Theme.text : Theme.secondaryText)
