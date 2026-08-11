@@ -334,14 +334,42 @@ enum AutoInvert {
                 degraded.append("auto colour balance: midtones are strongly coloured — check with the neutral picker")
             }
         }
-        // Solved with the PROFILE's default knees, toning, and the house
-        // filtration — the same reasoning throughout: Auto places the median
-        // under the rendering the user will actually see (balanced tint: new
-        // solves are renderVersion 2), not under a hypothetical neutral one,
-        // so neither the shipped warmth/tint nor a Lab profile's punch/fade
-        // quietly shifts the midtone off target. satScale stays 1.0: the
-        // ratio scaling is exact for the max channel, which is what the
-        // bisection reads.
+        let printEV = solveExposure(medianT: medianT, dminLinear: dminLinear,
+                                    dmax: DensityTriple(red: dmaxV.0, green: dmaxV.1,
+                                                        blue: dmaxV.2),
+                                    gamma: gamma, cast: cast, profile: profile)
+
+        return AutoInvertSolution(
+            baseColor: sampledBase ?? FilmColor(
+                red: PaperResponse.srgbEncode(dminLinear.0),
+                green: PaperResponse.srgbEncode(dminLinear.1),
+                blue: PaperResponse.srgbEncode(dminLinear.2)),
+            baseOrigin: origin,
+            dmax: DensityTriple(red: dmaxV.0, green: dmaxV.1, blue: dmaxV.2),
+            gamma: gamma,
+            printExposure: printEV,
+            medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2),
+            cast: cast,
+            degradedTerms: degraded)
+    }
+
+    /// The shared EV bisection — one bisection, two callers (`solve(from:
+    /// profile:)` per frame, `RollAnalysis` per roll). `cast` is in cast-
+    /// slider units, matching `AutoInvertSolution.cast`.
+    ///
+    /// Solved with the PROFILE's default knees, toning, and the house
+    /// filtration — the same reasoning throughout: Auto places the median
+    /// under the rendering the user will actually see (balanced tint: new
+    /// solves are renderVersion 2), not under a hypothetical neutral one,
+    /// so neither the shipped warmth/tint nor a Lab profile's punch/fade
+    /// quietly shifts the midtone off target. satScale stays 1.0: the
+    /// ratio scaling is exact for the max channel, which is what the
+    /// bisection reads.
+    static func solveExposure(medianT: (Double, Double, Double),
+                              dminLinear: (Double, Double, Double),
+                              dmax: DensityTriple, gamma: DensityTriple,
+                              cast: DensityTriple,
+                              profile: FilmToneProfile) -> Double {
         var defaults = PrintSettings()
         defaults.applyToneProfile(profile)
         let p = PaperResponse.kneeP(shoulder: defaults.shoulder)
@@ -363,7 +391,7 @@ enum AutoInvert {
             offset.2 += castFold.2
             let out = PaperResponse.develop(
                 medianT, dminLinear: dminLinear,
-                dmax: (dmaxV.0, dmaxV.1, dmaxV.2),
+                dmax: (dmax.red, dmax.green, dmax.blue),
                 gammaEffective: (gamma.red, gamma.green, gamma.blue),
                 printOffset: offset, p: p, q: q, satScale: 1.0,
                 punch: PaperResponse.punchAmount(defaults.punch),
@@ -372,20 +400,7 @@ enum AutoInvert {
                 toeChroma: PaperResponse.toeChromaWeight(defaults.toeChroma))
             if max(out.0, max(out.1, out.2)) < PaperResponse.targetMid { lo = mid } else { hi = mid }
         }
-        let printEV = ((lo + hi) / 2 * 100).rounded() / 100 // stable to read
-
-        return AutoInvertSolution(
-            baseColor: sampledBase ?? FilmColor(
-                red: PaperResponse.srgbEncode(dminLinear.0),
-                green: PaperResponse.srgbEncode(dminLinear.1),
-                blue: PaperResponse.srgbEncode(dminLinear.2)),
-            baseOrigin: origin,
-            dmax: DensityTriple(red: dmaxV.0, green: dmaxV.1, blue: dmaxV.2),
-            gamma: gamma,
-            printExposure: printEV,
-            medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2),
-            cast: cast,
-            degradedTerms: degraded)
+        return ((lo + hi) / 2 * 100).rounded() / 100 // stable to read
     }
 
     // MARK: Measurement

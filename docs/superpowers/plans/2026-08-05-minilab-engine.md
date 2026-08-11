@@ -1768,7 +1768,7 @@ enum RollAnalysis {
   `static func solveExposure(medianT: (Double, Double, Double), dminLinear: (Double, Double, Double), dmax: DensityTriple, gamma: DensityTriple, cast: DensityTriple, profile: FilmToneProfile) -> Double`
   (`cast` in slider units, matching `AutoInvertSolution.cast`) — `AutoInvert.solve(from:profile:)` and `RollAnalysis` both call it (one bisection, two callers; the Task 6/7 fold/develop code moves inside unchanged).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/RollAnalysisTests.swift`:
 
@@ -1787,6 +1787,12 @@ final class RollAnalysisTests: XCTestCase {
     private func rollFrames() -> [CIImage] {
         let full = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas, size: 128)
+        // PLAN BUGS, corrected 2026-08-11 (see RollAnalysisTests): (1) these
+        // interior crops cut the rebate out while the metric samples "the
+        // rebate in every corner" — crops must keep the border strip; (2) the
+        // dim frame scaled the WHOLE frame incl. rebate (scan-gain drift, the
+        // roll model's excluded case), but camera exposure can't touch
+        // unexposed rebate — dim the interior only.
         let dark = full.cropped(to: CGRect(x: 12, y: 12, width: 50, height: 104))
         let bright = full.cropped(to: CGRect(x: 62, y: 12, width: 54, height: 104))
         let dim = CIFilter.colorMatrix()
@@ -1892,9 +1898,9 @@ final class RollAnalysisTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Extract `AutoInvert.solveExposure` (move the Task 6/7 bisection verbatim; both callers pass their own inputs). Then `RollAnalysis.swift`:
 
@@ -1937,9 +1943,11 @@ enum RollAnalysis {
                  AutoInvert.percentile(m.sortedGreen, PaperResponse.dminPercentile),
                  AutoInvert.percentile(m.sortedBlue, PaperResponse.dminPercentile))
             }
-            dminLinear = (perFrame.map(\.0).min()!,
-                          perFrame.map(\.1).min()!,
-                          perFrame.map(\.2).min()!)
+            // PLAN BUG, corrected 2026-08-11: was min() — the DENSEST
+            // estimate, inverting the spec's own "thinnest film" reasoning.
+            dminLinear = (perFrame.map(\.0).max()!,
+                          perFrame.map(\.1).max()!,
+                          perFrame.map(\.2).max()!)
             baseColor = FilmColor(red: PaperResponse.srgbEncode(dminLinear.0),
                                   green: PaperResponse.srgbEncode(dminLinear.1),
                                   blue: PaperResponse.srgbEncode(dminLinear.2))
@@ -2025,9 +2033,9 @@ enum RollAnalysis {
 }
 ```
 
-- [ ] **Step 4: Run** `RollAnalysisTests` + `AutoInvertTests` (the extraction must not change `AutoInvert.solve` results — its tests prove it). Expected PASS.
+- [x] **Step 4: Run** `RollAnalysisTests` + `AutoInvertTests` (the extraction must not change `AutoInvert.solve` results — its tests prove it). Expected PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Film/RollAnalysis.swift Sources/Film/AutoInvert.swift Tests/RollAnalysisTests.swift project.yml PhotoEditor.xcodeproj
