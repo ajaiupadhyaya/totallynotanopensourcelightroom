@@ -29,6 +29,7 @@
 		28669969646D3A4810A0E9FB /* LocalAdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C38A94FD7721527DCC95870 /* LocalAdjustmentTests.swift */; };
 		287721B0AD1C871DAA88629E /* Tone.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = A8C6195D005B7B3428A2DC0A /* Tone.ci.metal */; };
 		2EB9DEDED3DB0096E6E6E4B4 /* KernelLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80F11E5D7410F510CEE64411 /* KernelLibrary.swift */; };
+		2ECD2F931C4CFFEDCCBC248D /* FrameDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07388216602747CD9FB4CFD /* FrameDetector.swift */; };
 		2EDFF08ECFDF4934C0EFAB81 /* PresetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ECAC9F574B3BA9437A1C07D /* PresetPanel.swift */; };
 		310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */; };
 		3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */; };
@@ -102,6 +103,7 @@
 		97A35712C70817D363C9319A /* WorkspaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */; };
 		9837DF10BD6443312BE36067 /* RangeMaskCubeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */; };
 		9ACD2C0FA63F5EDDDB5D0F11 /* LegacyToneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7B4C896FD4E723F238FCFC /* LegacyToneRenderer.swift */; };
+		9CEE2F4CD217D10C1CF5A9C0 /* FrameDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602A945D557793B1AF3A7AB3 /* FrameDetectorTests.swift */; };
 		9CFB989AC50C552BA4BFD912 /* LocalTone.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = F060B4298C198989DD59D75C /* LocalTone.ci.metal */; };
 		9EC7032CD5145CA66D621C51 /* ColorSuiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */; };
 		A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA08DAA6B2E59C1A3F7F06B /* RetouchRenderer.swift */; };
@@ -238,6 +240,7 @@
 		5B1C63E06502A5AD187DA403 /* Defringe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Defringe.swift; sourceTree = "<group>"; };
 		5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentTests.swift; sourceTree = "<group>"; };
 		5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopedSourceCache.swift; sourceTree = "<group>"; };
+		602A945D557793B1AF3A7AB3 /* FrameDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameDetectorTests.swift; sourceTree = "<group>"; };
 		602AF91A44F0025239865F8D /* LibrarySidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySidebar.swift; sourceTree = "<group>"; };
 		620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastSolverTests.swift; sourceTree = "<group>"; };
 		6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelInfrastructureTests.swift; sourceTree = "<group>"; };
@@ -321,6 +324,7 @@
 		EFB4F1CD3CF945C5503145A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EFE1121F6544524D2188B102 /* PrintEngineSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintEngineSupport.swift; sourceTree = "<group>"; };
 		F060B4298C198989DD59D75C /* LocalTone.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = LocalTone.ci.metal; sourceTree = "<group>"; };
+		F07388216602747CD9FB4CFD /* FrameDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameDetector.swift; sourceTree = "<group>"; };
 		F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmBaseSamplerTests.swift; sourceTree = "<group>"; };
 		F23771CF00BC23FA824B51B6 /* Color.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Color.ci.metal; sourceTree = "<group>"; };
 		F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositorTests.swift; sourceTree = "<group>"; };
@@ -425,6 +429,7 @@
 				7B9C2E153D2A43CB9D745CA0 /* FilmDensityConverterTests.swift */,
 				1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */,
 				753E17A3CC2C17EB5312E084 /* FilmStockStoreTests.swift */,
+				602A945D557793B1AF3A7AB3 /* FrameDetectorTests.swift */,
 				091C43C1EDDF307D8B43C947 /* GeometryTests.swift */,
 				6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */,
 				7C38A94FD7721527DCC95870 /* LocalAdjustmentTests.swift */,
@@ -473,6 +478,7 @@
 				89C718AEF739B1BABB07B61A /* FilmNegativeConverter.swift */,
 				6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */,
 				D7C39D72A549DFE7D38FA03F /* FilmStock.swift */,
+				F07388216602747CD9FB4CFD /* FrameDetector.swift */,
 				A3847B8AE37C226DB227816C /* PaperResponse.swift */,
 				4B01AA2E30B8269B816A99FB /* PrintSettings.swift */,
 				B703ECFBE832F019214A8163 /* RollAnalysis.swift */,
@@ -729,6 +735,7 @@
 				A11C57B4B89C6B31D564113E /* FilmDensityConverterTests.swift in Sources */,
 				8029E0360C35F25FE1988C2A /* FilmNegativeTests.swift in Sources */,
 				0074D52169F7EA3291738D38 /* FilmStockStoreTests.swift in Sources */,
+				9CEE2F4CD217D10C1CF5A9C0 /* FrameDetectorTests.swift in Sources */,
 				45466F838219CF7761A727B2 /* GeometryTests.swift in Sources */,
 				03E1E831E98D8C6286A03E05 /* KernelInfrastructureTests.swift in Sources */,
 				28669969646D3A4810A0E9FB /* LocalAdjustmentTests.swift in Sources */,
@@ -807,6 +814,7 @@
 				0E9C125BCDD2DD2C9B08B43A /* FilmPanel.swift in Sources */,
 				60A35DABA722DA72F962E386 /* FilmStock.swift in Sources */,
 				78B7ACE09A4153BA0437CE5C /* FocusPeaking.swift in Sources */,
+				2ECD2F931C4CFFEDCCBC248D /* FrameDetector.swift in Sources */,
 				57DD920F5D4D11086F682CAF /* Geometry.swift in Sources */,
 				BB4B230C9FB8D4D3EFF1A34A /* GeometryPanel.swift in Sources */,
 				3DE235260D6D0BEE9761CADA /* GeometryTransform.swift in Sources */,

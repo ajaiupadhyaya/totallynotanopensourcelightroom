@@ -738,7 +738,32 @@ final class EditorModel {
             film.print.applyToneProfile(forceProfile)
         }
         film.isEnabled = true
-        let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
+        var sampled = film.baseOrigin == .sampled ? film.baseColor : nil
+
+        // Frame detection (spec 2026-08-10): an uncropped lightbox scan gets
+        // measured through the detected film box, the crop lands in the SAME
+        // gesture — visible on the canvas, reviewable, one undo step — and a
+        // validated rebate ring stands in as the base sample. A user crop or
+        // user-sampled base always wins (the detector never runs); a nil
+        // detection leaves Auto exactly as before. Rolled frames keep their
+        // roll's own conversion path.
+        var detectedRect: CGRect?
+        var detectedMeasured = measured
+        var detectorSuppliedBase = false
+        if editStack.geometry.cropRect == .unitFrame, sampled == nil,
+           rollConversion == nil,
+           film.conversionModel == .density,
+           let detected = FrameDetector.detect(scan: measured,
+                                               context: renderer.context) {
+            detectedRect = detected.rect
+            var geometry = editStack.geometry
+            geometry.cropRect = detected.rect
+            detectedMeasured = GeometryTransform.apply(source, geometry: geometry)
+            if let rebate = detected.rebateBase {
+                sampled = rebate
+                detectorSuppliedBase = true
+            }
+        }
 
         if let rc = rollConversion, forceProfile == nil {
             // A rolled frame re-Autos against its roll's constants: measure
@@ -789,10 +814,13 @@ final class EditorModel {
             lastSolveDegradedTerms = m.degradedTerms
             return
         }
-        guard let solution = AutoInvert.solve(scan: measured, sampledBase: sampled,
+        guard let solution = AutoInvert.solve(scan: detectedMeasured, sampledBase: sampled,
                                               profile: film.print.toneProfile,
                                               context: renderer.context) else { return }
         lastSolveDegradedTerms = solution.degradedTerms
+        if detectedRect != nil {
+            lastSolveDegradedTerms.append("frame detected — review the crop")
+        }
         // v2 semantics travel with the solve — see the roll branch's note.
         film.print.renderVersion = 2
         film.baseColor = solution.baseColor
@@ -823,7 +851,22 @@ final class EditorModel {
         if film.stockID == nil {
             film.type = FilmBaseSampler.inferType(from: solution.baseColor)
         }
-        editStack.filmNegative = film
+        // A detector-supplied base is honest about its provenance: it is
+        // estimated from the scan (by the ring), not clicked by the user —
+        // the swatch caption must say so, and a re-Auto must re-estimate.
+        if detectorSuppliedBase {
+            film.baseOrigin = .estimated
+            film.isBaseSampled = false
+        }
+        // The detected crop lands in the SAME stack write as the conversion:
+        // one gesture, one undo step, and the crop is on the canvas for
+        // review the moment Auto returns.
+        var stack = editStack
+        if let detectedRect {
+            stack.geometry.cropRect = detectedRect
+        }
+        stack.filmNegative = film
+        editStack = stack
 
         stockMatches = FilmBaseSampler.rankStocks(matching: solution.baseColor,
                                                   in: filmStocks)
