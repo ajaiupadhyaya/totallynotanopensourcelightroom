@@ -88,6 +88,7 @@ final class RealScanTests: XCTestCase {
         }
         let measured = GeometryTransform.apply(scan, geometry: stack.geometry)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: measured, sampledBase: nil,
+                                                      profile: .linear,
                                                       context: context),
                                      "\(label): solve returned nil")
         stack.filmNegative.isEnabled = true

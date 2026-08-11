@@ -674,7 +674,9 @@ final class EditorModel {
     /// solve; matrix-model photos keep the original sample-and-rank behavior.
     func enableFilmNegative() {
         if editStack.filmNegative.conversionModel == .density {
-            autoConvertNegative()
+            // The spec's "new conversions default to Lab Standard" rule lands
+            // here — the one gesture every new conversion passes through.
+            autoConvertNegative(seedProfile: .labStandard)
         } else {
             editStack.filmNegative.isEnabled = true
             sampleFilmBase()
@@ -707,13 +709,21 @@ final class EditorModel {
     /// `Geometry`'s own crop (applied after conversion, see
     /// ``DevelopedSourceCache``) masks the rest at display/export time, same
     /// as ever.
-    func autoConvertNegative() {
+    /// - Parameter seedProfile: when non-nil AND the conversion is being
+    ///   enabled for the first time (isEnabled false), the profile applied
+    ///   before solving — the "new conversions default to Lab Standard" rule.
+    ///   The Auto button passes nil: re-solving respects the user's profile.
+    func autoConvertNegative(seedProfile: FilmToneProfile? = nil) {
         guard let source else { return }
         let measured = GeometryTransform.apply(source, geometry: editStack.geometry)
         var film = editStack.filmNegative
+        if let seedProfile, !film.isEnabled {
+            film.print.applyToneProfile(seedProfile)
+        }
         film.isEnabled = true
         let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
         guard let solution = AutoInvert.solve(scan: measured, sampledBase: sampled,
+                                              profile: film.print.toneProfile,
                                               context: renderer.context) else { return }
         film.baseColor = solution.baseColor
         film.baseOrigin = solution.baseOrigin
@@ -721,6 +731,10 @@ final class EditorModel {
         film.print.dmax = solution.dmax
         film.print.gamma = solution.gamma
         film.print.exposure = solution.printExposure
+        film.print.gradePivot = solution.medianDensity
+        film.print.castRed = solution.cast.red
+        film.print.castGreen = solution.cast.green
+        film.print.castBlue = solution.cast.blue
 
         // Zero the legacy (matrix-era) EV lift. It was a placement aid for a
         // model with no notion of a print exposure of its own; the density

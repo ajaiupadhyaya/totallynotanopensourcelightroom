@@ -10,11 +10,38 @@ struct AutoInvertSolution: Equatable {
     var gamma: DensityTriple
     var printExposure: Double
 
+    /// The median density per channel the bisection placed at middle grey —
+    /// written to `PrintSettings.gradePivot` so Contrast holds the mids
+    /// (renderVersion 2) instead of darkening everything below paper white.
+    var medianDensity: DensityTriple
+
+    /// Auto colour balance, in CAST-SLIDER units despite the type —
+    /// `DensityTriple` is the house "triple of Doubles, not a colour" carrier
+    /// and keeps this struct's synthesized `Equatable`, which a labeled tuple
+    /// would break. `.zero` unless the profile enables auto colour balance
+    /// (the Task 7 cast solver).
+    var cast: DensityTriple
+
     /// Human-readable names of terms that fell back to defaults because the
     /// scan gave nothing to measure. Empty means a clean solve.
     var degradedTerms: [String]
 
     var isDegraded: Bool { !degradedTerms.isEmpty }
+}
+
+/// One frame's gated measurement — everything the solve consumes, split from
+/// the solving so `RollAnalysis` (Task 9) can pool measurements across a
+/// roll's frames and solve constants once.
+struct FrameMeasurement {
+    /// Ascending-sorted linear transmittances of the gated population.
+    var sortedRed: [Double]
+    var sortedGreen: [Double]
+    var sortedBlue: [Double]
+    /// Display-encoded; wins over the percentile estimate — actual clear
+    /// film beats any statistic.
+    var sampledBase: FilmColor?
+    /// Gating fallbacks, carried into the solve's degraded terms.
+    var degradedTerms: [String]
 }
 
 /// The one-button solve: measure a downsampled linear render of the scan,
@@ -102,11 +129,23 @@ enum AutoInvert {
         return normalized.maxChannel - min(normalized.red, min(normalized.green, normalized.blue))
     }
 
+    /// The one-shot Auto: measure, then solve under the given profile.
+    static func solve(scan: CIImage, sampledBase: FilmColor?,
+                      profile: FilmToneProfile,
+                      context: CIContext) -> AutoInvertSolution? {
+        guard let m = measure(scan: scan, sampledBase: sampledBase, context: context)
+        else { return nil }
+        return solve(from: m, profile: profile)
+    }
+
+    /// Measurement half: downsample, gate, sort. Everything statistical about
+    /// ONE frame, none of it about rendering — so a roll can pool these.
+    ///
     /// - Parameter sampledBase: the user's eyedropper (or Phase 3 rebate)
     ///   measurement, display-encoded. Non-nil wins over the percentile
     ///   estimate: actual clear film beats any statistic.
-    static func solve(scan: CIImage, sampledBase: FilmColor?,
-                      context: CIContext) -> AutoInvertSolution? {
+    static func measure(scan: CIImage, sampledBase: FilmColor?,
+                        context: CIContext) -> FrameMeasurement? {
         guard let rawPixels = linearPixels(of: scan, side: sampleSide, context: context),
               !rawPixels.isEmpty else { return nil }
 
@@ -185,12 +224,34 @@ enum AutoInvert {
             degraded.append("scan is mostly backlight")
         }
 
+        return FrameMeasurement(sortedRed: pixels.map(\.0).sorted(),
+                                sortedGreen: pixels.map(\.1).sorted(),
+                                sortedBlue: pixels.map(\.2).sorted(),
+                                sampledBase: sampledBase,
+                                degradedTerms: degraded)
+    }
+
+    /// Solving half: closed-form density parameters plus the one-scalar EV
+    /// bisection, on a measurement — this frame's, or (through `RollAnalysis`)
+    /// a roll's pooled statistics. Deterministic, like everything here.
+    ///
+    /// The bisection places the median under the PROFILE's rendering — the
+    /// paper knees, house filtration (balanced tint: new solves are
+    /// renderVersion 2), and the profile's own punch/fade/glow/toeChroma —
+    /// because Auto's contract is "the midtone the user will actually see
+    /// lands at middle grey," not "…under a hypothetical neutral render."
+    static func solve(from m: FrameMeasurement,
+                      profile: FilmToneProfile) -> AutoInvertSolution? {
+        guard !m.sortedRed.isEmpty else { return nil }
+        var degraded = m.degradedTerms
+        let sampledBase = m.sampledBase
+
         // 1. Dmin per channel — sampled if available, else the 98th
         // percentile (NOT the maximum: on a lightbox scan the top of the
         // histogram is bare panel, not film base — see the spec's risk note).
-        var reds = pixels.map(\.0).sorted()
-        var greens = pixels.map(\.1).sorted()
-        var blues = pixels.map(\.2).sorted()
+        var reds = m.sortedRed
+        var greens = m.sortedGreen
+        var blues = m.sortedBlue
         let dminLinear: (Double, Double, Double)
         let origin: FilmBaseOrigin
         if let sampledBase {
@@ -209,7 +270,7 @@ enum AutoInvert {
         func density(_ t: Double, _ dmin: Double) -> Double {
             log10(max(dmin, 1e-4) / max(t, PaperResponse.transmittanceFloor))
         }
-        for i in pixels.indices {
+        for i in reds.indices {
             reds[i] = density(reds[i], dminLinear.0)
             greens[i] = density(greens[i], dminLinear.1)
             blues[i] = density(blues[i], dminLinear.2)
@@ -247,24 +308,32 @@ enum AutoInvert {
         let medianT = (dminLinear.0 * pow(10, -medianD.0),
                        dminLinear.1 * pow(10, -medianD.1),
                        dminLinear.2 * pow(10, -medianD.2))
-        // Solved with the shipped look's default knees AND default filtration
-        // — the same reasoning as `p`/`q` below: Auto places the median under
-        // the house rendering the user will actually see, not under a
-        // hypothetical neutral one, so a non-zero shipped warmth/tint doesn't
-        // quietly shift the midtone off target.
-        let defaults = PrintSettings()
+        // Solved with the PROFILE's default knees, toning, and the house
+        // filtration — the same reasoning throughout: Auto places the median
+        // under the rendering the user will actually see (balanced tint: new
+        // solves are renderVersion 2), not under a hypothetical neutral one,
+        // so neither the shipped warmth/tint nor a Lab profile's punch/fade
+        // quietly shifts the midtone off target. satScale stays 1.0: the
+        // ratio scaling is exact for the max channel, which is what the
+        // bisection reads.
+        var defaults = PrintSettings()
+        defaults.applyToneProfile(profile)
         let p = PaperResponse.kneeP(shoulder: defaults.shoulder)
         let q = PaperResponse.kneeQ(toe: defaults.toe)
         var lo = -8.0, hi = 8.0
         for _ in 0..<40 {
             let mid = (lo + hi) / 2
             let offset = PaperResponse.printOffsets(exposureEV: mid, warmth: defaults.warmth,
-                                                     tint: defaults.tint)
+                                                     tint: defaults.tint, balancedTint: true)
             let out = PaperResponse.develop(
                 medianT, dminLinear: dminLinear,
                 dmax: (dmaxV.0, dmaxV.1, dmaxV.2),
                 gammaEffective: (gamma.red, gamma.green, gamma.blue),
-                printOffset: offset, p: p, q: q, satScale: 1.0)
+                printOffset: offset, p: p, q: q, satScale: 1.0,
+                punch: PaperResponse.punchAmount(defaults.punch),
+                fade: PaperResponse.fadeLift(defaults.fade),
+                glow: PaperResponse.glowDrop(defaults.glow),
+                toeChroma: PaperResponse.toeChromaWeight(defaults.toeChroma))
             if max(out.0, max(out.1, out.2)) < PaperResponse.targetMid { lo = mid } else { hi = mid }
         }
         let printEV = ((lo + hi) / 2 * 100).rounded() / 100 // stable to read
@@ -278,6 +347,8 @@ enum AutoInvert {
             dmax: DensityTriple(red: dmaxV.0, green: dmaxV.1, blue: dmaxV.2),
             gamma: gamma,
             printExposure: printEV,
+            medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2),
+            cast: .zero,
             degradedTerms: degraded)
     }
 

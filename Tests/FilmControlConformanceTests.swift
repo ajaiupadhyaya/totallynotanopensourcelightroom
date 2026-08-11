@@ -27,6 +27,7 @@ final class FilmControlConformanceTests: XCTestCase {
         film.isEnabled = true
         film.conversionModel = .density
         let solution = AutoInvert.solve(scan: probe, sampledBase: nil,
+                                        profile: .linear,
                                         context: renderer.context)!
         film.baseColor = solution.baseColor
         film.baseOrigin = solution.baseOrigin

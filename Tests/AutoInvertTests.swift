@@ -35,6 +35,7 @@ final class AutoInvertTests: XCTestCase {
         let scan = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: nil,
+                                                      profile: .linear,
                                                       context: context))
         XCTAssertFalse(solution.isDegraded, "clean fixture must solve cleanly: \(solution.degradedTerms)")
 
@@ -78,6 +79,7 @@ final class AutoInvertTests: XCTestCase {
         let scan = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: nil,
+                                                      profile: .linear,
                                                       context: context))
         var flat = PrintSettings()
         flat.shoulder = 0; flat.toe = 0; flat.saturation = 0; flat.warmth = 0; flat.tint = 0
@@ -128,11 +130,13 @@ final class AutoInvertTests: XCTestCase {
                                     green: PaperResponse.srgbEncode(FilmSim.c41Base.1),
                                     blue: PaperResponse.srgbEncode(FilmSim.c41Base.2))
         let solution = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: sampledBase,
+                                                      profile: .linear,
                                                       context: context))
         XCTAssertEqual(solution.baseOrigin, .sampled)
         XCTAssertEqual(solution.baseColor, sampledBase)
 
         let estimated = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: nil,
+                                                       profile: .linear,
                                                        context: context))
         XCTAssertEqual(estimated.baseOrigin, .estimated)
     }
@@ -152,6 +156,7 @@ final class AutoInvertTests: XCTestCase {
         let scan = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: scan, sampledBase: nil,
+                                                      profile: .linear,
                                                       context: context))
         XCTAssertFalse(solution.printExposure.isNaN)
         XCTAssertTrue((-8.0...8.0).contains(solution.printExposure))
@@ -195,11 +200,76 @@ final class AutoInvertTests: XCTestCase {
         let flat = TestSupport.solidImage(red: 0.5, green: 0.35, blue: 0.2,
                                           size: 64)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: flat, sampledBase: nil,
-                                                      context: context))
+                                                      profile: .linear, context: context))
         XCTAssertTrue(solution.isDegraded)
         XCTAssertEqual(solution.gamma, .unit, "unmeasurable gamma falls back to 1")
         for g in [solution.gamma.red, solution.dmax.red, solution.printExposure] {
             XCTAssertFalse(g.isNaN)
         }
+    }
+
+    // MARK: Measure/solve split (Task 6)
+
+    /// The measure/solve split is pure refactor: solving a measurement must give
+    /// the same numbers the one-shot wrapper gives, and (under .linear) the same
+    /// numbers the pre-split solver gave — anchored by the conformance suite's
+    /// reproducibility test and the unchanged corpus prints.
+    func testMeasureThenSolveEqualsTheWrapper() throws {
+        let probe = FilmSim.negativeImage(dmin: FilmSim.c41Base,
+                                          gammas: FilmSim.crossoverGammas, size: 128)
+        let context = CIContext()
+        let m = try XCTUnwrap(AutoInvert.measure(scan: probe, sampledBase: nil,
+                                                 context: context))
+        let a = try XCTUnwrap(AutoInvert.solve(from: m, profile: .linear))
+        let b = try XCTUnwrap(AutoInvert.solve(scan: probe, sampledBase: nil,
+                                               profile: .linear, context: context))
+        XCTAssertEqual(a, b)
+    }
+
+    /// Profile-aware placement: the Lab profiles change the rendering the median
+    /// lands under (punch/fade/glow), so the solved EV must differ from linear's
+    /// — if it didn't, the bisection would be ignoring the profile.
+    func testLabProfileSolvesADifferentExposureThanLinear() throws {
+        let probe = FilmSim.negativeImage(dmin: FilmSim.c41Base,
+                                          gammas: FilmSim.crossoverGammas, size: 128)
+        let context = CIContext()
+        let linear = try XCTUnwrap(AutoInvert.solve(scan: probe, sampledBase: nil,
+                                                    profile: .linear, context: context))
+        let lab = try XCTUnwrap(AutoInvert.solve(scan: probe, sampledBase: nil,
+                                                 profile: .labStandard, context: context))
+        XCTAssertNotEqual(linear.printExposure, lab.printExposure)
+        XCTAssertEqual(linear.dmax, lab.dmax, "endpoint statistics are profile-independent")
+        XCTAssertEqual(linear.gamma, lab.gamma, "gammas are profile-independent")
+    }
+
+    /// The solved median density is reported (it becomes gradePivot): rendering
+    /// the median transmittance under the solved stack must land its max channel
+    /// at targetMid — the bisection's own contract, now visible in the solution.
+    func testMedianDensityIsReportedAndLandsAtTargetMid() throws {
+        let probe = FilmSim.negativeImage(dmin: FilmSim.c41Base,
+                                          gammas: FilmSim.crossoverGammas, size: 128)
+        let context = CIContext()
+        let s = try XCTUnwrap(AutoInvert.solve(scan: probe, sampledBase: nil,
+                                               profile: .linear, context: context))
+        XCTAssertGreaterThan(s.medianDensity.red, 0)
+        let dminLin = (PaperResponse.srgbDecode(s.baseColor.red),
+                       PaperResponse.srgbDecode(s.baseColor.green),
+                       PaperResponse.srgbDecode(s.baseColor.blue))
+        let medianT = (dminLin.0 * pow(10, -s.medianDensity.red),
+                       dminLin.1 * pow(10, -s.medianDensity.green),
+                       dminLin.2 * pow(10, -s.medianDensity.blue))
+        let defaults = PrintSettings()
+        let offset = PaperResponse.printOffsets(exposureEV: s.printExposure,
+                                                warmth: defaults.warmth,
+                                                tint: defaults.tint, balancedTint: true)
+        let out = PaperResponse.develop(
+            medianT, dminLinear: dminLin,
+            dmax: (s.dmax.red, s.dmax.green, s.dmax.blue),
+            gammaEffective: (s.gamma.red, s.gamma.green, s.gamma.blue),
+            printOffset: offset,
+            p: PaperResponse.kneeP(shoulder: defaults.shoulder),
+            q: PaperResponse.kneeQ(toe: defaults.toe), satScale: 1.0)
+        XCTAssertEqual(max(out.0, max(out.1, out.2)), PaperResponse.targetMid,
+                       accuracy: 0.01)
     }
 }

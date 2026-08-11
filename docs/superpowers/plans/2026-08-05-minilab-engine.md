@@ -1215,7 +1215,7 @@ extension AutoInvert {
   - `AutoInvertSolution` gains `var medianDensity: DensityTriple` (→ `gradePivot`) and `var cast: DensityTriple` (SLIDER units despite the type — `DensityTriple` is the house "triple of Doubles, not a colour" carrier and keeps the struct's synthesized `Equatable`, which a labeled tuple would break; doc-comment this. `.zero` unless Task 7's auto colour balance runs).
   - The old `solve(scan:sampledBase:context:)` is REMOVED (three call sites: `EditorModel.autoConvertNegative`, `FilmControlConformanceTests.baseStack`, `RealScanTests.convert`) — `profile:` becomes explicit everywhere so no site solves under an accidental default.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/AutoInvertTests.swift` (append):
 
@@ -1284,9 +1284,9 @@ func testMedianDensityIsReportedAndLandsAtTargetMid() throws {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Refactor `AutoInvert.swift`**
+- [x] **Step 3: Refactor `AutoInvert.swift`**
 
 Mechanical split of the existing `solve`:
 - `measure(scan:sampledBase:context:)` = steps 0–gating: `linearPixels`, the gate-then-validate population choice, returns `FrameMeasurement(sortedRed: pixels.map(\.0).sorted(), …, sampledBase: sampledBase, degradedTerms: degraded)`. (Sort once here; the solve consumes sorted arrays.)
@@ -1317,7 +1317,7 @@ Mechanical split of the existing `solve`:
   (satScale 1.0 stays exact for the max channel, as the existing comment explains.) Populate `medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2)` and `cast: .zero` in the returned solution. (`DensityTriple.zero` arrives in Task 4; if executing Task 6 against a tree where Task 4 somehow hasn't landed, that's an ordering violation — stop.)
 - Wrapper `solve(scan:sampledBase:profile:context:)` = `measure` + `solve(from:)`.
 
-- [ ] **Step 4: Update the three call sites**
+- [x] **Step 4: Update the three call sites**
 
 `EditorModel.autoConvertNegative` — solve under the CURRENT profile, write the new outputs, and (this is where the spec's "Lab Standard default for new conversions" lands) have `enableFilmNegative` seed the profile on first enable:
 
@@ -1363,11 +1363,11 @@ Mechanical split of the existing `solve`:
 
 `FilmControlConformanceTests.baseStack()`: `AutoInvert.solve(scan: probe, sampledBase: nil, profile: .linear, context: renderer.context)!` — the suite's reference deliberately stays the linear render. `RealScanTests.convert`: same explicit `.linear` for now (Task 12 parameterizes it).
 
-- [ ] **Step 5: Run** `AutoInvertTests`, `FilmControlConformanceTests`, `RealScanTests` (corpus machine) — expected PASS; conformance reference must be bit-identical to pre-task (its reproducibility test plus unchanged case measurements are the evidence).
+- [x] **Step 5: Run** `AutoInvertTests`, `FilmControlConformanceTests`, `RealScanTests` (corpus machine) — expected PASS; conformance reference must be bit-identical to pre-task (its reproducibility test plus unchanged case measurements are the evidence).
 
-- [ ] **Step 6: Also update FilmPanel's Auto button** — it calls `model.autoConvertNegative()`; the new defaulted parameter keeps it compiling unchanged. Verify with a build.
+- [x] **Step 6: Also update FilmPanel's Auto button** — it calls `model.autoConvertNegative()`; the new defaulted parameter keeps it compiling unchanged. Verify with a build.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/Film/AutoInvert.swift Sources/Views/EditorModel.swift Tests/AutoInvertTests.swift Tests/FilmControlConformanceTests.swift Tests/RealScanTests.swift
