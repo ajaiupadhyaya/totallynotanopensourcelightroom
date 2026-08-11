@@ -88,6 +88,19 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
     /// its own independent edit stack.
     var copyNumber: Int = 0
 
+    // MARK: Roll membership (catalog v8)
+    //
+    // A roll is a physical fact: these columns tie a frame to the ``Roll`` it
+    // was cut from so roll-level conversion constants can find their frames.
+    // Both are columns rather than edit-stack fields because membership is a
+    // property of the photograph, not of any one interpretation of it.
+
+    /// The roll this frame belongs to, if it has been assigned to one.
+    var rollID: UUID?
+
+    /// Position on the roll ("frame 7"), used to order frames within a roll.
+    var frameNumber: Int?
+
     var isVirtualCopy: Bool { copyNumber > 0 }
 
     var fileName: String { fileURL.lastPathComponent }
@@ -105,7 +118,9 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         cameraModel: String? = nil,
         lensModel: String? = nil,
         iso: Int? = nil,
-        captureDate: Date? = nil
+        captureDate: Date? = nil,
+        rollID: UUID? = nil,
+        frameNumber: Int? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -120,6 +135,8 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         self.lensModel = lensModel
         self.iso = iso
         self.captureDate = captureDate
+        self.rollID = rollID
+        self.frameNumber = frameNumber
     }
 
     /// Fills the denormalized metadata columns from a file's EXIF.
@@ -149,5 +166,7 @@ struct CatalogEntry: Codable, Identifiable, Equatable, FetchableRecord, Persista
         iso = c.lenient(.iso, nil)
         captureDate = c.lenient(.captureDate, nil)
         copyNumber = c.lenient(.copyNumber, 0)
+        rollID = c.lenient(.rollID, nil)
+        frameNumber = c.lenient(.frameNumber, nil)
     }
 }

@@ -147,6 +147,7 @@
 		EB4149833522DBBEEC79C333 /* MLMaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41EC8A0826BF47AA06B55F5 /* MLMaskTests.swift */; };
 		EE0DB89B116CD2E7F269A84D /* LumenFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6106C96E36873E9FC2FA21 /* LumenFeatureTests.swift */; };
 		EE1487233E747EB239BC3F45 /* PrintEngineModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE94C5196EA33B400405B6C9 /* PrintEngineModelTests.swift */; };
+		EF9518A1418CC740E75D05A9 /* Roll.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D589EC47A7DC66808183BE0 /* Roll.swift */; };
 		F4D6CDBDCD6A3C4F9A697934 /* PrintSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FE46A6811AD7AAE5C34B1AC /* PrintSettingsTests.swift */; };
 		F5B19249F5CFBF8823EC3F67 /* ImageDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798CF687AF441778F974D6E6 /* ImageDecoder.swift */; };
 		F89EAA1F8C7835B7D964611B /* ColorMixerPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD1A535E136A75D553E6E18 /* ColorMixerPanel.swift */; };
@@ -185,6 +186,7 @@
 		14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceState.swift; sourceTree = "<group>"; };
 		15EA91B171D5F7331561914B /* AutoInvertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoInvertTests.swift; sourceTree = "<group>"; };
 		1818774E9EBF3AF83A8D263C /* ExportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportServiceTests.swift; sourceTree = "<group>"; };
+		1D589EC47A7DC66808183BE0 /* Roll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Roll.swift; sourceTree = "<group>"; };
 		1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeTests.swift; sourceTree = "<group>"; };
 		1FE46A6811AD7AAE5C34B1AC /* PrintSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintSettingsTests.swift; sourceTree = "<group>"; };
 		22A2A7F2E531320ECECC92DF /* CanvasArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasArea.swift; sourceTree = "<group>"; };
@@ -482,6 +484,7 @@
 				2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */,
 				B9F44C12165E98D2652E57A3 /* MaskComponent.swift */,
 				00464425C644621741D179E5 /* RetouchSpot.swift */,
+				1D589EC47A7DC66808183BE0 /* Roll.swift */,
 				14661F13B49D18F1B7FA51FD /* WorkspaceState.swift */,
 			);
 			path = Models;
@@ -822,6 +825,7 @@
 				1FB8533D3BC7684CD3E9D3EB /* RetouchPanel.swift in Sources */,
 				A01C3199FD4C9C800667E057 /* RetouchRenderer.swift in Sources */,
 				58126A828112E984EDE39BED /* RetouchSpot.swift in Sources */,
+				EF9518A1418CC740E75D05A9 /* Roll.swift in Sources */,
 				BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */,
 				616756D288F64D368F8022C7 /* SnapshotPanel.swift in Sources */,
 				CF84407AFA00318B15392839 /* SourceImage.swift in Sources */,

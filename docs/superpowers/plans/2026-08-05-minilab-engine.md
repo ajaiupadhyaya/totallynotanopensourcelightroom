@@ -1648,7 +1648,7 @@ struct Roll: Codable, Identifiable, Equatable, FetchableRecord, PersistableRecor
   - `CatalogEntry.rollID: UUID?`, `CatalogEntry.frameNumber: Int?` (lenient decode, defaulted init params at the end of the initializer so existing call sites compile unchanged)
   - `CatalogStore`: `allRolls() throws -> [Roll]`, `saveRoll(_:) throws`, `deleteRoll(id: UUID) throws`, `entries(inRoll: UUID) throws -> [CatalogEntry]` (ordered by `frameNumber`, then `dateImported`)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `Tests/CatalogStoreTests.swift` (follow that file's existing in-memory-store fixture style):
 
@@ -1692,7 +1692,7 @@ func testEntriesWithoutRollFieldsDecode() throws {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**, then implement: `Roll.swift` as above; in `CatalogStore.migrator` append after `v7_stockPrintCharacter`:
+- [x] **Step 2: Run to verify failure**, then implement: `Roll.swift` as above; in `CatalogStore.migrator` append after `v7_stockPrintCharacter`:
 
 ```swift
         // Phase 2.5 (the Minilab): the roll table the Phase 3 roadmap
@@ -1725,9 +1725,9 @@ func testEntriesWithoutRollFieldsDecode() throws {
 
 plus the four store methods (mirror the film-stock CRUD section's style) and the `CatalogEntry` fields + `rollID = c.lenient(.rollID, nil)` / `frameNumber = c.lenient(.frameNumber, nil)` in its decoder.
 
-- [ ] **Step 3: Run** `CatalogStoreTests` — PASS. Then `xcodegen generate` was needed for `Roll.swift` — confirm the build includes it.
+- [x] **Step 3: Run** `CatalogStoreTests` — PASS. Then `xcodegen generate` was needed for `Roll.swift` — confirm the build includes it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Models/Roll.swift Sources/Catalog/CatalogStore.swift Sources/Models/CatalogEntry.swift Tests/CatalogStoreTests.swift project.yml PhotoEditor.xcodeproj

@@ -62,6 +62,44 @@ final class CatalogStoreTests: XCTestCase {
         XCTAssertTrue(try store.allEntries().isEmpty)
     }
 
+    func testRollRoundTripAndAssignment() throws {
+        let store = try CatalogStore()
+        var roll = Roll(id: UUID(), identifier: "test roll", stock: "Portra 400",
+                        camera: nil, lens: nil, exposureIndex: nil, pushPull: nil,
+                        developer: nil, devNotes: nil, lab: nil, scanDate: nil,
+                        dateCreated: Date(), conversion: nil)
+        try store.saveRoll(roll)
+        XCTAssertEqual(try store.allRolls().map(\.id), [roll.id])
+
+        var entry = CatalogEntry(id: UUID(), fileURL: URL(fileURLWithPath: "/tmp/a.tif"),
+                                 dateImported: Date(), editStack: EditStack(),
+                                 thumbnailPath: nil)
+        entry.rollID = roll.id
+        entry.frameNumber = 7
+        try store.save(entry)
+        let inRoll = try store.entries(inRoll: roll.id)
+        XCTAssertEqual(inRoll.map(\.id), [entry.id])
+        XCTAssertEqual(inRoll[0].frameNumber, 7)
+
+        roll.conversion = RollConversion(
+            baseColor: FilmColor(red: 0.9, green: 0.6, blue: 0.3),
+            baseOrigin: .estimated, gamma: .unit,
+            dmax: DensityTriple(red: 2, green: 2, blue: 2),
+            castRed: 3, castGreen: 0, castBlue: -2, toneProfile: .labStandard)
+        try store.saveRoll(roll)
+        XCTAssertEqual(try store.allRolls()[0].conversion?.castRed, 3)
+    }
+
+    /// A pre-v8 row (no rollID key in its JSON) still decodes.
+    func testEntriesWithoutRollFieldsDecode() throws {
+        let json = #"{"id": "00000000-0000-0000-0000-000000000001", "fileURL": "file:///tmp/a.tif", "dateImported": 0, "editStack": {}}"#
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let entry = try decoder.decode(CatalogEntry.self, from: json.data(using: .utf8)!)
+        XCTAssertNil(entry.rollID)
+        XCTAssertNil(entry.frameNumber)
+    }
+
     func testOnDiskCatalogPersistsAcrossReopen() throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("pecat-\(UUID().uuidString)", isDirectory: true)
