@@ -108,10 +108,10 @@ struct HistogramView: View {
         let outline = curve(bins, in: size, closed: false)
         return ZStack {
             curve(bins, in: size, closed: true)
-                .fill(tint.opacity(0.55))
+                .fill(tint.opacity(0.38))
                 .blendMode(.screen)
             outline
-                .stroke(tint.opacity(0.95), lineWidth: 1)
+                .stroke(tint.opacity(0.82), lineWidth: 1)
                 .blendMode(.screen)
         }
     }
@@ -123,7 +123,14 @@ struct HistogramView: View {
             let stepX = size.width / CGFloat(bins.count - 1)
 
             func point(_ i: Int) -> CGPoint {
-                let normalized = CGFloat((bins[i] / peak).squareRoot())
+                var normalized = CGFloat((bins[i] / peak).squareRoot())
+                // Edge bins hold the CLIPPED mass and are excluded from the
+                // scale (see Histogram.peak) — capped just under the ceiling
+                // so a clipped spike reads as a maxed column instead of a
+                // full-height white wall over the data (design audit).
+                if i == 0 || i == bins.count - 1 {
+                    normalized = min(normalized, 0.92)
+                }
                 return CGPoint(x: CGFloat(i) * stepX,
                                y: size.height - min(max(normalized, 0), 1) * size.height)
             }

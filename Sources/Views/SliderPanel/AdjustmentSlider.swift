@@ -6,11 +6,13 @@ import SwiftUI
 ///
 /// ## Anatomy
 ///
-/// An inset groove spans the row. A tick marks the neutral value; a lit bar
-/// runs from that tick to the current value, so *what has been done to this
-/// photograph* is visible as a length, the way a console fader shows its offset
-/// at a glance. A machined thumb marks the position, and the numeric readout
-/// doubles as a precision scrub control.
+/// One 20pt line: a fixed label column, then an inset groove, then the
+/// numeric readout. A tick marks the neutral value; a lit bar runs from that
+/// tick to the current value, so *what has been done to this photograph* is
+/// visible as a length, the way a console fader shows its offset at a
+/// glance. A machined thumb marks the position, and the readout doubles as a
+/// precision scrub control. The fixed columns mean every groove in a panel
+/// starts and ends on the same x — the delta bars scan as one instrument.
 ///
 /// The delta bar is the point of the whole design. A conventional slider fills
 /// from its left end, which says where the value sits on an abstract scale but
@@ -57,12 +59,47 @@ struct AdjustmentSlider: View {
     private var isNeutral: Bool { abs(value - neutral) < 1e-9 }
     private var isActive: Bool { isDraggingTrack || isScrubbing }
 
+    /// The label column: fixed, so every groove in a panel starts on the
+    /// same x and the delta bars read as a single aligned instrument — the
+    /// design audit measured the old two-line anatomy at a 57pt row pitch,
+    /// three sliders per screen; one 20pt line puts a whole panel in view,
+    /// which is the density a working tool needs.
+    private static let labelColumn: CGFloat = 96
+    private static let readoutColumn: CGFloat = 58
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            header
+        HStack(alignment: .center, spacing: Theme.space2) {
+            Text(title)
+                .font(Theme.controlLabel)
+                .foregroundStyle(isNeutral ? Theme.text.opacity(0.82) : Theme.text)
+                .lineLimit(1)
+                .frame(width: Self.labelColumn, alignment: .leading)
+
             track
+
+            // A reserved slot, not a conditional insert: the reset appearing
+            // must never resize the groove.
+            ZStack {
+                if !isNeutral, isHovering || isFocused {
+                    Button(action: reset) {
+                        Icon(kind: .reset, size: 10)
+                            .foregroundStyle(Theme.tertiaryText)
+                            .frame(width: 14, height: 14)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reset \(title)")
+                    .transition(.opacity)
+                }
+            }
+            .frame(width: 14)
+
+            readout
+                .frame(minWidth: Self.readoutColumn, alignment: .trailing)
         }
-        .padding(.vertical, 1)
+        .frame(height: 20)
+        .animation(Theme.quick, value: isHovering)
+        .animation(Theme.quick, value: isNeutral)
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { reset() }
         .onHover { isHovering = $0 }
@@ -92,37 +129,6 @@ struct AdjustmentSlider: View {
             @unknown default: break
             }
         }
-    }
-
-    // MARK: Header
-
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Theme.space2) {
-            Text(title)
-                .font(Theme.controlLabel)
-                .foregroundStyle(isNeutral ? Theme.text.opacity(0.82) : Theme.text)
-
-            Spacer(minLength: Theme.space2)
-
-            // A reset appears only once there is something to reset, and only
-            // while the pointer is on the row — the affordance shows up exactly
-            // when it means something.
-            if !isNeutral, isHovering || isFocused {
-                Button(action: reset) {
-                    Icon(kind: .reset, size: 10)
-                        .foregroundStyle(Theme.tertiaryText)
-                        .frame(width: 16, height: 16)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Reset \(title)")
-                .transition(.opacity)
-            }
-
-            readout
-        }
-        .animation(Theme.quick, value: isHovering)
-        .animation(Theme.quick, value: isNeutral)
     }
 
     private var readout: some View {

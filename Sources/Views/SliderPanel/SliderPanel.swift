@@ -21,14 +21,20 @@ struct SliderPanel: View {
             VStack(alignment: .leading, spacing: 0) {
                 if model.editStack.processVersion < 2 {
                     PanelSection("Process") {
-                        Text("This photo uses the original develop engine. "
-                             + "Slider values are kept — only the engine changes, "
-                             + "and the current look stays one click away in Snapshots.")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(Theme.secondaryText)
-                        PlateButton(title: "Update to Version 2") {
-                            model.upgradeToProcessVersion2()
+                        // One line, text face (monospace means DATA — the
+                        // design law this prose broke); the full story lives
+                        // in the tooltip.
+                        HStack(spacing: Theme.space2) {
+                            Text("Original develop engine")
+                                .font(Theme.caption)
+                                .foregroundStyle(Theme.secondaryText)
+                            Spacer()
+                            PlateButton(title: "Update") {
+                                model.upgradeToProcessVersion2()
+                            }
                         }
+                        .help("Slider values are kept — only the engine changes, "
+                              + "and the current look stays one click away in Snapshots.")
                     }
                 }
 

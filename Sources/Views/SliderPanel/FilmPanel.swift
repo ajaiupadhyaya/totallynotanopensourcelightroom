@@ -25,17 +25,18 @@ struct FilmPanel: View {
 
             if film.isEnabled {
                 if film.conversionModel == .matrix && film.type.requiresInversion {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("This photo uses the original matrix conversion. "
-                             + "Updating re-solves it through the print engine — "
-                             + "the current look is snapshotted first and stays "
-                             + "one click away.")
-                            .font(.system(size: 10, design: .monospaced))
+                    HStack(spacing: Theme.space2) {
+                        Text("Original matrix conversion")
+                            .font(Theme.caption)
                             .foregroundStyle(Theme.secondaryText)
-                        PlateButton(title: "Update Conversion") {
+                        Spacer()
+                        PlateButton(title: "Update") {
                             model.updateConversion()
                         }
                     }
+                    .help("Updating re-solves through the print engine — the "
+                          + "current look is snapshotted first and stays one "
+                          + "click away.")
                 }
 
                 TabStrip(
@@ -120,12 +121,10 @@ struct FilmPanel: View {
                 }
             }
 
-            Text("Sampling reads the brightest area, which on a negative is "
-                 + "the unexposed film base. Include some clear border in the "
-                 + "scan for the best result.")
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Theme.secondaryText)
         }
+        .help("Sampling reads the brightest area, which on a negative is the "
+              + "unexposed film base. Include some clear border in the scan "
+              + "for the best result.")
     }
 
     // MARK: Stock selection
@@ -200,14 +199,16 @@ struct FilmPanel: View {
                 .buttonStyle(.plain)
             }
 
-            // Be straight with the user about what this ranking is worth.
-            Text("Base color separates color negative from B&W or slide "
-                 + "reliably, but most C-41 stocks share a near-identical mask — "
-                 + "so treat these as candidates, not an identification. For "
-                 + "accuracy, pick the stock you actually shot and calibrate it.")
-                .font(.system(size: 9.5, design: .monospaced))
+            // Be straight with the user about what this ranking is worth —
+            // one honest line, full reasoning in the tooltip, TEXT face.
+            Text("Candidates, not an identification — calibrate your stock.")
+                .font(Theme.caption)
                 .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 2)
+                .help("Base color separates color negative from B&W or slide "
+                      + "reliably, but most C-41 stocks share a near-identical "
+                      + "mask. For accuracy, pick the stock you actually shot "
+                      + "and calibrate it.")
         }
         .padding(8)
         .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
@@ -325,7 +326,7 @@ struct FilmPanel: View {
                 $0.contains("colour balance")
             }) {
                 Text(term)
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(Theme.caption)
                     .foregroundStyle(Theme.filmEdge)
                     .fixedSize(horizontal: false, vertical: true)
             }

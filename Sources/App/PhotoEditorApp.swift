@@ -133,8 +133,8 @@ private struct TopBar: View {
 
             // Panel toggles live at the far edge, nearest the panels they fold.
             HStack(spacing: Theme.space3) {
-                LampToggle(label: "Roll", isOn: $isShowingLibrary)
-                LampToggle(label: "Develop", isOn: $isShowingDevelop)
+                LampToggle(label: "Roll", isOn: $isShowingLibrary, style: .quiet)
+                LampToggle(label: "Develop", isOn: $isShowingDevelop, style: .quiet)
             }
         }
         .padding(.horizontal, Theme.panelInset)

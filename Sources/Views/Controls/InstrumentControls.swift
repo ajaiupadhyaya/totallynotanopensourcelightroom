@@ -169,30 +169,46 @@ private struct PressReporting: ButtonStyle {
 
 // MARK: - LampToggle
 
-/// A drawn toggle: a small square lamp that lights with the accent.
+/// A drawn toggle: a small square lamp beside a caps label.
+///
+/// Two voltages. `.accent` is for states that DIFFER from the default —
+/// diagnostics like Peak and Before, which deserve to shout while active.
+/// `.quiet` lights in the text colour, for default-on panel toggles: the
+/// design audit counted fourteen accent elements glowing at rest, and an
+/// accent that is always on means nothing — the resting chrome goes grey so
+/// the accent can be spent on what actually changed.
 struct LampToggle: View {
+    enum Style { case accent, quiet }
+
     let label: String
     @Binding var isOn: Bool
+    var style: Style = .accent
 
     @State private var isHovering = false
+
+    private var litColor: Color {
+        style == .accent ? Theme.accent : Theme.secondaryText
+    }
 
     var body: some View {
         Button { isOn.toggle() } label: {
             HStack(spacing: 6) {
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(isOn ? Theme.accent : Color.clear)
+                    .fill(isOn ? litColor : Color.clear)
                     .frame(width: 7, height: 7)
                     .overlay {
                         RoundedRectangle(cornerRadius: 1.5)
                             .strokeBorder(
-                                isOn ? Theme.accent
+                                isOn ? litColor
                                      : (isHovering ? Theme.secondaryText : Theme.tertiaryText),
                                 lineWidth: Theme.hairline
                             )
                     }
                     // The lit lamp gets a faint bloom, the way an indicator on
-                    // a real panel spills a little light onto its bezel.
-                    .shadow(color: isOn ? Theme.accent.opacity(0.55) : .clear, radius: 3)
+                    // a real panel spills a little light onto its bezel —
+                    // accent lamps only; a quiet lamp is furniture.
+                    .shadow(color: isOn && style == .accent
+                            ? Theme.accent.opacity(0.55) : .clear, radius: 3)
 
                 Text(label.uppercased())
                     .plateLabel()
