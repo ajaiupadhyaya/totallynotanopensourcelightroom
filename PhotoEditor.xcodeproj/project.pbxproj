@@ -41,6 +41,7 @@
 		493BD7BCDAF47B0BCE4AD20D /* AutoInvertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15EA91B171D5F7331561914B /* AutoInvertTests.swift */; };
 		49AAE1733C7EC12F39B9DF3D /* Phase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955D38A421CE01C63316D878 /* Phase2Tests.swift */; };
 		4C73473B2849E148E76197C8 /* EffectsStages.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */; };
+		4E43D8652025D973DD66DE66 /* RollModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75899155385AF32A00FAAAE6 /* RollModel.swift */; };
 		4E482C9D94B1F517A6F7C204 /* EditRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F12400FAB4E4E2D7B746A0 /* EditRenderer.swift */; };
 		4EBE75FACDC69EC3DCE3F640 /* ParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB35AA9AE71ECBD87479578 /* ParityTests.swift */; };
 		504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267388D14FEE2777E922AC35 /* ColorMixerTests.swift */; };
@@ -108,6 +109,7 @@
 		A537E63094B2875F0B5AB93B /* CanvasArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A2A7F2E531320ECECC92DF /* CanvasArea.swift */; };
 		A5CD48C9BB4FE89964260212 /* CastSolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447A9B4F413242A3841D318F /* CastSolver.swift */; };
 		AA3751E17D1F5CEE73292DBF /* DisplayToggleConformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6C9B80F5A1EE2ABD8E9A86 /* DisplayToggleConformanceTests.swift */; };
+		AAA13367FC563FCE1C48494A /* RollModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E686716E65DEF5E63C3A450 /* RollModelTests.swift */; };
 		AB26A14B66BEF9F5757F239B /* MaskCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523FF6E84F8696BA923A783B /* MaskCompositor.swift */; };
 		AD60EE40143A15C8FE0BC6BE /* CullingCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1166D48907F88359EBF4DA05 /* CullingCommands.swift */; };
 		B19B7753F1618E46FB0C83E9 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 3F4EDBF61BFD5A46628D40DB /* GRDB */; };
@@ -241,6 +243,7 @@
 		6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeSettings.swift; sourceTree = "<group>"; };
 		732C7BCA2E7B9AFF5DD78424 /* ColorScience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorScience.swift; sourceTree = "<group>"; };
 		753E17A3CC2C17EB5312E084 /* FilmStockStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmStockStoreTests.swift; sourceTree = "<group>"; };
+		75899155385AF32A00FAAAE6 /* RollModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollModel.swift; sourceTree = "<group>"; };
 		78988AE124F31D425DB32C2F /* WorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowTests.swift; sourceTree = "<group>"; };
 		798CF687AF441778F974D6E6 /* ImageDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDecoder.swift; sourceTree = "<group>"; };
 		7B9C2E153D2A43CB9D745CA0 /* FilmDensityConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmDensityConverterTests.swift; sourceTree = "<group>"; };
@@ -267,6 +270,7 @@
 		955FF06504B66581F45A5A7B /* CalibrationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationSupport.swift; sourceTree = "<group>"; };
 		98D365F1176EE97796A58796 /* OpticsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpticsPanel.swift; sourceTree = "<group>"; };
 		9E462B9CEEABAAAD8AE62961 /* MaskComponentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskComponentPanel.swift; sourceTree = "<group>"; };
+		9E686716E65DEF5E63C3A450 /* RollModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollModelTests.swift; sourceTree = "<group>"; };
 		9E862E04D9DE878612B0AE08 /* CatalogScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogScaleTests.swift; sourceTree = "<group>"; };
 		A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSnapshot.swift; sourceTree = "<group>"; };
 		A24E17192240663CA3BE4181 /* CanvasToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasToolTests.swift; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 				34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */,
 				602AF91A44F0025239865F8D /* LibrarySidebar.swift */,
 				0D3584DC4BB48755D7ACAE0C /* MetalCanvasView.swift */,
+				75899155385AF32A00FAAAE6 /* RollModel.swift */,
 				42064BDE271E9B76EFFD6DCC /* Theme.swift */,
 				E1B80BB6DE75F993D679057C /* ToolKeyMonitor.swift */,
 				E869071E34608F2B4DFA10AB /* ToolRail.swift */,
@@ -441,6 +446,7 @@
 				4C7275DDAFF22956BEA0FB6A /* RealScanTests.swift */,
 				DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */,
 				06EBD4CB7863CBC35BD1BAFB /* RollAnalysisTests.swift */,
+				9E686716E65DEF5E63C3A450 /* RollModelTests.swift */,
 				C971C5547D7963F84FCD8C69 /* TestSupport.swift */,
 				0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */,
 				D915C4CBA652F53BDCDD730E /* VirtualCopyAndSnapshotTests.swift */,
@@ -742,6 +748,7 @@
 				FEE94336F503B419930EFB32 /* RealScanTests.swift in Sources */,
 				91D2B5ADD90FF74D56FF5078 /* RetouchTests.swift in Sources */,
 				759A8725D47E244E6AC81FE4 /* RollAnalysisTests.swift in Sources */,
+				AAA13367FC563FCE1C48494A /* RollModelTests.swift in Sources */,
 				BEE1A0ABE73BC3B8197529AF /* TestSupport.swift in Sources */,
 				A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */,
 				8476E1A3FDAC4F7E92F58765 /* VirtualCopyAndSnapshotTests.swift in Sources */,
@@ -834,6 +841,7 @@
 				58126A828112E984EDE39BED /* RetouchSpot.swift in Sources */,
 				EF9518A1418CC740E75D05A9 /* Roll.swift in Sources */,
 				D76248CCC18F83D92E8675DF /* RollAnalysis.swift in Sources */,
+				4E43D8652025D973DD66DE66 /* RollModel.swift in Sources */,
 				BF88801122DE422375AA5BF4 /* SliderPanel.swift in Sources */,
 				616756D288F64D368F8022C7 /* SnapshotPanel.swift in Sources */,
 				CF84407AFA00318B15392839 /* SourceImage.swift in Sources */,

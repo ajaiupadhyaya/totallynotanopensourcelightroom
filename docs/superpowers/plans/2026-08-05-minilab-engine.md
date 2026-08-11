@@ -2091,7 +2091,7 @@ final class RollModel {
 
   - `EditorModel` gains `var rollConversion: RollConversion?` (set by `AppModel.open` when the entry's roll has a solved conversion) — `autoConvertNegative` uses it: roll constants + frame-only EV.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/RollModelTests.swift`:
 
@@ -2163,9 +2163,9 @@ final class RollModelTests: XCTestCase {
 
 (The second test pins the store contract `RollModel.createRoll` builds on; `createRoll`/`add`/`convertRoll` themselves are thin AppModel plumbing exercised by the corpus tests and by hand — the pure core is what gets the unit coverage.)
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `RollModel.swift` — `conversionStacks`:
 
@@ -2255,9 +2255,9 @@ final class RollModelTests: XCTestCase {
 
 UI: `LibrarySidebar` context menu after "Paste Settings" — `Menu("Roll")` with "New Roll from Selection…" (sheet: two `InstrumentField`s — identifier, stock — and a `PlateButton("Create")`; drawn chrome, not a stock alert), "Add to Roll" submenu over `app.rollModel.rolls`, and "Convert Roll" (visible when every target shares one `rollID`). `FilmstripRow`: when `entry.rollID` resolves, append the roll identifier to the existing edge-print legend (the decoration becomes data — keep `Theme.filmEdge`, same type size). `EditorCommands`: Develop menu → "Convert Roll" invoking the same action for the open frame's roll, disabled when `rollID == nil`.
 
-- [ ] **Step 4: Run** `RollModelTests` + `CatalogStoreTests`, then build the app (`xcodebuild … build`) to prove the UI wiring compiles. Expected PASS.
+- [x] **Step 4: Run** `RollModelTests` + `CatalogStoreTests`, then build the app (`xcodebuild … build`) to prove the UI wiring compiles. Expected PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Views/RollModel.swift Sources/App/AppModel.swift Sources/Views/EditorModel.swift Sources/Views/LibrarySidebar.swift Sources/App/EditorCommands.swift Tests/RollModelTests.swift project.yml PhotoEditor.xcodeproj

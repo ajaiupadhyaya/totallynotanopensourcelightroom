@@ -14,6 +14,21 @@ struct LibrarySidebar: View {
     @State private var searchText = ""
     @State private var isShowingBatchExport = false
 
+    /// Non-nil while the drawn New Roll sheet is up — the frames it will
+    /// contain, captured at menu time.
+    @State private var newRollTargets: [CatalogEntry]?
+    @State private var newRollIdentifier = ""
+    @State private var newRollStock = ""
+
+    /// The one roll every target belongs to, or nil (mixed/none) — Convert
+    /// Roll only offers itself when the answer is unambiguous.
+    private func sharedRoll(of targets: [CatalogEntry]) -> Roll? {
+        let ids = Set(targets.compactMap(\.rollID))
+        guard ids.count == 1, targets.allSatisfy({ $0.rollID != nil }),
+              let id = ids.first else { return nil }
+        return app.rollModel.rolls.first { $0.id == id }
+    }
+
     private var visibleEntries: [CatalogEntry] {
         app.entries.filter { filter.matches($0, search: searchText) }
     }
@@ -50,6 +65,45 @@ struct LibrarySidebar: View {
         .sheet(isPresented: $isShowingBatchExport) {
             BatchExportSheet(app: app, entries: actionTargets)
         }
+        .sheet(isPresented: Binding(get: { newRollTargets != nil },
+                                    set: { if !$0 { newRollTargets = nil } })) {
+            newRollSheet
+        }
+    }
+
+    /// The drawn New Roll sheet — two InstrumentFields and a PlateButton,
+    /// never a stock alert (the house rule the preset-naming alert once
+    /// broke).
+    private var newRollSheet: some View {
+        VStack(alignment: .leading, spacing: Theme.space3) {
+            Text("NEW ROLL")
+                .sectionLabel(Theme.text)
+            InstrumentField(placeholder: "Identifier — \u{201C}2026-08 Portra roll 3\u{201D}",
+                            text: $newRollIdentifier)
+            InstrumentField(placeholder: "Stock (optional)", text: $newRollStock)
+            Text("\(newRollTargets?.count ?? 0) frames, numbered in import order")
+                .font(Theme.caption)
+                .foregroundStyle(Theme.secondaryText)
+            HStack {
+                Spacer()
+                PlateButton(title: "Cancel") { newRollTargets = nil }
+                PlateButton(title: "Create", emphasis: .prominent,
+                            isEnabled: !newRollIdentifier
+                                .trimmingCharacters(in: .whitespaces).isEmpty) {
+                    if let targets = newRollTargets {
+                        app.rollModel.createRoll(identifier: newRollIdentifier,
+                                                 stock: newRollStock,
+                                                 from: targets)
+                    }
+                    newRollTargets = nil
+                    newRollIdentifier = ""
+                    newRollStock = ""
+                }
+            }
+        }
+        .padding(Theme.space4)
+        .frame(width: 340)
+        .background(Theme.surface)
     }
 
     /// "ROLL" + the working actions. The panel is the roll; the header says so.
@@ -103,6 +157,7 @@ struct LibrarySidebar: View {
                             FilmstripRow(
                                 entry: entry,
                                 frameNumber: index + 1,
+                                rollIdentifier: app.rollModel.roll(for: entry)?.identifier,
                                 isSelected: app.selection.contains(entry.id),
                                 isOpen: app.editor?.entry.id == entry.id
                             )
@@ -186,6 +241,28 @@ struct LibrarySidebar: View {
 
         Button("Copy Settings") { app.copySettings(from: entry) }
         Button("Paste Settings") { app.pasteSettings(to: targetsIncluding(entry)) }
+
+        Menu("Roll") {
+            Button("New Roll from Selection…") {
+                newRollTargets = targetsIncluding(entry)
+            }
+            if !app.rollModel.rolls.isEmpty {
+                Menu("Add to Roll") {
+                    ForEach(app.rollModel.rolls) { roll in
+                        Button(roll.identifier) {
+                            app.rollModel.add(targetsIncluding(entry), to: roll)
+                        }
+                    }
+                }
+            }
+            if let roll = sharedRoll(of: targetsIncluding(entry)) {
+                Button(app.rollModel.isConverting
+                       ? "Converting…" : "Convert Roll \u{201C}\(roll.identifier)\u{201D}") {
+                    Task { await app.rollModel.convertRoll(roll) }
+                }
+                .disabled(app.rollModel.isConverting)
+            }
+        }
             .disabled(!app.canPasteSettings)
 
         Divider()
@@ -268,6 +345,7 @@ struct LibrarySidebar: View {
 private struct FilmstripRow: View {
     let entry: CatalogEntry
     let frameNumber: Int
+    let rollIdentifier: String?
     let isSelected: Bool
     let isOpen: Bool
 
@@ -352,9 +430,13 @@ private struct FilmstripRow: View {
             : String(format: "%02d", frameNumber)
     }
 
-    /// What a rebate legend says: the stock when known, else the camera, else
-    /// the file type — most specific truth available.
+    /// What a rebate legend says: the roll when assigned (the edge print
+    /// finally printing something true of the physical roll), else the stock,
+    /// else the camera, else the file type — most specific truth available.
     private var edgeLegend: String {
+        if let rollIdentifier, !rollIdentifier.isEmpty {
+            return rollIdentifier.uppercased()
+        }
         if let stock = entry.editStack.filmNegative.stockName, !stock.isEmpty {
             return stock.uppercased()
         }

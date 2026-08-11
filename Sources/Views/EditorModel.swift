@@ -709,19 +709,74 @@ final class EditorModel {
     /// `Geometry`'s own crop (applied after conversion, see
     /// ``DevelopedSourceCache``) masks the rest at display/export time, same
     /// as ever.
+    /// The solved conversion of the roll this photo belongs to, if any — set
+    /// by `AppModel.open`. Non-nil turns Auto into a roll-constants re-solve.
+    var rollConversion: RollConversion?
+
     /// - Parameter seedProfile: when non-nil AND the conversion is being
     ///   enabled for the first time (isEnabled false), the profile applied
     ///   before solving — the "new conversions default to Lab Standard" rule.
     ///   The Auto button passes nil: re-solving respects the user's profile.
-    func autoConvertNegative(seedProfile: FilmToneProfile? = nil) {
+    /// - Parameter forceProfile: applies the profile regardless of enabled
+    ///   state before solving — the profile-switch path (Task 11's strip).
+    ///   Deliberately bypasses the roll branch below: switching profiles
+    ///   leaves the roll's conversion; Convert Roll re-establishes it.
+    func autoConvertNegative(seedProfile: FilmToneProfile? = nil,
+                             forceProfile: FilmToneProfile? = nil) {
         guard let source else { return }
         let measured = GeometryTransform.apply(source, geometry: editStack.geometry)
         var film = editStack.filmNegative
         if let seedProfile, !film.isEnabled {
             film.print.applyToneProfile(seedProfile)
         }
+        if let forceProfile {
+            film.print.applyToneProfile(forceProfile)
+        }
         film.isEnabled = true
         let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
+
+        if let rc = rollConversion, forceProfile == nil {
+            // A rolled frame re-Autos against its roll's constants: measure
+            // this frame, solve exposure only. Constants stay the roll's —
+            // that IS the consistency contract.
+            guard let m = AutoInvert.measure(scan: measured, sampledBase: sampled,
+                                             context: renderer.context) else { return }
+            let base = (film.baseOrigin == .sampled) ? film.baseColor : rc.baseColor
+            let dminLin = (PaperResponse.srgbDecode(base.red),
+                           PaperResponse.srgbDecode(base.green),
+                           PaperResponse.srgbDecode(base.blue))
+            func density(_ t: Double, _ dm: Double) -> Double {
+                log10(max(dm, 1e-4) / max(t, PaperResponse.transmittanceFloor))
+            }
+            let medianD = DensityTriple(
+                red: density(AutoInvert.percentile(m.sortedRed, 0.5), dminLin.0),
+                green: density(AutoInvert.percentile(m.sortedGreen, 0.5), dminLin.1),
+                blue: density(AutoInvert.percentile(m.sortedBlue, 0.5), dminLin.2))
+            let medianT = (dminLin.0 * pow(10, -medianD.red),
+                           dminLin.1 * pow(10, -medianD.green),
+                           dminLin.2 * pow(10, -medianD.blue))
+            if film.baseOrigin != .sampled {
+                film.baseColor = rc.baseColor
+                film.baseOrigin = rc.baseOrigin
+                film.isBaseSampled = false
+            }
+            film.print.gamma = rc.gamma
+            film.print.dmax = rc.dmax
+            film.print.castRed = rc.castRed
+            film.print.castGreen = rc.castGreen
+            film.print.castBlue = rc.castBlue
+            film.print.applyToneProfile(rc.toneProfile)
+            film.print.exposure = AutoInvert.solveExposure(
+                medianT: medianT, dminLinear: dminLin, dmax: rc.dmax,
+                gamma: rc.gamma,
+                cast: DensityTriple(red: rc.castRed, green: rc.castGreen,
+                                    blue: rc.castBlue),
+                profile: rc.toneProfile)
+            film.print.gradePivot = medianD
+            film.exposure = 0
+            editStack.filmNegative = film
+            return
+        }
         guard let solution = AutoInvert.solve(scan: measured, sampledBase: sampled,
                                               profile: film.print.toneProfile,
                                               context: renderer.context) else { return }

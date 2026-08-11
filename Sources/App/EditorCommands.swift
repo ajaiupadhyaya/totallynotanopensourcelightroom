@@ -72,6 +72,17 @@ struct EditorCommands: Commands {
             Divider()
 
             Button("Reset All Adjustments") { editor?.resetAdjustments() }
+
+            Divider()
+
+            Button("Convert Roll") {
+                if let entry = editor?.entry,
+                   let roll = app.rollModel.roll(for: entry) {
+                    Task { await app.rollModel.convertRoll(roll) }
+                }
+            }
+            .disabled(editor.flatMap { app.rollModel.roll(for: $0.entry) } == nil
+                      || app.rollModel.isConverting)
                 .disabled(editor == nil)
         }
 
