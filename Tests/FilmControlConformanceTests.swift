@@ -368,10 +368,10 @@ final class FilmControlConformanceTests: XCTestCase {
         "stockSaturation": "matrix engine only — frozen, covered by FilmNegativeTests",
         "print.renderVersion": "freeze flag, not a control — PaperResponseGoldenTests owns it",
         "print.gradePivot": "Auto-solved compensation anchor, not a control — grade-invariance test in FilmDensityConverterTests owns it",
-        "print.toneProfile": "profile selector — its four parameters each have a case above; selection behavior covered by EditorModelTests",
+        "print.toneProfile": "profile selector — its four parameters each have a case above; selection behavior covered by PrintSettingsTests.testApplyToneProfileWritesTheProfileParameters (Task 11 moves this pointer to EditorModelTests when the gesture-level path lands)",
         // "print" itself is not a leaf field: it is decomposed into its own
-        // seven fields below (all prefixed "print."), every one of which is
-        // covered via `cases` — no print exclusions.
+        // children below (all prefixed "print."), each of which is covered
+        // via `cases` or carries one of the three "print." exclusions above.
     ]
 
     // MARK: Field inventory

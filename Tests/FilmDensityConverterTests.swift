@@ -53,16 +53,26 @@ final class FilmDensityConverterTests: XCTestCase {
         lab.print.applyToneProfile(.labStandard)
         assertKernelAgreesWithSwiftModel(lab)
 
-        // Fourth leg: cast + zone trim at a non-unit grade (Task 4). Proves
-        // the CPU folds (cast through the effective gamma, trims folded per
-        // channel into the kernel's zone math) and the kernel describe one
-        // model — a converter that folded cast through the un-graded gamma,
-        // or marshaled the trim vectors in the wrong zone order, diverges
-        // from the Swift model here.
+        // Fourth leg: cast + zone trims at a non-unit grade + a stale legacy
+        // EV (Tasks 4/5). Proves the CPU folds (cast through the effective
+        // gamma, trims folded per channel into the kernel's zone math, legacy
+        // EV folded pre-curve on renderVersion 2) and the kernel describe one
+        // model. ALL THREE zones carry a nonzero trim on DISTINCT channels
+        // with distinct signs — the group review proved the original
+        // shadow-only leg left trimM/trimH (and zoneHighStart/zoneHighFull)
+        // output-inert, so a converter that transposed the mid/high trim
+        // vectors, or a kernel that swapped the wM/wH weights, passed the
+        // whole suite. With distinct channels per zone, any zone swap,
+        // channel swap, or marshal transposition diverges here. The nonzero
+        // stack-level `exposure` pins the v2 fold's magnitude, which the
+        // never-clips test deliberately does not.
         var cast = densitySettings()
         cast.print.contrast = 3
         cast.print.castRed = 40
         cast.print.shadowTrim.red = 60
+        cast.print.midTrim.green = -50
+        cast.print.highTrim.blue = 40
+        cast.exposure = 0.5
         assertKernelAgreesWithSwiftModel(cast)
     }
 

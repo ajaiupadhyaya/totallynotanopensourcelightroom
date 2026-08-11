@@ -1106,9 +1106,14 @@ In `FilmDensityConverter.convert`, change the legacy-EV block:
 func testV2FoldsLegacyExposureBeforeThePaperCurve() throws {
     var v2 = densitySettings()
     v2.exposure = 2
+    // PLAN BUG, corrected 2026-08-10 (same class as Task 2's toe fixture):
+    // the original probe was near-base "renders near white" — on a NEGATIVE
+    // the base renders near BLACK, where a post-curve multiply has nothing to
+    // clip, so neither assertion could ever trip. The implemented test uses a
+    // DENSE patch (density 1.7, the print's near-white) built in linear space.
     let scan = TestSupport.solidImage(red: v2.baseColor.red * 0.9,
                                       green: v2.baseColor.green * 0.9,
-                                      blue: v2.baseColor.blue * 0.9) // near-base: renders near white
+                                      blue: v2.baseColor.blue * 0.9) // WRONG — see note above
     let v2Out = TestSupport.readLinearColor(
         FilmDensityConverter.convert(scan, settings: v2), context: context)
     XCTAssertLessThan(max(v2Out.red, max(v2Out.green, v2Out.blue)), 1.0,

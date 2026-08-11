@@ -61,6 +61,27 @@ final class PrintSettingsTests: XCTestCase {
         XCTAssertTrue(EditStack().isNeutralEdit)
     }
 
+    /// The upgrade case the group review caught: a neutral stack PERSISTED by
+    /// the pre-Minilab build (its print JSON has no renderVersion key, so it
+    /// decodes 1, while a fresh stack initializes 2). Every photo imported
+    /// under the shipping build carries exactly this JSON, and without the
+    /// renderVersion normalization in isNeutralEdit it would read as edited
+    /// after upgrade — enabling Reset on photos the user never touched.
+    func testNeutralStackFromThePreviousBuildIsStillANeutralEdit() throws {
+        var json = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(EditStack())) as! [String: Any]
+        var film = json["filmNegative"] as! [String: Any]
+        var print = film["print"] as! [String: Any]
+        print.removeValue(forKey: "renderVersion") // pre-Minilab JSON: decode → 1
+        film["print"] = print
+        json["filmNegative"] = film
+        let decoded = try JSONDecoder().decode(
+            EditStack.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(decoded.filmNegative.print.renderVersion, 1)
+        XCTAssertTrue(decoded.isNeutralEdit,
+                      "an untouched photo from the previous build must not read as edited")
+    }
+
     /// The house look, chosen on visual inspection of a rendered warmth/tint
     /// sweep against the user's own corpus (Task 8, Phase C) — a deliberate
     /// trim of this engine's default look, not a rescue tuned to any one
