@@ -144,6 +144,10 @@ final class RollModel {
                 film.baseOrigin = solution.conversion.baseOrigin
                 film.isBaseSampled = false
             }
+            // v2 semantics travel with the solve (see autoConvertNegative):
+            // a roll mixing pre-Minilab and fresh frames must render its one
+            // set of constants identically on every frame.
+            film.print.renderVersion = 2
             film.print.applyToneProfile(solution.conversion.toneProfile)
             film.print.gamma = solution.conversion.gamma
             film.print.dmax = solution.conversion.dmax

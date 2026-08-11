@@ -765,6 +765,12 @@ final class EditorModel {
                 film.baseOrigin = rc.baseOrigin
                 film.isBaseSampled = false
             }
+            // The solve places the median under renderVersion-2 semantics
+            // (balanced tint, gradePivot); writing it onto a decoded-v1 stack
+            // would render the placement wrong and leave the pivot dead. Auto
+            // overwrites the whole conversion (snapshot-protected), so the
+            // upgrade cannot violate the freeze.
+            film.print.renderVersion = 2
             film.print.gamma = rc.gamma
             film.print.dmax = rc.dmax
             film.print.castRed = rc.castRed
@@ -787,6 +793,8 @@ final class EditorModel {
                                               profile: film.print.toneProfile,
                                               context: renderer.context) else { return }
         lastSolveDegradedTerms = solution.degradedTerms
+        // v2 semantics travel with the solve — see the roll branch's note.
+        film.print.renderVersion = 2
         film.baseColor = solution.baseColor
         film.baseOrigin = solution.baseOrigin
         film.isBaseSampled = solution.baseOrigin == .sampled

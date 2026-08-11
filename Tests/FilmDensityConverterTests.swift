@@ -73,6 +73,12 @@ final class FilmDensityConverterTests: XCTestCase {
         cast.print.midTrim.green = -50
         cast.print.highTrim.blue = 40
         cast.exposure = 0.5
+        // Full toe chroma: the group review measured that leg 3's labStandard
+        // toeChroma (0.27) contributes at most 8.35e-4 on this neutral ramp —
+        // under the 2e-3 gate, so a kernel with the toe term deleted passed
+        // every leg. At 100 (weight 0.9) against this leg's castRed ratio
+        // spread the term contributes ~9e-3, comfortably above the gate.
+        cast.print.toeChroma = 100
         assertKernelAgreesWithSwiftModel(cast)
     }
 

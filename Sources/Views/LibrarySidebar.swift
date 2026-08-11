@@ -241,6 +241,7 @@ struct LibrarySidebar: View {
 
         Button("Copy Settings") { app.copySettings(from: entry) }
         Button("Paste Settings") { app.pasteSettings(to: targetsIncluding(entry)) }
+            .disabled(!app.canPasteSettings)
 
         Menu("Roll") {
             Button("New Roll from Selection…") {
@@ -263,7 +264,6 @@ struct LibrarySidebar: View {
                 .disabled(app.rollModel.isConverting)
             }
         }
-            .disabled(!app.canPasteSettings)
 
         Divider()
 

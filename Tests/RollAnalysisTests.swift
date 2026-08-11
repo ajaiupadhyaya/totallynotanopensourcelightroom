@@ -41,7 +41,30 @@ final class RollAnalysisTests: XCTestCase {
         dim.gVector = CIVector(x: 0, y: k, z: 0, w: 0)
         dim.bVector = CIVector(x: 0, y: 0, z: k, w: 0)
         let thin = dim.outputImage!.composited(over: full)
-        return [full, dark, bright, thin]
+        // A FOGGED frame: uniform extra density over the whole frame, rebate
+        // included — that is what fog physically does. It exists to make the
+        // base-envelope DIRECTION falsifiable: with four identical rebates,
+        // min and max of the per-frame estimates were equal and the group
+        // review proved the min→max fix untestable. The fogged rebate is
+        // darker; the spec's "thinnest film is closest to true base" demands
+        // the envelope ignore it (max transmittance), and the ground-truth
+        // assertion below fails under min.
+        let fog = CIFilter.colorMatrix()
+        fog.inputImage = full
+        let kf = CGFloat(pow(10.0, -0.05))
+        fog.rVector = CIVector(x: kf, y: 0, z: 0, w: 0)
+        fog.gVector = CIVector(x: 0, y: kf, z: 0, w: 0)
+        fog.bVector = CIVector(x: 0, y: 0, z: kf, w: 0)
+        let fogged = fog.outputImage!
+        return [full, dark, bright, thin, fogged]
+    }
+
+    /// The clean four — no fog. The corner-variance metric is premised on
+    /// every frame's rebate being IDENTICAL material; the fogged frame
+    /// violates that premise by construction (its rebate genuinely differs),
+    /// so it belongs only to the constants/envelope test above, never here.
+    private func cleanRollFrames() -> [CIImage] {
+        Array(rollFrames().prefix(4))
     }
 
     func testRollConstantsAreSharedAndPerFrameSolvesAreNot() throws {
@@ -64,6 +87,27 @@ final class RollAnalysisTests: XCTestCase {
         XCTAssertGreaterThan(
             roll.frameExposures.max()! - roll.frameExposures.min()!, 0.05,
             "the dimmed frame must solve a different exposure")
+
+        // GROUND TRUTH (group review: without these, ANY shared-but-wrong
+        // pooling passed — shared garbage renders consistently). The fixture
+        // KNOWS its film: base is FilmSim.c41Base, and the fogged frame's
+        // darker rebate must lose the envelope to the clean frames' (max
+        // transmittance = thinnest film). Tolerance covers the 98th-pct
+        // estimator reading base-adjacent texture, not the envelope
+        // direction: under min() the fogged estimate wins and red lands
+        // ~11% low, far outside this band.
+        let truth = (PaperResponse.srgbEncode(FilmSim.c41Base.0),
+                     PaperResponse.srgbEncode(FilmSim.c41Base.1),
+                     PaperResponse.srgbEncode(FilmSim.c41Base.2))
+        XCTAssertEqual(roll.conversion.baseColor.red, truth.0, accuracy: 0.03)
+        XCTAssertEqual(roll.conversion.baseColor.green, truth.1, accuracy: 0.03)
+        XCTAssertEqual(roll.conversion.baseColor.blue, truth.2, accuracy: 0.03)
+        // And the pooled gamma must agree with the full-frame per-frame solve
+        // to first order — pooling refines the same statistics, it does not
+        // invent different ones.
+        XCTAssertEqual(roll.conversion.gamma.red, perFrame[0].gamma.red,
+                       accuracy: perFrame[0].gamma.red * 0.25,
+                       "pooled gamma far from the full-frame solve — wrong pooling")
     }
 
     /// The metric that justifies the feature: the rebate (border) of every
@@ -71,7 +115,7 @@ final class RollAnalysisTests: XCTestCase {
     /// should agree across frames. Roll-solved frames must agree at least as
     /// well as per-frame-solved ones (in practice far better).
     func testRollSolveShrinksCrossFrameChromaVariance() throws {
-        let frames = rollFrames()
+        let frames = cleanRollFrames()
         let ms = try frames.map {
             try XCTUnwrap(AutoInvert.measure(scan: $0, sampledBase: nil,
                                              context: context))

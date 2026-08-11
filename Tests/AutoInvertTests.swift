@@ -240,6 +240,20 @@ final class AutoInvertTests: XCTestCase {
         XCTAssertNotEqual(linear.printExposure, lab.printExposure)
         XCTAssertEqual(linear.dmax, lab.dmax, "endpoint statistics are profile-independent")
         XCTAssertEqual(linear.gamma, lab.gamma, "gammas are profile-independent")
+
+        // The linear-vs-lab difference alone cannot prove the bisection reads
+        // the TONING: both Lab profiles solve the identical cast (cast
+        // depends only on medians/gamma/dmax), so if soft and standard solve
+        // different EVs, only punch/fade/glow/toeChroma can be separating
+        // them — the group review showed deleting those defaulted arguments
+        // from solveExposure's develop() call compiled silently and survived
+        // the original assertion via the cast fold.
+        let soft = try XCTUnwrap(AutoInvert.solve(scan: probe, sampledBase: nil,
+                                                  profile: .labSoft, context: context))
+        XCTAssertEqual(soft.cast, lab.cast, "cast is profile-toning-independent")
+        XCTAssertNotEqual(soft.printExposure, lab.printExposure,
+                          "identical cast, different toning — only the toning "
+                          + "parameters can separate these EVs")
     }
 
     /// The solved median density is reported (it becomes gradePivot): rendering
