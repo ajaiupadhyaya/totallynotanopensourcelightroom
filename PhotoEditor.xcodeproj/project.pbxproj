@@ -32,6 +32,7 @@
 		310B7D3B22B71D0183447CFA /* PhotoEditorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C1E1274B9578E787B28B1D /* PhotoEditorApp.swift */; };
 		3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */; };
 		36CAEE8082B31C61445393B3 /* MLMaskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7EEB7632D72A68035D921B /* MLMaskCache.swift */; };
+		3C3E5C9418B42A813DE9B1AD /* CastSolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */; };
 		3D213130578B516FDDA852B1 /* AutoInvert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107B093C10CB7D47BD1EFF8C /* AutoInvert.swift */; };
 		3DE235260D6D0BEE9761CADA /* GeometryTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */; };
 		45466F838219CF7761A727B2 /* GeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091C43C1EDDF307D8B43C947 /* GeometryTests.swift */; };
@@ -104,6 +105,7 @@
 		A0B52532CB817F1ADF373D10 /* ToolActivationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC477B2AABAE6619889DAE1 /* ToolActivationTests.swift */; };
 		A11C57B4B89C6B31D564113E /* FilmDensityConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C2E153D2A43CB9D745CA0 /* FilmDensityConverterTests.swift */; };
 		A537E63094B2875F0B5AB93B /* CanvasArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A2A7F2E531320ECECC92DF /* CanvasArea.swift */; };
+		A5CD48C9BB4FE89964260212 /* CastSolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447A9B4F413242A3841D318F /* CastSolver.swift */; };
 		AA3751E17D1F5CEE73292DBF /* DisplayToggleConformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6C9B80F5A1EE2ABD8E9A86 /* DisplayToggleConformanceTests.swift */; };
 		AB26A14B66BEF9F5757F239B /* MaskCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523FF6E84F8696BA923A783B /* MaskCompositor.swift */; };
 		AD60EE40143A15C8FE0BC6BE /* CullingCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1166D48907F88359EBF4DA05 /* CullingCommands.swift */; };
@@ -208,6 +210,7 @@
 		40363F5629EE0EF44F2763EF /* ColorStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorStages.swift; sourceTree = "<group>"; };
 		4156F0DF5FC9D1D99A311867 /* RangeMaskCubeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskCubeCache.swift; sourceTree = "<group>"; };
 		42064BDE271E9B76EFFD6DCC /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		447A9B4F413242A3841D318F /* CastSolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastSolver.swift; sourceTree = "<group>"; };
 		458BC1E85DF2F196B31FE6E7 /* RangeMaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskTests.swift; sourceTree = "<group>"; };
 		4625C5AC7A6158F9CC38CD61 /* FocusPeaking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPeaking.swift; sourceTree = "<group>"; };
 		4A7EEB7632D72A68035D921B /* MLMaskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLMaskCache.swift; sourceTree = "<group>"; };
@@ -226,6 +229,7 @@
 		5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentTests.swift; sourceTree = "<group>"; };
 		5FFC38C3F1B48FED295FF3FD /* DevelopedSourceCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopedSourceCache.swift; sourceTree = "<group>"; };
 		602AF91A44F0025239865F8D /* LibrarySidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySidebar.swift; sourceTree = "<group>"; };
+		620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastSolverTests.swift; sourceTree = "<group>"; };
 		6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelInfrastructureTests.swift; sourceTree = "<group>"; };
 		6B22E289B6818B14FC289C0C /* ColorSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSettings.swift; sourceTree = "<group>"; };
 		6CBCC27BB747B5F27F8847EF /* MLMaskEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLMaskEnvironment.swift; sourceTree = "<group>"; };
@@ -387,6 +391,7 @@
 				955FF06504B66581F45A5A7B /* CalibrationSupport.swift */,
 				30B68D5C8D421896627EA502 /* CalibrationTests.swift */,
 				A24E17192240663CA3BE4181 /* CanvasToolTests.swift */,
+				620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */,
 				9E862E04D9DE878612B0AE08 /* CatalogScaleTests.swift */,
 				BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */,
 				267388D14FEE2777E922AC35 /* ColorMixerTests.swift */,
@@ -442,6 +447,7 @@
 			isa = PBXGroup;
 			children = (
 				107B093C10CB7D47BD1EFF8C /* AutoInvert.swift */,
+				447A9B4F413242A3841D318F /* CastSolver.swift */,
 				C2EDA462DA2F0278D71489A7 /* FilmBaseSampler.swift */,
 				8701AFF80F12C07B2E720244 /* FilmColor.swift */,
 				3F9683E5847CAA02C183935A /* FilmDensityConverter.swift */,
@@ -683,6 +689,7 @@
 				96047658B9B680F93410FFA6 /* CalibrationSupport.swift in Sources */,
 				BA766B47DB98E7CEA6552A06 /* CalibrationTests.swift in Sources */,
 				C9314B0B31F82C1252544841 /* CanvasToolTests.swift in Sources */,
+				3C3E5C9418B42A813DE9B1AD /* CastSolverTests.swift in Sources */,
 				1D24B32E36F100ADF3CF4701 /* CatalogScaleTests.swift in Sources */,
 				DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */,
 				504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */,
@@ -742,6 +749,7 @@
 				3D213130578B516FDDA852B1 /* AutoInvert.swift in Sources */,
 				DAFC5DB84B71E09ACD582F98 /* BatchExportSheet.swift in Sources */,
 				A537E63094B2875F0B5AB93B /* CanvasArea.swift in Sources */,
+				A5CD48C9BB4FE89964260212 /* CastSolver.swift in Sources */,
 				50FFEFFDDE4F09C8D399558B /* CatalogEntry.swift in Sources */,
 				84EEA5528D19459DFF8CBD8C /* CatalogStore.swift in Sources */,
 				DAB4E9907E3B60CA11827227 /* Color.ci.metal in Sources */,

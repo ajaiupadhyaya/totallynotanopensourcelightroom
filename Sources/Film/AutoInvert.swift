@@ -308,6 +308,32 @@ enum AutoInvert {
         let medianT = (dminLinear.0 * pow(10, -medianD.0),
                        dminLinear.1 * pow(10, -medianD.1),
                        dminLinear.2 * pow(10, -medianD.2))
+
+        // Auto colour balance (Lab profiles only): equalize the per-channel
+        // median densities — midtone gray-world — via the closed-form cast
+        // solver, expressed in the same ±100 slider units the panel shows.
+        // Solved BEFORE the bisection and folded into it, so the placed EV
+        // already accounts for the correction. Honesty-gated: gray-world on
+        // genuinely colourful midtones is a risky assumption, and the solve
+        // says so rather than guessing confidently.
+        var cast = DensityTriple.zero   // slider units — see AutoInvertSolution.cast
+        if profile.enablesAutoColorBalance {
+            let solved = CastSolver.castSliders(
+                neutralDensity: DensityTriple(red: medianD.0, green: medianD.1,
+                                              blue: medianD.2),
+                gamma: gamma, dmax: DensityTriple(red: dmaxV.0, green: dmaxV.1,
+                                                  blue: dmaxV.2))
+            cast = DensityTriple(red: solved.red, green: solved.green, blue: solved.blue)
+            if solved.clipped {
+                degraded.append("auto colour balance hit the slider limit")
+            }
+            let medianColor = FilmColor(red: PaperResponse.srgbEncode(medianT.0),
+                                        green: PaperResponse.srgbEncode(medianT.1),
+                                        blue: PaperResponse.srgbEncode(medianT.2))
+            if chromaSpread(medianColor) > 0.18 {
+                degraded.append("auto colour balance: midtones are strongly coloured — check with the neutral picker")
+            }
+        }
         // Solved with the PROFILE's default knees, toning, and the house
         // filtration — the same reasoning throughout: Auto places the median
         // under the rendering the user will actually see (balanced tint: new
@@ -320,11 +346,21 @@ enum AutoInvert {
         defaults.applyToneProfile(profile)
         let p = PaperResponse.kneeP(shoulder: defaults.shoulder)
         let q = PaperResponse.kneeQ(toe: defaults.toe)
+        // The cast fold, hoisted: a density offset folds through the
+        // effective gamma into the log-domain print offset (the Task 4
+        // identity γ·(D + c − Dmax) = γ·(D − Dmax) + γ·c), constant across
+        // bisection iterations.
+        let castFold = (gamma.red * PaperResponse.castDensity(cast.red),
+                        gamma.green * PaperResponse.castDensity(cast.green),
+                        gamma.blue * PaperResponse.castDensity(cast.blue))
         var lo = -8.0, hi = 8.0
         for _ in 0..<40 {
             let mid = (lo + hi) / 2
-            let offset = PaperResponse.printOffsets(exposureEV: mid, warmth: defaults.warmth,
+            var offset = PaperResponse.printOffsets(exposureEV: mid, warmth: defaults.warmth,
                                                      tint: defaults.tint, balancedTint: true)
+            offset.0 += castFold.0
+            offset.1 += castFold.1
+            offset.2 += castFold.2
             let out = PaperResponse.develop(
                 medianT, dminLinear: dminLinear,
                 dmax: (dmaxV.0, dmaxV.1, dmaxV.2),
@@ -348,7 +384,7 @@ enum AutoInvert {
             gamma: gamma,
             printExposure: printEV,
             medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2),
-            cast: .zero,
+            cast: cast,
             degradedTerms: degraded)
     }
 

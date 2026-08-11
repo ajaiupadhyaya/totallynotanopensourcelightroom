@@ -1413,7 +1413,7 @@ enum CastSolver {
 
 - Modifies `AutoInvert.solve(from:profile:)`: when `profile.enablesAutoColorBalance`, solve `cast` from the median densities BEFORE the EV bisection, fold the cast into the bisection's develop call (as `printOffset += gammaEffective · castDensity`, the Task 4 fold), and gate honesty: if the median transmittances' chroma spread (via the existing `chromaSpread(_:)` on the srgbEncoded medians) exceeds 0.18, append `"auto colour balance: midtones are strongly coloured — check with the neutral picker"` to `degradedTerms`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/CastSolverTests.swift`:
 
@@ -1516,9 +1516,9 @@ final class CastSolverTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.** (`AutoInvert.percentile` is currently internal-static — it is; `chromaSpread` stays private, the solver body uses it internally.)
+- [x] **Step 2: Run — expect compile failure.** (`AutoInvert.percentile` is currently internal-static — it is; `chromaSpread` stays private, the solver body uses it internally.)
 
-- [ ] **Step 3: Implement `CastSolver.swift`**
+- [x] **Step 3: Implement `CastSolver.swift`**
 
 ```swift
 import Foundation
@@ -1562,7 +1562,7 @@ enum CastSolver {
 }
 ```
 
-- [ ] **Step 4: Wire auto colour balance into `AutoInvert.solve(from:profile:)`**
+- [x] **Step 4: Wire auto colour balance into `AutoInvert.solve(from:profile:)`**
 
 After the gamma solve and median computation, before the bisection:
 
@@ -1589,9 +1589,9 @@ After the gamma solve and median computation, before the bisection:
 
 and fold it into the bisection's develop call: `offset.0 += gamma.red * PaperResponse.castDensity(cast.red)` (×3, applied to the offset each iteration — hoist the three folded constants out of the loop). Return `cast` in the solution.
 
-- [ ] **Step 5: Run CastSolverTests + AutoInvertTests + FilmControlConformanceTests** — expected PASS (conformance solves `.linear`: cast stays zero, reference unchanged).
+- [x] **Step 5: Run CastSolverTests + AutoInvertTests + FilmControlConformanceTests** — expected PASS (conformance solves `.linear`: cast stays zero, reference unchanged).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Film/CastSolver.swift Sources/Film/AutoInvert.swift Tests/CastSolverTests.swift project.yml PhotoEditor.xcodeproj
