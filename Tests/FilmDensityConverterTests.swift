@@ -44,6 +44,42 @@ final class FilmDensityConverterTests: XCTestCase {
         graded.print.warmth = 24
         graded.print.tint = -8
         assertKernelAgreesWithSwiftModel(graded)
+
+        // Third leg: non-neutral toning (Task 3). Every slider the profile
+        // writes is nonzero, so a kernel that silently ignored the new
+        // punch/fade/glow/toeChroma arguments — or marshaled them in the
+        // wrong order — diverges from the Swift model here.
+        var lab = densitySettings()
+        lab.print.applyToneProfile(.labStandard)
+        assertKernelAgreesWithSwiftModel(lab)
+
+        // Fourth leg: cast + zone trims at a non-unit grade + a stale legacy
+        // EV (Tasks 4/5). Proves the CPU folds (cast through the effective
+        // gamma, trims folded per channel into the kernel's zone math, legacy
+        // EV folded pre-curve on renderVersion 2) and the kernel describe one
+        // model. ALL THREE zones carry a nonzero trim on DISTINCT channels
+        // with distinct signs — the group review proved the original
+        // shadow-only leg left trimM/trimH (and zoneHighStart/zoneHighFull)
+        // output-inert, so a converter that transposed the mid/high trim
+        // vectors, or a kernel that swapped the wM/wH weights, passed the
+        // whole suite. With distinct channels per zone, any zone swap,
+        // channel swap, or marshal transposition diverges here. The nonzero
+        // stack-level `exposure` pins the v2 fold's magnitude, which the
+        // never-clips test deliberately does not.
+        var cast = densitySettings()
+        cast.print.contrast = 3
+        cast.print.castRed = 40
+        cast.print.shadowTrim.red = 60
+        cast.print.midTrim.green = -50
+        cast.print.highTrim.blue = 40
+        cast.exposure = 0.5
+        // Full toe chroma: the group review measured that leg 3's labStandard
+        // toeChroma (0.27) contributes at most 8.35e-4 on this neutral ramp —
+        // under the 2e-3 gate, so a kernel with the toe term deleted passed
+        // every leg. At 100 (weight 0.9) against this leg's castRed ratio
+        // spread the term contributes ~9e-3, comfortably above the gate.
+        cast.print.toeChroma = 100
+        assertKernelAgreesWithSwiftModel(cast)
     }
 
     private func assertKernelAgreesWithSwiftModel(
@@ -63,9 +99,35 @@ final class FilmDensityConverterTests: XCTestCase {
         let gammaEffective = (settings.print.gamma.red * grade,
                               settings.print.gamma.green * grade,
                               settings.print.gamma.blue * grade)
-        let printOffset = PaperResponse.printOffsets(exposureEV: settings.print.exposure,
-                                                      warmth: settings.print.warmth,
-                                                      tint: settings.print.tint)
+        let v2 = settings.print.renderVersion >= 2
+        var printOffset = PaperResponse.printOffsets(
+            exposureEV: settings.print.exposure + (v2 ? settings.exposure : 0),
+            warmth: settings.print.warmth,
+            tint: settings.print.tint, balancedTint: v2)
+        // Cast folds through the EFFECTIVE gamma; the grade pivot through the
+        // UN-graded gamma — both exactly as FilmDensityConverter folds them.
+        printOffset.0 += gammaEffective.0 * PaperResponse.castDensity(settings.print.castRed)
+        printOffset.1 += gammaEffective.1 * PaperResponse.castDensity(settings.print.castGreen)
+        printOffset.2 += gammaEffective.2 * PaperResponse.castDensity(settings.print.castBlue)
+        if v2, let pivot = settings.print.gradePivot {
+            printOffset.0 += settings.print.gamma.red * (1 - grade)
+                * (pivot.red - settings.print.dmax.red)
+            printOffset.1 += settings.print.gamma.green * (1 - grade)
+                * (pivot.green - settings.print.dmax.green)
+            printOffset.2 += settings.print.gamma.blue * (1 - grade)
+                * (pivot.blue - settings.print.dmax.blue)
+        }
+        // Zone trims arrive at develop() already folded through the effective
+        // gamma, mirroring the converter's kernel marshaling.
+        let shadowTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.red),
+                          gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.green),
+                          gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.shadowTrim.blue))
+        let midTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.midTrim.red),
+                       gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.midTrim.green),
+                       gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.midTrim.blue))
+        let highTrim = (gammaEffective.0 * PaperResponse.zoneTrimDensity(settings.print.highTrim.red),
+                        gammaEffective.1 * PaperResponse.zoneTrimDensity(settings.print.highTrim.green),
+                        gammaEffective.2 * PaperResponse.zoneTrimDensity(settings.print.highTrim.blue))
         let dmax = (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue)
         let p = PaperResponse.kneeP(shoulder: settings.print.shoulder)
         let q = PaperResponse.kneeQ(toe: settings.print.toe)
@@ -77,7 +139,12 @@ final class FilmDensityConverterTests: XCTestCase {
             let t = (dminLin.0 * transmit, dminLin.1 * transmit, dminLin.2 * transmit)
             expected.append(PaperResponse.develop(
                 t, dminLinear: dminLin, dmax: dmax, gammaEffective: gammaEffective,
-                printOffset: printOffset, p: p, q: q, satScale: satScale))
+                printOffset: printOffset, p: p, q: q, satScale: satScale,
+                shadowTrim: shadowTrim, midTrim: midTrim, highTrim: highTrim,
+                punch: PaperResponse.punchAmount(settings.print.punch),
+                fade: PaperResponse.fadeLift(settings.print.fade),
+                glow: PaperResponse.glowDrop(settings.print.glow),
+                toeChroma: PaperResponse.toeChromaWeight(settings.print.toeChroma)))
             pixels[x * 4 + 0] = Float(t.0)
             pixels[x * 4 + 1] = Float(t.1)
             pixels[x * 4 + 2] = Float(t.2)
@@ -103,6 +170,112 @@ final class FilmDensityConverterTests: XCTestCase {
             XCTAssertEqual(Double(buffer[x * 4 + 2]), expected[x].2, accuracy: 2e-3,
                            file: file, line: line)
         }
+    }
+
+    /// Cast folds through the EFFECTIVE gamma (grade included): a +cast on red
+    /// is exactly a density offset, so the render must equal the pure model
+    /// developed with printOffset.red += gammaEffective.red · castDensity.
+    func testCastFoldMatchesTheDensityOffsetSemantics() {
+        var settings = densitySettings()
+        settings.print.contrast = 3            // non-unit grade — the fold's hard case
+        settings.print.castRed = 60
+        let grade = PaperResponse.gradeScale(settings.print.contrast)
+        let dminLin = (PaperResponse.srgbDecode(settings.baseColor.red),
+                       PaperResponse.srgbDecode(settings.baseColor.green),
+                       PaperResponse.srgbDecode(settings.baseColor.blue))
+        let t = (dminLin.0 * 0.1, dminLin.1 * 0.1, dminLin.2 * 0.1)
+        let scan = TestSupport.solidImage(redLinear: t.0, greenLinear: t.1, blueLinear: t.2)
+        let rendered = TestSupport.readLinearColor(
+            FilmDensityConverter.convert(scan, settings: settings), context: context)
+        var offset = PaperResponse.printOffsets(exposureEV: settings.print.exposure,
+                                                warmth: settings.print.warmth,
+                                                tint: settings.print.tint,
+                                                balancedTint: true)
+        offset.0 += settings.print.gamma.red * grade * PaperResponse.castDensity(60)
+        let expected = PaperResponse.develop(
+            t, dminLinear: dminLin,
+            dmax: (settings.print.dmax.red, settings.print.dmax.green, settings.print.dmax.blue),
+            gammaEffective: (settings.print.gamma.red * grade,
+                             settings.print.gamma.green * grade,
+                             settings.print.gamma.blue * grade),
+            printOffset: offset,
+            p: PaperResponse.kneeP(shoulder: settings.print.shoulder),
+            q: PaperResponse.kneeQ(toe: settings.print.toe),
+            satScale: 1.0 + settings.print.saturation / 100.0)
+        XCTAssertEqual(rendered.red, expected.0, accuracy: 2e-3)
+        XCTAssertEqual(rendered.green, expected.1, accuracy: 2e-3)
+        XCTAssertEqual(rendered.blue, expected.2, accuracy: 2e-3)
+    }
+
+    /// renderVersion 2 restores the never-clips contract with a nonzero legacy
+    /// EV: the same +2 EV that pushes a v1 render past 1.0 stays under 1.0 on
+    /// v2, because it now runs through the paper curve.
+    ///
+    /// The probe is a DENSE patch (density 1.7, near Dmax), built in linear
+    /// space: on a negative the dense areas are the print's near-whites, which
+    /// is the only place a post-curve multiply has anything to push past 1.0
+    /// (the base renders near BLACK — see
+    /// ``testBaseRendersNearBlackAndLightboxBelowIt`` — where ×2EV clips
+    /// nothing). On v2 the folded EV lands this patch at ≈0.9999 — under the
+    /// shoulder's strict ceiling; on v1 the same patch renders mid-grey
+    /// (≈0.46) and the frozen post-curve ×4 pushes it to ≈1.8.
+    func testV2FoldsLegacyExposureBeforeThePaperCurve() throws {
+        var v2 = densitySettings()
+        v2.exposure = 2
+        let dminLin = (PaperResponse.srgbDecode(v2.baseColor.red),
+                       PaperResponse.srgbDecode(v2.baseColor.green),
+                       PaperResponse.srgbDecode(v2.baseColor.blue))
+        let transmit = pow(10.0, -1.7)
+        let scan = TestSupport.solidImage(redLinear: dminLin.0 * transmit,
+                                          greenLinear: dminLin.1 * transmit,
+                                          blueLinear: dminLin.2 * transmit)
+        let v2Out = TestSupport.readLinearColor(
+            FilmDensityConverter.convert(scan, settings: v2), context: context)
+        XCTAssertLessThan(max(v2Out.red, max(v2Out.green, v2Out.blue)), 1.0,
+                          "v2 must never clip, even with a stale legacy EV")
+
+        var v1JSON = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(v2)) as! [String: Any]
+        var printDict = v1JSON["print"] as! [String: Any]
+        printDict.removeValue(forKey: "renderVersion") // decode → 1
+        v1JSON["print"] = printDict
+        let v1 = try JSONDecoder().decode(
+            FilmNegativeSettings.self,
+            from: JSONSerialization.data(withJSONObject: v1JSON))
+        XCTAssertEqual(v1.print.renderVersion, 1)
+        let v1Out = TestSupport.readLinearColor(
+            FilmNegativeConverter.convert(scan, settings: v1), context: context)
+        XCTAssertGreaterThan(max(v1Out.red, max(v1Out.green, v1Out.blue)), 1.0,
+                             "the frozen v1 misfeature must stay frozen — the "
+                             + "post-curve ×2EV multiply clips a dense patch past 1.0")
+    }
+
+    /// Grade pivot: with the pivot set to the (synthetic) median density,
+    /// raising Contrast leaves that density's render invariant while still
+    /// steepening the curve around it.
+    func testGradePivotHoldsTheMidUnderContrast() {
+        var settings = densitySettings()
+        let pivotD = 1.1
+        settings.print.gradePivot = DensityTriple(red: pivotD, green: pivotD, blue: pivotD)
+        let dminLin = PaperResponse.srgbDecode(settings.baseColor.red)
+        func render(_ density: Double, contrast: Double) -> Double {
+            var s = settings
+            s.print.contrast = contrast
+            let t = dminLin * pow(10, -density)
+            let g = PaperResponse.srgbDecode(s.baseColor.green) * pow(10, -density)
+            let b = PaperResponse.srgbDecode(s.baseColor.blue) * pow(10, -density)
+            let scan = TestSupport.solidImage(redLinear: t, greenLinear: g, blueLinear: b)
+            return TestSupport.readLinearColor(
+                FilmDensityConverter.convert(scan, settings: s), context: context).red
+        }
+        XCTAssertEqual(render(pivotD, contrast: 4), render(pivotD, contrast: 2),
+                       accuracy: 2e-3, "the pivot density must not move with grade")
+        let below2 = render(0.6, contrast: 2), below4 = render(0.6, contrast: 4)
+        XCTAssertLessThan(below4, below2 - 1e-3,
+                          "grade 4 must darken below the pivot (steeper curve)")
+        let above2 = render(1.6, contrast: 2), above4 = render(1.6, contrast: 4)
+        XCTAssertGreaterThan(above4, above2 + 1e-3,
+                             "grade 4 must brighten above the pivot")
     }
 
     /// The film base renders near black; brighter-than-base (lightbox)

@@ -589,7 +589,7 @@ Persist `renderVersion`, `toneProfile`, `punch`, `fade`, `glow`, `toeChroma`; mi
   - `PrintSettings.applyToneProfile(_ profile: FilmToneProfile)` (mutating: sets `toneProfile` + the four sliders to the profile's values)
   - Kernel `film_density_print` gains trailing args: `float3 trimS, float3 trimM, float3 trimH, float punch, float fade, float glow, float toeChroma` (Task 4 wires the trims; this task passes zeros)
 
-- [ ] **Step 1: Write failing decode/profile tests**
+- [x] **Step 1: Write failing decode/profile tests**
 
 Append to `Tests/PrintSettingsTests.swift`:
 
@@ -621,9 +621,9 @@ func testApplyToneProfileWritesTheProfileParameters() {
 }
 ```
 
-- [ ] **Step 2: Run to verify compile failure** (`-only-testing:PhotoEditorTests/PrintSettingsTests`).
+- [x] **Step 2: Run to verify compile failure** (`-only-testing:PhotoEditorTests/PrintSettingsTests`).
 
-- [ ] **Step 3: Implement `FilmToneProfile` + fields in `PrintSettings.swift`**
+- [x] **Step 3: Implement `FilmToneProfile` + fields in `PrintSettings.swift`**
 
 Above `PrintSettings`:
 
@@ -718,9 +718,9 @@ And in `init(from:)`, after the `tint` line:
         toeChroma = c.lenient(.toeChroma, 0)
 ```
 
-- [ ] **Step 4: Run PrintSettingsTests** — expected PASS.
+- [x] **Step 4: Run PrintSettingsTests** — expected PASS.
 
-- [ ] **Step 5: Mirror in the kernel and marshal**
+- [x] **Step 5: Mirror in the kernel and marshal**
 
 `Film.ci.metal` — extend the signature and body (mirror of Task 2, same order of operations; keep the doc comments in step with `PaperResponse`):
 
@@ -802,7 +802,7 @@ extern "C" float4 film_density_print(coreimage::sample_t s,
         ) ?? image
 ```
 
-- [ ] **Step 6: Extend the kernel-agreement test to non-neutral toning**
+- [x] **Step 6: Extend the kernel-agreement test to non-neutral toning**
 
 In `Tests/FilmDensityConverterTests.swift`, add a third leg to `testKernelAgreesWithTheSwiftModel` and thread the new params through `assertKernelAgreesWithSwiftModel`'s expected-value computation:
 
@@ -824,7 +824,7 @@ and in the helper, compute `expected` with:
                 toeChroma: PaperResponse.toeChromaWeight(settings.print.toeChroma)))
 ```
 
-- [ ] **Step 7: Conformance rows**
+- [x] **Step 7: Conformance rows**
 
 In `Tests/FilmControlConformanceTests.swift` — the completeness test now fails without these. Append to `cases` (reference is the `.linear`-solved `baseStack()`, so 0-floor sliders use two non-neutral legs):
 
@@ -856,12 +856,12 @@ And to `excluded`:
 
 **Measure before declaring:** render the probe once with each `high` leg and print the four measures (temporary diagnostic, then delete it — house discipline per this file's block comment). If a measured sign contradicts the table above, the declared sign is wrong: fix the table to the measurement and record why in the case's comment. If a delta lands under its floor, first try moving the leg further from neutral (the `FilmControlCase` contract allows any in-range value); only then adjust the floor, with the measured number in the comment (Toe/Warmth precedents).
 
-- [ ] **Step 8: Run the three suites**
+- [x] **Step 8: Run the three suites**
 
 Run: `-only-testing:PhotoEditorTests/FilmDensityConverterTests -only-testing:PhotoEditorTests/FilmControlConformanceTests -only-testing:PhotoEditorTests/PaperResponseGoldenTests`
 Expected: ALL PASS. The goldens pass because every new field defaults/decodes to its identity and the kernel additions are exact no-ops at those values.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Sources/Film/PrintSettings.swift Sources/Film/FilmDensityConverter.swift Sources/Pipeline/Kernels/Film.ci.metal Tests/PrintSettingsTests.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift
@@ -886,7 +886,7 @@ The cast and grade-pivot corrections fold into `printOffset` on the CPU (they ar
   - `PrintSettings.gradePivot: DensityTriple?` (init/decode nil; Auto writes it in Task 6)
   - The CPU folds in `FilmDensityConverter` (exact formulas below) — Task 5/6 rely on them.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/PrintSettingsTests.swift`:
 
@@ -943,9 +943,9 @@ func testCastFoldMatchesTheDensityOffsetSemantics() {
 
 If `TestSupport` has no linear-value solid-image/readback helpers, add them beside `solidImage`/`readColor` following those implementations (a 1×1 `.RGBAf` bitmap in `extendedLinearSRGB`, and a `.RGBAf` readback in the same space) — do NOT reuse the sRGB readers for linear values.
 
-- [ ] **Step 2: Run to verify failure** (compile failure on the new fields).
+- [x] **Step 2: Run to verify failure** (compile failure on the new fields).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `PrintSettings.swift` — after `toeChroma`:
 
@@ -1019,7 +1019,7 @@ and replace the three trim placeholders in the arguments array:
 
 Also extend the kernel-agreement helper: fold cast/pivot/trims exactly as above when computing `expected`, and add a fourth leg exercising `castRed = 40, shadowTrim.red = 60, contrast = 3` — the agreement test is what proves the CPU fold and the kernel's zone math describe one model.
 
-- [ ] **Step 4: Conformance rows for the seven new fields**
+- [x] **Step 4: Conformance rows for the seven new fields**
 
 ```swift
         .init(name: "Cast Red", key: "print.castRed",
@@ -1059,9 +1059,9 @@ and:
 
 Same measure-first discipline as Task 3 Step 7: print the actual deltas once, adjust legs/floors from measurement, delete the diagnostic.
 
-- [ ] **Step 5: Run the suites** (`FilmDensityConverterTests`, `FilmControlConformanceTests`, `PaperResponseGoldenTests`, `PrintSettingsTests`). Expected: ALL PASS.
+- [x] **Step 5: Run the suites** (`FilmDensityConverterTests`, `FilmControlConformanceTests`, `PaperResponseGoldenTests`, `PrintSettingsTests`). Expected: ALL PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Film/PrintSettings.swift Sources/Film/FilmDensityConverter.swift Sources/Pipeline/Kernels/Film.ci.metal Tests/PrintSettingsTests.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift
@@ -1078,7 +1078,7 @@ Task 3/4 installed the v2 branches (`balancedTint: v2`, legacy-EV fold, pivot co
 - Modify: `Sources/Film/FilmDensityConverter.swift` (only the legacy-EV skip below)
 - Test: `Tests/FilmDensityConverterTests.swift`, `Tests/FilmControlConformanceTests.swift`
 
-- [ ] **Step 1: Gate the post-curve legacy EV to v1**
+- [x] **Step 1: Gate the post-curve legacy EV to v1**
 
 In `FilmDensityConverter.convert`, change the legacy-EV block:
 
@@ -1095,7 +1095,7 @@ In `FilmDensityConverter.convert`, change the legacy-EV block:
         }
 ```
 
-- [ ] **Step 2: Write the three semantic proofs**
+- [x] **Step 2: Write the three semantic proofs**
 
 `Tests/FilmDensityConverterTests.swift`:
 
@@ -1106,9 +1106,14 @@ In `FilmDensityConverter.convert`, change the legacy-EV block:
 func testV2FoldsLegacyExposureBeforeThePaperCurve() throws {
     var v2 = densitySettings()
     v2.exposure = 2
+    // PLAN BUG, corrected 2026-08-10 (same class as Task 2's toe fixture):
+    // the original probe was near-base "renders near white" — on a NEGATIVE
+    // the base renders near BLACK, where a post-curve multiply has nothing to
+    // clip, so neither assertion could ever trip. The implemented test uses a
+    // DENSE patch (density 1.7, the print's near-white) built in linear space.
     let scan = TestSupport.solidImage(red: v2.baseColor.red * 0.9,
                                       green: v2.baseColor.green * 0.9,
-                                      blue: v2.baseColor.blue * 0.9) // near-base: renders near white
+                                      blue: v2.baseColor.blue * 0.9) // WRONG — see note above
     let v2Out = TestSupport.readLinearColor(
         FilmDensityConverter.convert(scan, settings: v2), context: context)
     XCTAssertLessThan(max(v2Out.red, max(v2Out.green, v2Out.blue)), 1.0,
@@ -1160,13 +1165,13 @@ func testGradePivotHoldsTheMidUnderContrast() {
 
 (The balanced-tint proof already exists at the model level from Task 2; the kernel-agreement fourth leg covers it end-to-end.)
 
-- [ ] **Step 3: Run FilmDensityConverterTests** — expected: the two new tests PASS, all old ones PASS, goldens PASS (the v1 ramp golden carries nonzero legacy EV + tint −8, which is exactly what this task must not disturb).
+- [x] **Step 3: Run FilmDensityConverterTests** — expected: the two new tests PASS, all old ones PASS, goldens PASS (the v1 ramp golden carries nonzero legacy EV + tint −8, which is exactly what this task must not disturb).
 
-- [ ] **Step 4: Re-verify conformance and re-measure if needed**
+- [x] **Step 4: Re-verify conformance and re-measure if needed**
 
 Run `FilmControlConformanceTests`. If Print Warmth/Tint (or any case) now fails a floor or flips: re-run with a temporary sweep diagnostic, adjust the leg (preferred) or floor to the measured values, document in the case comment citing this task — the exact Phase C procedure recorded in that file's block comment. Delete the diagnostic.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Film/FilmDensityConverter.swift Tests/FilmDensityConverterTests.swift Tests/FilmControlConformanceTests.swift
@@ -1210,7 +1215,7 @@ extension AutoInvert {
   - `AutoInvertSolution` gains `var medianDensity: DensityTriple` (→ `gradePivot`) and `var cast: DensityTriple` (SLIDER units despite the type — `DensityTriple` is the house "triple of Doubles, not a colour" carrier and keeps the struct's synthesized `Equatable`, which a labeled tuple would break; doc-comment this. `.zero` unless Task 7's auto colour balance runs).
   - The old `solve(scan:sampledBase:context:)` is REMOVED (three call sites: `EditorModel.autoConvertNegative`, `FilmControlConformanceTests.baseStack`, `RealScanTests.convert`) — `profile:` becomes explicit everywhere so no site solves under an accidental default.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/AutoInvertTests.swift` (append):
 
@@ -1279,9 +1284,9 @@ func testMedianDensityIsReportedAndLandsAtTargetMid() throws {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Refactor `AutoInvert.swift`**
+- [x] **Step 3: Refactor `AutoInvert.swift`**
 
 Mechanical split of the existing `solve`:
 - `measure(scan:sampledBase:context:)` = steps 0–gating: `linearPixels`, the gate-then-validate population choice, returns `FrameMeasurement(sortedRed: pixels.map(\.0).sorted(), …, sampledBase: sampledBase, degradedTerms: degraded)`. (Sort once here; the solve consumes sorted arrays.)
@@ -1312,7 +1317,7 @@ Mechanical split of the existing `solve`:
   (satScale 1.0 stays exact for the max channel, as the existing comment explains.) Populate `medianDensity: DensityTriple(red: medianD.0, green: medianD.1, blue: medianD.2)` and `cast: .zero` in the returned solution. (`DensityTriple.zero` arrives in Task 4; if executing Task 6 against a tree where Task 4 somehow hasn't landed, that's an ordering violation — stop.)
 - Wrapper `solve(scan:sampledBase:profile:context:)` = `measure` + `solve(from:)`.
 
-- [ ] **Step 4: Update the three call sites**
+- [x] **Step 4: Update the three call sites**
 
 `EditorModel.autoConvertNegative` — solve under the CURRENT profile, write the new outputs, and (this is where the spec's "Lab Standard default for new conversions" lands) have `enableFilmNegative` seed the profile on first enable:
 
@@ -1358,11 +1363,11 @@ Mechanical split of the existing `solve`:
 
 `FilmControlConformanceTests.baseStack()`: `AutoInvert.solve(scan: probe, sampledBase: nil, profile: .linear, context: renderer.context)!` — the suite's reference deliberately stays the linear render. `RealScanTests.convert`: same explicit `.linear` for now (Task 12 parameterizes it).
 
-- [ ] **Step 5: Run** `AutoInvertTests`, `FilmControlConformanceTests`, `RealScanTests` (corpus machine) — expected PASS; conformance reference must be bit-identical to pre-task (its reproducibility test plus unchanged case measurements are the evidence).
+- [x] **Step 5: Run** `AutoInvertTests`, `FilmControlConformanceTests`, `RealScanTests` (corpus machine) — expected PASS; conformance reference must be bit-identical to pre-task (its reproducibility test plus unchanged case measurements are the evidence).
 
-- [ ] **Step 6: Also update FilmPanel's Auto button** — it calls `model.autoConvertNegative()`; the new defaulted parameter keeps it compiling unchanged. Verify with a build.
+- [x] **Step 6: Also update FilmPanel's Auto button** — it calls `model.autoConvertNegative()`; the new defaulted parameter keeps it compiling unchanged. Verify with a build.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/Film/AutoInvert.swift Sources/Views/EditorModel.swift Tests/AutoInvertTests.swift Tests/FilmControlConformanceTests.swift Tests/RealScanTests.swift
@@ -1408,7 +1413,7 @@ enum CastSolver {
 
 - Modifies `AutoInvert.solve(from:profile:)`: when `profile.enablesAutoColorBalance`, solve `cast` from the median densities BEFORE the EV bisection, fold the cast into the bisection's develop call (as `printOffset += gammaEffective · castDensity`, the Task 4 fold), and gate honesty: if the median transmittances' chroma spread (via the existing `chromaSpread(_:)` on the srgbEncoded medians) exceeds 0.18, append `"auto colour balance: midtones are strongly coloured — check with the neutral picker"` to `degradedTerms`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/CastSolverTests.swift`:
 
@@ -1511,9 +1516,9 @@ final class CastSolverTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.** (`AutoInvert.percentile` is currently internal-static — it is; `chromaSpread` stays private, the solver body uses it internally.)
+- [x] **Step 2: Run — expect compile failure.** (`AutoInvert.percentile` is currently internal-static — it is; `chromaSpread` stays private, the solver body uses it internally.)
 
-- [ ] **Step 3: Implement `CastSolver.swift`**
+- [x] **Step 3: Implement `CastSolver.swift`**
 
 ```swift
 import Foundation
@@ -1557,7 +1562,7 @@ enum CastSolver {
 }
 ```
 
-- [ ] **Step 4: Wire auto colour balance into `AutoInvert.solve(from:profile:)`**
+- [x] **Step 4: Wire auto colour balance into `AutoInvert.solve(from:profile:)`**
 
 After the gamma solve and median computation, before the bisection:
 
@@ -1584,9 +1589,9 @@ After the gamma solve and median computation, before the bisection:
 
 and fold it into the bisection's develop call: `offset.0 += gamma.red * PaperResponse.castDensity(cast.red)` (×3, applied to the offset each iteration — hoist the three folded constants out of the loop). Return `cast` in the solution.
 
-- [ ] **Step 5: Run CastSolverTests + AutoInvertTests + FilmControlConformanceTests** — expected PASS (conformance solves `.linear`: cast stays zero, reference unchanged).
+- [x] **Step 5: Run CastSolverTests + AutoInvertTests + FilmControlConformanceTests** — expected PASS (conformance solves `.linear`: cast stays zero, reference unchanged).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Film/CastSolver.swift Sources/Film/AutoInvert.swift Tests/CastSolverTests.swift project.yml PhotoEditor.xcodeproj
@@ -1643,7 +1648,7 @@ struct Roll: Codable, Identifiable, Equatable, FetchableRecord, PersistableRecor
   - `CatalogEntry.rollID: UUID?`, `CatalogEntry.frameNumber: Int?` (lenient decode, defaulted init params at the end of the initializer so existing call sites compile unchanged)
   - `CatalogStore`: `allRolls() throws -> [Roll]`, `saveRoll(_:) throws`, `deleteRoll(id: UUID) throws`, `entries(inRoll: UUID) throws -> [CatalogEntry]` (ordered by `frameNumber`, then `dateImported`)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `Tests/CatalogStoreTests.swift` (follow that file's existing in-memory-store fixture style):
 
@@ -1687,7 +1692,7 @@ func testEntriesWithoutRollFieldsDecode() throws {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**, then implement: `Roll.swift` as above; in `CatalogStore.migrator` append after `v7_stockPrintCharacter`:
+- [x] **Step 2: Run to verify failure**, then implement: `Roll.swift` as above; in `CatalogStore.migrator` append after `v7_stockPrintCharacter`:
 
 ```swift
         // Phase 2.5 (the Minilab): the roll table the Phase 3 roadmap
@@ -1720,9 +1725,9 @@ func testEntriesWithoutRollFieldsDecode() throws {
 
 plus the four store methods (mirror the film-stock CRUD section's style) and the `CatalogEntry` fields + `rollID = c.lenient(.rollID, nil)` / `frameNumber = c.lenient(.frameNumber, nil)` in its decoder.
 
-- [ ] **Step 3: Run** `CatalogStoreTests` — PASS. Then `xcodegen generate` was needed for `Roll.swift` — confirm the build includes it.
+- [x] **Step 3: Run** `CatalogStoreTests` — PASS. Then `xcodegen generate` was needed for `Roll.swift` — confirm the build includes it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Models/Roll.swift Sources/Catalog/CatalogStore.swift Sources/Models/CatalogEntry.swift Tests/CatalogStoreTests.swift project.yml PhotoEditor.xcodeproj
@@ -1763,7 +1768,7 @@ enum RollAnalysis {
   `static func solveExposure(medianT: (Double, Double, Double), dminLinear: (Double, Double, Double), dmax: DensityTriple, gamma: DensityTriple, cast: DensityTriple, profile: FilmToneProfile) -> Double`
   (`cast` in slider units, matching `AutoInvertSolution.cast`) — `AutoInvert.solve(from:profile:)` and `RollAnalysis` both call it (one bisection, two callers; the Task 6/7 fold/develop code moves inside unchanged).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/RollAnalysisTests.swift`:
 
@@ -1782,6 +1787,12 @@ final class RollAnalysisTests: XCTestCase {
     private func rollFrames() -> [CIImage] {
         let full = FilmSim.negativeImage(dmin: FilmSim.c41Base,
                                          gammas: FilmSim.crossoverGammas, size: 128)
+        // PLAN BUGS, corrected 2026-08-11 (see RollAnalysisTests): (1) these
+        // interior crops cut the rebate out while the metric samples "the
+        // rebate in every corner" — crops must keep the border strip; (2) the
+        // dim frame scaled the WHOLE frame incl. rebate (scan-gain drift, the
+        // roll model's excluded case), but camera exposure can't touch
+        // unexposed rebate — dim the interior only.
         let dark = full.cropped(to: CGRect(x: 12, y: 12, width: 50, height: 104))
         let bright = full.cropped(to: CGRect(x: 62, y: 12, width: 54, height: 104))
         let dim = CIFilter.colorMatrix()
@@ -1887,9 +1898,9 @@ final class RollAnalysisTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Extract `AutoInvert.solveExposure` (move the Task 6/7 bisection verbatim; both callers pass their own inputs). Then `RollAnalysis.swift`:
 
@@ -1932,9 +1943,11 @@ enum RollAnalysis {
                  AutoInvert.percentile(m.sortedGreen, PaperResponse.dminPercentile),
                  AutoInvert.percentile(m.sortedBlue, PaperResponse.dminPercentile))
             }
-            dminLinear = (perFrame.map(\.0).min()!,
-                          perFrame.map(\.1).min()!,
-                          perFrame.map(\.2).min()!)
+            // PLAN BUG, corrected 2026-08-11: was min() — the DENSEST
+            // estimate, inverting the spec's own "thinnest film" reasoning.
+            dminLinear = (perFrame.map(\.0).max()!,
+                          perFrame.map(\.1).max()!,
+                          perFrame.map(\.2).max()!)
             baseColor = FilmColor(red: PaperResponse.srgbEncode(dminLinear.0),
                                   green: PaperResponse.srgbEncode(dminLinear.1),
                                   blue: PaperResponse.srgbEncode(dminLinear.2))
@@ -2020,9 +2033,9 @@ enum RollAnalysis {
 }
 ```
 
-- [ ] **Step 4: Run** `RollAnalysisTests` + `AutoInvertTests` (the extraction must not change `AutoInvert.solve` results — its tests prove it). Expected PASS.
+- [x] **Step 4: Run** `RollAnalysisTests` + `AutoInvertTests` (the extraction must not change `AutoInvert.solve` results — its tests prove it). Expected PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Film/RollAnalysis.swift Sources/Film/AutoInvert.swift Tests/RollAnalysisTests.swift project.yml PhotoEditor.xcodeproj
@@ -2078,7 +2091,7 @@ final class RollModel {
 
   - `EditorModel` gains `var rollConversion: RollConversion?` (set by `AppModel.open` when the entry's roll has a solved conversion) — `autoConvertNegative` uses it: roll constants + frame-only EV.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Tests/RollModelTests.swift`:
 
@@ -2150,9 +2163,9 @@ final class RollModelTests: XCTestCase {
 
 (The second test pins the store contract `RollModel.createRoll` builds on; `createRoll`/`add`/`convertRoll` themselves are thin AppModel plumbing exercised by the corpus tests and by hand — the pure core is what gets the unit coverage.)
 
-- [ ] **Step 2: Run — expect compile failure.**
+- [x] **Step 2: Run — expect compile failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `RollModel.swift` — `conversionStacks`:
 
@@ -2242,9 +2255,9 @@ final class RollModelTests: XCTestCase {
 
 UI: `LibrarySidebar` context menu after "Paste Settings" — `Menu("Roll")` with "New Roll from Selection…" (sheet: two `InstrumentField`s — identifier, stock — and a `PlateButton("Create")`; drawn chrome, not a stock alert), "Add to Roll" submenu over `app.rollModel.rolls`, and "Convert Roll" (visible when every target shares one `rollID`). `FilmstripRow`: when `entry.rollID` resolves, append the roll identifier to the existing edge-print legend (the decoration becomes data — keep `Theme.filmEdge`, same type size). `EditorCommands`: Develop menu → "Convert Roll" invoking the same action for the open frame's roll, disabled when `rollID == nil`.
 
-- [ ] **Step 4: Run** `RollModelTests` + `CatalogStoreTests`, then build the app (`xcodebuild … build`) to prove the UI wiring compiles. Expected PASS.
+- [x] **Step 4: Run** `RollModelTests` + `CatalogStoreTests`, then build the app (`xcodebuild … build`) to prove the UI wiring compiles. Expected PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/Views/RollModel.swift Sources/App/AppModel.swift Sources/Views/EditorModel.swift Sources/Views/LibrarySidebar.swift Sources/App/EditorCommands.swift Tests/RollModelTests.swift project.yml PhotoEditor.xcodeproj
@@ -2270,7 +2283,7 @@ All drawn in the existing language; every control double-click-resets via `Adjus
   - `func autoColorBalance(bias: (red: Double, green: Double, blue: Double))` — fresh `AutoInvert.measure` of the geometry-cropped scan, medians → `CastSolver` + bias, writes the three cast sliders (menu: Neutral `(0,0,0)`, Warm `CastSolver.warmBias`, Cool negated)
 - `CanvasArea.pickerPrompt` gains: `case .neutralCast: "Click something that should be neutral — grey card, pavement, a white shirt."`
 
-- [ ] **Step 1: Write failing model tests**
+- [x] **Step 1: Write failing model tests**
 
 `Tests/EditorModelTests.swift` (follow that file's existing fixture pattern for building an `EditorModel` with a test image):
 
@@ -2307,7 +2320,7 @@ func testNeutralCastPickerRoutesAndWrites() throws {
 
 (If `EditorModelTests` has no undo-count helper, follow `EditorUndoTests`' pattern for the one-step assertion instead — whichever file already asserts single-step gestures.)
 
-- [ ] **Step 2: Run — expect failure.** Implement the `EditorModel` pieces per the Interfaces block, then the panel:
+- [x] **Step 2: Run — expect failure.** Implement the `EditorModel` pieces per the Interfaces block, then the panel:
 
 In `FilmPanel.printControls`, top: a `TabStrip` over profiles —
 
@@ -2328,9 +2341,9 @@ In `FilmPanel.printControls`, top: a `TabStrip` over profiles —
 
 then, with the existing print sliders: `AdjustmentSlider(title: "Punch", value: …print.punch, range: 0...100, format: "%.0f", neutral: 0)`, `"Fade"` and `"Glow"` likewise. A `COLOUR BALANCE` group (`sectionLabel` style): `PlateButton(title: model.canvasPicker == .neutralCast ? "Click…" : "Neutral…")` toggling the picker; a drawn `Menu`("Auto") with Neutral/Warm/Cool calling `autoColorBalance`; three `AdjustmentSlider`s Cast R/G/B, range −100…100, neutral 0. Inside the existing per-channel trims disclosure: `"Toe Chroma"` (0…100) and the nine zone-trim sliders in three labelled groups (Shadows/Mids/Highs, R/G/B each, −100…100). Honesty caption under the cast group when the last Auto reported the gray-world degraded term — read from a new `model.lastSolveDegradedTerms: [String]` the solve writes (non-persisted UI state).
 
-- [ ] **Step 3: Run the two test classes + build.** Expected PASS.
+- [x] **Step 3: Run the two test classes + build.** Expected PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Views/SliderPanel/FilmPanel.swift Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Tests/EditorModelTests.swift Tests/CanvasToolTests.swift
@@ -2347,11 +2360,11 @@ Everything gated (`XCTSkip`) off this machine's corpora and tools; asserts sanit
 - Modify: `Tests/RealScanTests.swift`
 - Create: `Tests/NegadoctorReferenceTests.swift`, `Tests/RollConsistencyTests.swift`
 
-- [ ] **Step 1: A/B profile renders + acceptance sheet**
+- [x] **Step 1: A/B profile renders + acceptance sheet**
 
 In `RealScanTests`: give `convert` a `profile: FilmToneProfile` parameter (label suffix `-linear` / `-lab`), passing it to `AutoInvert.solve` and writing the solved cast/pivot/profile fields into the stack exactly as `autoConvertNegative` does. Corpus tests render each frame under BOTH profiles (medium format: cropped only, plus one blind linear per frame kept as the Fix-2 before/after evidence). Artifacts move to `artifacts/minilab/`. Add `testWriteAcceptanceSheet` (runs last alphabetically — name it `testZZAcceptanceSheet` so the JPEGs exist): builds `artifacts/minilab/acceptance-sheet.html`, a table of rows `<name> | linear | lab` with `<img>` tags referencing the JPEGs, plus each frame's printed solve numbers. Plain string-built HTML, no dependencies.
 
-- [ ] **Step 2: negadoctor references**
+- [x] **Step 2: negadoctor references**
 
 `Tests/NegadoctorReferenceTests.swift`: locate `darktable-cli` among `/opt/homebrew/bin/darktable-cli`, `/usr/local/bin/darktable-cli`, `/Applications/darktable.app/Contents/MacOS/darktable-cli` — `XCTSkip` if absent ("brew install --cask darktable"). For the first 5 CR2s that have an XMP sidecar (try `<name>.cr2.xmp` then `<name>.xmp` beside the file; skip the test if none): run
 
@@ -2366,7 +2379,7 @@ In `RealScanTests`: give `convert` a `profile: FilmToneProfile` parameter (label
 
 Assert exit 0 → non-empty `artifacts/minilab/ref-<name>.jpg`, and add a `ref` column to the acceptance sheet when present. (These runs take ~10–30 s per frame — keep the count at 5.)
 
-- [ ] **Step 3: Roll-consistency metric on the real corpus**
+- [x] **Step 3: Roll-consistency metric on the real corpus**
 
 `Tests/RollConsistencyTests.swift`: manifest at `~/Desktop/negatives/rolls.json` —
 
@@ -2376,9 +2389,9 @@ Assert exit 0 → non-empty `artifacts/minilab/ref-<name>.jpg`, and add a `ref` 
 
 `XCTSkip` when absent, PRINTING that template so the user can create it. For each manifest roll (≥ 2 files): decode each frame (1600 px, PV2), apply `RealScanTests.mediumFormatDemoCropRect` via Geometry before measuring (make that constant `internal` rather than duplicating it), `AutoInvert.measure` each; solve per-frame (`AutoInvert.solve(from:profile: .labStandard)`) AND as a roll (`RollAnalysis.solve`). Render both ways through `EditRenderer`; metric = variance across frames of the rendered median chromaticity `(max−min)/max` of the median linear pixel (the `CastSolverTests.medianChroma` computation — lift it into a shared test helper in `PrintEngineSupport.swift`). Assert `rollVariance ≤ perFrameVariance * 1.05` and print both plus the per-frame vs roll gamma values (`ROLLCONSISTENCY corpus: …`) for the acceptance log.
 
-- [ ] **Step 4: Run all three on this machine** (corpus present). Expected: PASS with artifacts written; on any other machine: SKIP cleanly.
+- [x] **Step 4: Run all three on this machine** (corpus present). Expected: PASS with artifacts written; on any other machine: SKIP cleanly.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Tests/RealScanTests.swift Tests/NegadoctorReferenceTests.swift Tests/RollConsistencyTests.swift Tests/PrintEngineSupport.swift project.yml PhotoEditor.xcodeproj
@@ -2389,18 +2402,18 @@ git commit -m "test(film): minilab validation — A/B profile corpus renders, ne
 
 ### Task 13: Full verification + acceptance handoff
 
-- [ ] **Step 1: Full suite once**
+- [x] **Step 1: Full suite once**
 
 Run: `xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test`
 Expected: everything green (gated suites skip or pass per machine). Fix anything that isn't before proceeding — no green claim without this output in hand.
 
-- [ ] **Step 2: Regenerate acceptance artifacts** (the corpus suites just did). Open `artifacts/minilab/acceptance-sheet.html` and confirm it renders linear/lab/ref columns.
+- [x] **Step 2: Regenerate acceptance artifacts** (the corpus suites just did). Open `artifacts/minilab/acceptance-sheet.html` and confirm it renders linear/lab/ref columns.
 
-- [ ] **Step 3: CHANGELOG**
+- [x] **Step 3: CHANGELOG**
 
 Add under `Unreleased` in `CHANGELOG.md`: the Minilab engine — tone profiles (Linear preserves the Phase 2 render; Lab Standard is the new-conversion default), cast correction (picker/auto/manual) and zone trims, renderVersion 2 fixes (pre-curve EV, balanced tint, mid-pivot grade, toe chroma), rolls with roll-level conversion. Note the freeze guarantees explicitly.
 
-- [ ] **Step 4: Commit, then hand to the user**
+- [x] **Step 4: Commit, then hand to the user**
 
 ```bash
 git add CHANGELOG.md

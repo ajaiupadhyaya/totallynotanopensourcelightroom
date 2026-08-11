@@ -121,6 +121,32 @@ final class CatalogStore {
                 t.add(column: "printSaturation", .double)
             }
         }
+        // Phase 2.5 (the Minilab): the roll table the Phase 3 roadmap
+        // sketched — created here because roll-level conversion needs it now.
+        // Phase 3 fills the metadata columns (body, developer, lab, …).
+        migrator.registerMigration("v8_rolls") { db in
+            try db.create(table: Roll.databaseTableName) { t in
+                t.primaryKey("id", .blob)
+                t.column("identifier", .text).notNull()
+                t.column("stock", .text)
+                t.column("camera", .text)
+                t.column("lens", .text)
+                t.column("exposureIndex", .integer)
+                t.column("pushPull", .integer)
+                t.column("developer", .text)
+                t.column("devNotes", .text)
+                t.column("lab", .text)
+                t.column("scanDate", .datetime)
+                t.column("dateCreated", .datetime).notNull()
+                t.column("conversion", .text) // JSON RollConversion
+            }
+            try db.alter(table: CatalogEntry.databaseTableName) { t in
+                t.add(column: "rollID", .blob)
+                t.add(column: "frameNumber", .integer)
+            }
+            try db.create(index: "idx_catalogEntry_rollID",
+                          on: CatalogEntry.databaseTableName, columns: ["rollID"])
+        }
         return migrator
     }
 
@@ -197,6 +223,34 @@ final class CatalogStore {
 
     func deleteFilmStock(id: String) throws {
         _ = try dbQueue.write { db in try FilmStock.deleteOne(db, key: id) }
+    }
+
+    // MARK: Rolls
+
+    /// Every roll, newest first — the same convention as the entry list.
+    func allRolls() throws -> [Roll] {
+        try dbQueue.read { db in
+            try Roll.order(Column("dateCreated").desc).fetchAll(db)
+        }
+    }
+
+    func saveRoll(_ roll: Roll) throws {
+        try dbQueue.write { db in try roll.save(db) }
+    }
+
+    func deleteRoll(id: UUID) throws {
+        _ = try dbQueue.write { db in try Roll.deleteOne(db, key: id) }
+    }
+
+    /// The frames assigned to one roll, in roll order: frame number first,
+    /// import date as the tie-breaker for unnumbered frames.
+    func entries(inRoll rollID: UUID) throws -> [CatalogEntry] {
+        try dbQueue.read { db in
+            try CatalogEntry
+                .filter(Column("rollID") == rollID)
+                .order(Column("frameNumber"), Column("dateImported"))
+                .fetchAll(db)
+        }
     }
 
     /// All entries, newest import group first. A master and every virtual copy

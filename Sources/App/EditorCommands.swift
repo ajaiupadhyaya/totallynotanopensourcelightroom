@@ -134,6 +134,17 @@ struct EditorCommands: Commands {
         // MARK: Develop
 
         CommandMenu("Develop") {
+            Button("Convert Roll") {
+                if let entry = editor?.entry,
+                   let roll = app.rollModel.roll(for: entry) {
+                    Task { await app.rollModel.convertRoll(roll) }
+                }
+            }
+            .disabled(editor.flatMap { app.rollModel.roll(for: $0.entry) } == nil
+                      || app.rollModel.isConverting)
+
+            Divider()
+
             Button("Adjust") { workspace.inspectorMode = .adjust }
                 .keyboardShortcut("1", modifiers: [.command, .option])
             Button("Masks") { workspace.inspectorMode = .masks }

@@ -411,6 +411,7 @@ private struct EditCanvas: View {
         case .retouchPlace: "Click the defect to remove"
         case .colorRangeSample: "Click the colour to select"
         case .pointColorSample: "Click the colour to target"
+        case .neutralCast: "Click something that should be neutral — grey card, pavement, a white shirt"
         case nil: nil
         }
     }

@@ -29,9 +29,22 @@ final class AppModel {
     /// than each owning a private copy that the others cannot open.
     var isShowingImporter = false
 
-    private let catalog: CatalogStore
+    /// Internal (not private) so peer models — `RollModel` today, Phase 4's
+    /// sync — can read/write catalog records through their own actions
+    /// rather than growing this class a passthrough per query.
+    let catalog: CatalogStore
     private let thumbnails: ThumbnailGenerator
     private let renderer = EditRenderer()
+
+    /// Roll actions live in their own model (the roadmap's instruction —
+    /// EditorModel is long enough). Lazy so `self` exists; observation
+    /// happens on RollModel itself, not this container.
+    @ObservationIgnored private(set) lazy var rollModel = RollModel(app: self)
+
+    /// The one place peer models surface catalog IO failures to the user.
+    func reportError(_ message: String) {
+        errorMessage = message
+    }
 
     init() {
         if let base = try? AppModel.baseDirectory(),
@@ -306,10 +319,22 @@ final class AppModel {
         to targets: [CatalogEntry],
         options: EditTransferOptions = .init()
     ) -> Int {
+        updateStacks(targets.map {
+            ($0, $0.editStack.applying(stack, options: options))
+        })
+    }
+
+    /// Saves prepared (entry, stack) pairs: persists, updates ``entries``,
+    /// refreshes thumbnails, reopens the editor if it shows one of them.
+    /// The roll-wide / sync-across-selection shared mechanism (spec §Roll
+    /// model; Phase 4's sync reuses this) — `apply(_:to:options:)` is now a
+    /// caller of this one implementation.
+    @discardableResult
+    func updateStacks(_ updates: [(CatalogEntry, EditStack)]) -> Int {
         var applied = 0
-        for target in targets {
+        for (target, stack) in updates {
             var updated = target
-            updated.editStack = target.editStack.applying(stack, options: options)
+            updated.editStack = stack
             guard updated != target else { continue }
             do {
                 try catalog.save(updated)
@@ -323,8 +348,28 @@ final class AppModel {
             }
         }
         // The open editor would otherwise keep showing its stale stack.
-        if let editor, targets.contains(where: { $0.id == editor.entry.id }) {
+        if let editor, updates.contains(where: { $0.0.id == editor.entry.id }) {
             open(entries.first { $0.id == editor.entry.id } ?? editor.entry)
+        }
+        return applied
+    }
+
+    /// Saves entry METADATA changes (rollID, frameNumber — not stacks):
+    /// persists and updates ``entries``, no thumbnail work, no editor
+    /// reopen. RollModel's assignment path.
+    @discardableResult
+    func updateEntries(_ updates: [CatalogEntry]) -> Int {
+        var applied = 0
+        for updated in updates {
+            do {
+                try catalog.save(updated)
+                if let index = entries.firstIndex(where: { $0.id == updated.id }) {
+                    entries[index] = updated
+                }
+                applied += 1
+            } catch {
+                errorMessage = "Could not update \(updated.fileName): \(error.localizedDescription)"
+            }
         }
         return applied
     }
@@ -435,6 +480,9 @@ final class AppModel {
             thumbnails: thumbnails,
             onPersist: { [weak self] in self?.refreshEntry(entry.id) }
         )
+        // A rolled frame's Auto re-solves against its roll's constants — the
+        // consistency contract travels with the open photo.
+        editor?.rollConversion = rollModel.roll(for: entry)?.conversion
         selection = [entry.id]
         Self.lastOpenedID = entry.id
     }

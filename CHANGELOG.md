@@ -4,6 +4,51 @@ All notable changes to PhotoEditor are documented here.
 
 ## Unreleased
 
+### Added — the Minilab engine
+
+Negative conversion grows the three layers that separate an honest inversion
+from a finished lab scan, plus the roll discipline that makes frames agree.
+
+- **Tone profiles.** Linear / Lab Soft / Lab Standard / Lab Hard — a strip at
+  the top of the print controls. Linear is exactly the Phase 2 print engine,
+  bit for bit. The Lab profiles add midtone punch, a raised paper black
+  (Fade), a softened paper white (Glow), and shadow chroma compression (Toe
+  Chroma) — every value an ordinary visible slider, seeded by the profile and
+  yours to override. New conversions default to Lab Standard; switching
+  profiles re-solves the placement in one undo step. **Existing photos keep
+  the Linear rendering they were accepted under — nothing you have converted
+  changes.**
+- **Cast correction that actually works.** A neutral picker (click a grey
+  card, pavement, a white shirt), gray-world auto colour balance under Lab
+  profiles (Neutral / Warm / Cool), and three Cast sliders at ±0.5 EV per
+  channel — twice the filtration clamp, independent of the Warmth/Tint taste
+  trim. Honesty-gated: strongly-coloured midtones make the solve say so
+  instead of guessing. Zone trims (shadows/mids/highs, per channel) add the
+  deliberate colour-character controls — these rotate colour by design.
+- **renderVersion 2** fixes four proven defects for new conversions while
+  freezing version 1 forever: legacy film EV now folds in before the paper
+  curve (the never-clips contract holds again), tint filtration balances
+  across both complements instead of moving exposure, Contrast pivots around
+  the solved mids instead of darkening everything below paper white, and the
+  toe finally desaturates like paper does.
+- **Rolls.** Group frames into a roll (context menu → New Roll from
+  Selection), and Convert Roll solves the film's base and per-channel gammas
+  ONCE from statistics pooled across every frame — only exposure varies per
+  frame, which is how film actually works. Measured on a real roll: per-frame
+  solving drifted red gamma from 2.27 to 4.07 across five frames of one film;
+  the roll solve replaces that with one set of constants. Every frame is
+  snapshotted before conversion; frames with individually-sampled bases keep
+  them; the filmstrip's edge print now shows the roll.
+- **Auto is profile-aware and coherent with the render** — the median is
+  placed under the exact rendering the photo will get (profile toning,
+  balanced tint), fixing a subtle solve/render mismatch that nudged every new
+  conversion's midtone off target.
+- **Validation harnesses** (developer-facing, gated): A/B corpus renders with
+  an acceptance sheet (linear vs Lab Standard vs roll-converted vs darktable
+  negadoctor references through your own sidecars), and a roll-consistency
+  metric. The engine's bit-stability is enforced by golden tests recorded
+  before any of this landed.
+
 ### Fixed
 
 Three defects found by a new conformance suite that renders a test chart with

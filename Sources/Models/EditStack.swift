@@ -242,6 +242,12 @@ extension EditStack {
         var normalized = self
         normalized.processVersion = EditStack().processVersion
         normalized.rawWBInitialized = false
+        // renderVersion is a freeze flag, not an edit: a stack persisted by a
+        // pre-Minilab build decodes 1 while a fresh stack initializes 2, and
+        // without this line every photo imported-but-never-edited under the
+        // old build would read as edited after upgrade (enabling Reset on an
+        // untouched photo). Same reasoning as processVersion above.
+        normalized.filmNegative.print.renderVersion = EditStack().filmNegative.print.renderVersion
         return normalized == EditStack()
     }
 }

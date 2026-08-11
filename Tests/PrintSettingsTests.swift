@@ -61,6 +61,27 @@ final class PrintSettingsTests: XCTestCase {
         XCTAssertTrue(EditStack().isNeutralEdit)
     }
 
+    /// The upgrade case the group review caught: a neutral stack PERSISTED by
+    /// the pre-Minilab build (its print JSON has no renderVersion key, so it
+    /// decodes 1, while a fresh stack initializes 2). Every photo imported
+    /// under the shipping build carries exactly this JSON, and without the
+    /// renderVersion normalization in isNeutralEdit it would read as edited
+    /// after upgrade — enabling Reset on photos the user never touched.
+    func testNeutralStackFromThePreviousBuildIsStillANeutralEdit() throws {
+        var json = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(EditStack())) as! [String: Any]
+        var film = json["filmNegative"] as! [String: Any]
+        var print = film["print"] as! [String: Any]
+        print.removeValue(forKey: "renderVersion") // pre-Minilab JSON: decode → 1
+        film["print"] = print
+        json["filmNegative"] = film
+        let decoded = try JSONDecoder().decode(
+            EditStack.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(decoded.filmNegative.print.renderVersion, 1)
+        XCTAssertTrue(decoded.isNeutralEdit,
+                      "an untouched photo from the previous build must not read as edited")
+    }
+
     /// The house look, chosen on visual inspection of a rendered warmth/tint
     /// sweep against the user's own corpus (Task 8, Phase C) — a deliberate
     /// trim of this engine's default look, not a rescue tuned to any one
@@ -71,5 +92,44 @@ final class PrintSettingsTests: XCTestCase {
     func testHouseDefaultFiltrationIsWarmth24TintNegative8() {
         XCTAssertEqual(PrintSettings().warmth, 24)
         XCTAssertEqual(PrintSettings().tint, -8)
+    }
+
+    /// The freeze asymmetry, same trick as conversionModel: fresh settings are
+    /// renderVersion 2; anything decoded from JSON that predates the field is 1.
+    func testRenderVersionInitializesTwoDecodesOne() throws {
+        XCTAssertEqual(PrintSettings().renderVersion, 2)
+        let old = try JSONDecoder().decode(PrintSettings.self,
+                                           from: #"{"exposure": 1}"#.data(using: .utf8)!)
+        XCTAssertEqual(old.renderVersion, 1)
+        XCTAssertEqual(old.toneProfile, .linear)
+        XCTAssertEqual(old.punch, 0); XCTAssertEqual(old.fade, 0)
+        XCTAssertEqual(old.glow, 0); XCTAssertEqual(old.toeChroma, 0)
+    }
+
+    /// The Task 4 fields — cast correction, zone trims, grade pivot — must
+    /// all decode to their mathematical identity from a stack that predates
+    /// them, or an old photo's rendering would shift on upgrade.
+    func testCastAndTrimFieldsDecodeToNeutral() throws {
+        let old = try JSONDecoder().decode(PrintSettings.self,
+                                           from: #"{"exposure": 1}"#.data(using: .utf8)!)
+        XCTAssertEqual(old.castRed, 0); XCTAssertEqual(old.castGreen, 0)
+        XCTAssertEqual(old.castBlue, 0)
+        XCTAssertEqual(old.shadowTrim, .zero); XCTAssertEqual(old.midTrim, .zero)
+        XCTAssertEqual(old.highTrim, .zero)
+        XCTAssertNil(old.gradePivot)
+    }
+
+    func testApplyToneProfileWritesTheProfileParameters() {
+        var p = PrintSettings()
+        p.applyToneProfile(.labStandard)
+        XCTAssertEqual(p.toneProfile, .labStandard)
+        XCTAssertEqual(p.punch, FilmToneProfile.labStandard.punch)
+        XCTAssertEqual(p.fade, FilmToneProfile.labStandard.fade)
+        XCTAssertEqual(p.glow, FilmToneProfile.labStandard.glow)
+        XCTAssertEqual(p.toeChroma, FilmToneProfile.labStandard.toeChroma)
+        p.applyToneProfile(.linear)
+        XCTAssertEqual(p.punch, 0, "linear must be exactly today's render")
+        XCTAssertFalse(FilmToneProfile.linear.enablesAutoColorBalance)
+        XCTAssertTrue(FilmToneProfile.labStandard.enablesAutoColorBalance)
     }
 }

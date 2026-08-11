@@ -70,10 +70,19 @@ final class CatalogScaleTests: XCTestCase {
             let copies = (fileIndex % 7 == 0) ? 2 : 1
 
             for copyNumber in 0..<copies where entries.count < count {
+                // The copy gets a date a month AFTER its master — production
+                // copies share the master's date (createVirtualCopy assigns
+                // it), but the group review proved that with identical dates
+                // the ordering SQL's master-wins subqueries were untestable:
+                // plain dateImported ordering produced byte-identical output.
+                // A divergent copy date makes the grouping genuinely
+                // load-bearing — the paged/full agreement test now fails if
+                // either side stops pulling the MASTER's date for the group.
+                let divergence = copyNumber > 0 ? 86_400.0 * 30 : 0
                 var entry = CatalogEntry(
                     id: UUID(),
                     fileURL: url,
-                    dateImported: epoch.addingTimeInterval(Double(fileIndex)),
+                    dateImported: epoch.addingTimeInterval(Double(fileIndex) + divergence),
                     editStack: Self.stack(heavy: fileIndex % 4 == 0),
                     thumbnailPath: URL(fileURLWithPath: "/tmp/thumbs/\(fileIndex)-\(copyNumber).jpg"),
                     rating: fileIndex % 6,
@@ -235,23 +244,31 @@ final class CatalogScaleTests: XCTestCase {
                        "Paged fetch must produce the same order as the full fetch.")
     }
 
-    /// Paging must not degrade as the offset moves deep into the library —
-    /// the ordering has to come from an index, not from sorting every row and
-    /// discarding all but a screenful.
-    func testDeepPagingDoesNotDegrade() throws {
+    /// A page must cost a small fraction of a full load, or paging is
+    /// decorative. The regression this pins is the one paging exists to
+    /// prevent: implement `recentEntries` as
+    /// `allEntries().dropFirst(offset).prefix(limit)` and this fails,
+    /// because that implementation decodes every edit stack in the library
+    /// for every screenful — and the decode is what costs. (The ordering is
+    /// a computed group date, so SQLite sorts rows per page rather than
+    /// walking an index; that is a row scan, not a stack decode, and it is
+    /// cheap. The group review killed this test's previous form — a
+    /// deep-vs-shallow ratio — because a whole-library implementation is
+    /// equally slow at every offset: the ratio stayed ~1 and the assertion
+    /// could not fail against the very regression its message named.)
+    func testDeepPageCostsAFractionOfTheFullLoad() throws {
         let (store, _) = try makeOnDiskStore()
         let rows = 20_000
         try store.save(makeEntries(count: rows))
 
-        // Warm the page cache so this measures the query, not first-touch IO.
+        // Warm the page cache so this measures the work, not first-touch IO.
         _ = try store.recentEntries(limit: 200, offset: 0)
 
-        let shallow = try time { _ = try store.recentEntries(limit: 200, offset: 0) }
-        let deep = try time { _ = try store.recentEntries(limit: 200, offset: rows - 200) }
+        let full = try time { _ = try store.allEntries() }
+        let deepPage = try time { _ = try store.recentEntries(limit: 200, offset: rows - 200) }
 
-        // Generous: catching an O(n) scan per page, not micro-regressions.
-        XCTAssertLessThan(deep, max(shallow * 25, 0.05),
-                          "Deep paging cost \(deep)s vs \(shallow)s shallow — the ordering is not coming from an index.")
+        XCTAssertLessThan(deepPage, full * 0.2,
+                          "a deep page cost \(deepPage)s against \(full)s for the full load — paging is decoding the library")
     }
 
     /// `entryCount()` must not load the library to count it.
