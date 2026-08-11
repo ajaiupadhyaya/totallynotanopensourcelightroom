@@ -71,6 +71,20 @@ enum ImageDecoder {
             if let edrAmount = policy.edrAmount {
                 filter.extendedDynamicRangeAmount = Float(edrAmount)
             }
+            if policy.optsIntoRAW9 {
+                // Runtime capability check, per file, with mandatory
+                // fallback — an unsupported decoderVersion yields a nil
+                // output image BY CONTRACT. version9 and version9DNG are
+                // distinct capabilities, and a film workflow is DNG-heavy.
+                let supported = filter.supportedDecoderVersions
+                if url.pathExtension.lowercased() == "dng" {
+                    if supported.contains(.version9DNG) {
+                        filter.decoderVersion = .version9DNG
+                    }
+                } else if supported.contains(.version9) {
+                    filter.decoderVersion = .version9
+                }
+            }
             if policy.usesScaleFactorPreviews {
                 if let maxDimension {
                     let native = max(filter.nativeSize.width, filter.nativeSize.height)

@@ -46,11 +46,22 @@ struct RawDecodePolicy: Equatable {
     /// source — its chain never reaches the filter anyway.
     let usesScaleFactorPreviews: Bool
 
+    /// PV2 only: opt into Apple's RAW 9 decoder — the ML joint
+    /// demosaic-and-denoise — WHEN this system and file support it. Strictly
+    /// a runtime, per-file capability check at the apply site: setting an
+    /// unsupported version yields a nil output image by Apple's own
+    /// contract, so the check is correctness, not hygiene. PV1 stays at
+    /// Apple's defaults forever (the frozen decode its photos were accepted
+    /// under); on systems without RAW 9 the check simply never fires and
+    /// nothing changes — the deployment floor stays macOS 14.
+    let optsIntoRAW9: Bool
+
     init(processVersion: Int) {
         let isPV2 = processVersion >= 2
         disablesGamutMapping = isPV2
         edrAmount = isPV2 ? 1.0 : nil
         usesScaleFactorPreviews = isPV2
+        optsIntoRAW9 = isPV2
     }
 }
 

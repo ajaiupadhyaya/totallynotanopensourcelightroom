@@ -85,11 +85,15 @@ final class RawSourceTests: XCTestCase {
         XCTAssertFalse(pv1.disablesGamutMapping, "PV1 decoded with Apple's gamut mapping ON")
         XCTAssertNil(pv1.edrAmount, "PV1 decoded with Apple's default EDR amount")
         XCTAssertFalse(pv1.usesScaleFactorPreviews, "PV1 decoded full-size, then downsampled")
+        XCTAssertFalse(pv1.optsIntoRAW9,
+                       "PV1 never opts into RAW 9 — its decode is frozen at Apple defaults")
 
         let pv2 = RawDecodePolicy(processVersion: 2)
         XCTAssertTrue(pv2.disablesGamutMapping)
         XCTAssertEqual(pv2.edrAmount, 1.0)
         XCTAssertTrue(pv2.usesScaleFactorPreviews)
+        XCTAssertTrue(pv2.optsIntoRAW9,
+                      "PV2 opts into RAW 9 where the system and file support it")
 
         // A version below 1 (corrupt/absent field) is treated as legacy, never
         // as "newer than everything".
