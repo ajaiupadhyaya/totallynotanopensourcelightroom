@@ -181,6 +181,9 @@ final class EditorModel {
         case colorRangeSample
         /// Click a colour; the selected point-colour target samples it.
         case pointColorSample
+        /// Click something that should be neutral; the cast sliders solve to
+        /// make it so.
+        case neutralCast
     }
 
     /// Index of the point-colour target awaiting a canvas sample.
@@ -202,6 +205,8 @@ final class EditorModel {
             ))
         case .retouchPlace:
             addRetouchSpot(atUnitPoint: point)
+        case .neutralCast:
+            pickNeutralCast(atUnitPoint: point)
         case .colorRangeSample:
             sampleColorRange(at: point)
             return
@@ -775,11 +780,13 @@ final class EditorModel {
             film.print.gradePivot = medianD
             film.exposure = 0
             editStack.filmNegative = film
+            lastSolveDegradedTerms = m.degradedTerms
             return
         }
         guard let solution = AutoInvert.solve(scan: measured, sampledBase: sampled,
                                               profile: film.print.toneProfile,
                                               context: renderer.context) else { return }
+        lastSolveDegradedTerms = solution.degradedTerms
         film.baseColor = solution.baseColor
         film.baseOrigin = solution.baseOrigin
         film.isBaseSampled = solution.baseOrigin == .sampled
@@ -812,6 +819,104 @@ final class EditorModel {
 
         stockMatches = FilmBaseSampler.rankStocks(matching: solution.baseColor,
                                                   in: filmStocks)
+    }
+
+    /// What the last Auto solve wanted the user to know — the honesty caption
+    /// under the colour-balance group. View state, never persisted.
+    var lastSolveDegradedTerms: [String] = []
+
+    /// The profile strip's action: write the profile's parameters and, when
+    /// the conversion is live, re-solve the placement under it — one gesture,
+    /// one undo step. Not enabled yet? Just seed the fields.
+    func applyToneProfile(_ profile: FilmToneProfile) {
+        if editStack.filmNegative.isEnabled,
+           editStack.filmNegative.conversionModel == .density {
+            autoConvertNegative(forceProfile: profile)
+        } else {
+            var film = editStack.filmNegative
+            film.print.applyToneProfile(profile)
+            editStack.filmNegative = film
+        }
+    }
+
+    /// The neutral picker: sample a 2%-side patch of the SCAN (not the
+    /// rendered positive) around the click, solve the per-channel density
+    /// offsets that make it render neutral, and move the cast sliders there.
+    /// The solve is a delta on top of what is already dialed in — clicking a
+    /// patch that already renders neutral moves nothing.
+    func pickNeutralCast(atUnitPoint point: CGPoint) {
+        guard let source else { return }
+        let side = 0.02
+        let extent = source.extent
+        let rect = CGRect(
+            x: extent.origin.x + (point.x - side / 2) * extent.width,
+            y: extent.origin.y + (point.y - side / 2) * extent.height,
+            width: max(1, side * extent.width),
+            height: max(1, side * extent.height)
+        )
+        guard let patch = FilmBaseSampler.sampleAverage(
+            from: source, in: rect, context: renderer.context
+        ) else { return }
+
+        var film = editStack.filmNegative
+        let base = film.baseColor.safeForDivision
+        let dmin = (PaperResponse.srgbDecode(base.red),
+                    PaperResponse.srgbDecode(base.green),
+                    PaperResponse.srgbDecode(base.blue))
+        func density(_ t: Double, _ dm: Double) -> Double {
+            log10(max(dm, 1e-4) / max(t, PaperResponse.transmittanceFloor))
+        }
+        // Densities as the renderer sees them, current cast included — so the
+        // solve returns the ADDITIONAL correction, not a replacement.
+        let seen = DensityTriple(
+            red: density(PaperResponse.srgbDecode(patch.red), dmin.0)
+                + PaperResponse.castDensity(film.print.castRed),
+            green: density(PaperResponse.srgbDecode(patch.green), dmin.1)
+                + PaperResponse.castDensity(film.print.castGreen),
+            blue: density(PaperResponse.srgbDecode(patch.blue), dmin.2)
+                + PaperResponse.castDensity(film.print.castBlue))
+        let delta = CastSolver.castSliders(neutralDensity: seen,
+                                           gamma: film.print.gamma,
+                                           dmax: film.print.dmax)
+        func clamp(_ v: Double) -> Double { min(max(v, -100), 100) }
+        film.print.castRed = clamp(film.print.castRed + delta.red)
+        film.print.castGreen = clamp(film.print.castGreen + delta.green)
+        film.print.castBlue = clamp(film.print.castBlue + delta.blue)
+        editStack.filmNegative = film
+    }
+
+    /// Auto colour balance on demand — the menu's Neutral / Warm / Cool.
+    /// Fresh midtone measurement of the geometry-cropped scan, gray-world
+    /// solve against the CURRENT stack's gamma/dmax, plus a documented bias.
+    /// (Grade-independent: equalizing through the un-graded gamma equalizes
+    /// the graded line too — the grade scales all three L values equally.)
+    func autoColorBalance(bias: (red: Double, green: Double, blue: Double)) {
+        guard let source else { return }
+        let measured = GeometryTransform.apply(source, geometry: editStack.geometry)
+        var film = editStack.filmNegative
+        let sampled = film.baseOrigin == .sampled ? film.baseColor : nil
+        guard let m = AutoInvert.measure(scan: measured, sampledBase: sampled,
+                                         context: renderer.context) else { return }
+        let base = film.baseColor.safeForDivision
+        let dmin = (PaperResponse.srgbDecode(base.red),
+                    PaperResponse.srgbDecode(base.green),
+                    PaperResponse.srgbDecode(base.blue))
+        func density(_ t: Double, _ dm: Double) -> Double {
+            log10(max(dm, 1e-4) / max(t, PaperResponse.transmittanceFloor))
+        }
+        let medianD = DensityTriple(
+            red: density(AutoInvert.percentile(m.sortedRed, 0.5), dmin.0),
+            green: density(AutoInvert.percentile(m.sortedGreen, 0.5), dmin.1),
+            blue: density(AutoInvert.percentile(m.sortedBlue, 0.5), dmin.2))
+        let solved = CastSolver.castSliders(neutralDensity: medianD,
+                                            gamma: film.print.gamma,
+                                            dmax: film.print.dmax)
+        func clamp(_ v: Double) -> Double { min(max(v, -100), 100) }
+        film.print.castRed = clamp(solved.red + bias.red)
+        film.print.castGreen = clamp(solved.green + bias.green)
+        film.print.castBlue = clamp(solved.blue + bias.blue)
+        editStack.filmNegative = film
+        lastSolveDegradedTerms = m.degradedTerms
     }
 
     /// Matrix → print engine, as an explicit, snapshotted, undoable action —

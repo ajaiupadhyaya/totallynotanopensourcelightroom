@@ -2283,7 +2283,7 @@ All drawn in the existing language; every control double-click-resets via `Adjus
   - `func autoColorBalance(bias: (red: Double, green: Double, blue: Double))` — fresh `AutoInvert.measure` of the geometry-cropped scan, medians → `CastSolver` + bias, writes the three cast sliders (menu: Neutral `(0,0,0)`, Warm `CastSolver.warmBias`, Cool negated)
 - `CanvasArea.pickerPrompt` gains: `case .neutralCast: "Click something that should be neutral — grey card, pavement, a white shirt."`
 
-- [ ] **Step 1: Write failing model tests**
+- [x] **Step 1: Write failing model tests**
 
 `Tests/EditorModelTests.swift` (follow that file's existing fixture pattern for building an `EditorModel` with a test image):
 
@@ -2320,7 +2320,7 @@ func testNeutralCastPickerRoutesAndWrites() throws {
 
 (If `EditorModelTests` has no undo-count helper, follow `EditorUndoTests`' pattern for the one-step assertion instead — whichever file already asserts single-step gestures.)
 
-- [ ] **Step 2: Run — expect failure.** Implement the `EditorModel` pieces per the Interfaces block, then the panel:
+- [x] **Step 2: Run — expect failure.** Implement the `EditorModel` pieces per the Interfaces block, then the panel:
 
 In `FilmPanel.printControls`, top: a `TabStrip` over profiles —
 
@@ -2341,9 +2341,9 @@ In `FilmPanel.printControls`, top: a `TabStrip` over profiles —
 
 then, with the existing print sliders: `AdjustmentSlider(title: "Punch", value: …print.punch, range: 0...100, format: "%.0f", neutral: 0)`, `"Fade"` and `"Glow"` likewise. A `COLOUR BALANCE` group (`sectionLabel` style): `PlateButton(title: model.canvasPicker == .neutralCast ? "Click…" : "Neutral…")` toggling the picker; a drawn `Menu`("Auto") with Neutral/Warm/Cool calling `autoColorBalance`; three `AdjustmentSlider`s Cast R/G/B, range −100…100, neutral 0. Inside the existing per-channel trims disclosure: `"Toe Chroma"` (0…100) and the nine zone-trim sliders in three labelled groups (Shadows/Mids/Highs, R/G/B each, −100…100). Honesty caption under the cast group when the last Auto reported the gray-world degraded term — read from a new `model.lastSolveDegradedTerms: [String]` the solve writes (non-persisted UI state).
 
-- [ ] **Step 3: Run the two test classes + build.** Expected PASS.
+- [x] **Step 3: Run the two test classes + build.** Expected PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Views/SliderPanel/FilmPanel.swift Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Tests/EditorModelTests.swift Tests/CanvasToolTests.swift

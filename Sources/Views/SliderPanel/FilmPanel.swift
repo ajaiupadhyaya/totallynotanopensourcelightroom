@@ -216,12 +216,42 @@ struct FilmPanel: View {
     /// The print engine's front controls — the terms a printer would use.
     private var printControls: some View {
         VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            // The rendering family — Linear is exactly the honest Phase 2
+            // print; the Lab profiles add the minilab's finishing layers.
+            // Selecting one WRITES its values into the sliders below and
+            // re-solves the placement: a starting point, never hidden state.
+            TabStrip(
+                options: [
+                    (FilmToneProfile.linear, "LIN"),
+                    (.labSoft, "SOFT"),
+                    (.labStandard, "LAB"),
+                    (.labHard, "HARD"),
+                ],
+                selection: Binding(
+                    get: { film.print.toneProfile },
+                    set: { model.applyToneProfile($0) }
+                ),
+                spacing: Theme.space3
+            )
+
             AdjustmentSlider(title: "Print Exposure",
                              value: $model.editStack.filmNegative.print.exposure,
                              range: -3...3, format: "%.2f EV", neutral: 0)
             AdjustmentSlider(title: "Print Contrast",
                              value: $model.editStack.filmNegative.print.contrast,
                              range: 0...5, format: "Grade %.1f", neutral: 2)
+            AdjustmentSlider(title: "Punch",
+                             value: $model.editStack.filmNegative.print.punch,
+                             range: 0...100, format: "%.0f",
+                             neutral: film.print.toneProfile.punch)
+            AdjustmentSlider(title: "Fade",
+                             value: $model.editStack.filmNegative.print.fade,
+                             range: 0...100, format: "%.0f",
+                             neutral: film.print.toneProfile.fade)
+            AdjustmentSlider(title: "Glow",
+                             value: $model.editStack.filmNegative.print.glow,
+                             range: 0...100, format: "%.0f",
+                             neutral: film.print.toneProfile.glow)
             AdjustmentSlider(title: "Shoulder",
                              value: $model.editStack.filmNegative.print.shoulder,
                              range: 0...100, format: "%.0f", neutral: 40)
@@ -243,10 +273,62 @@ struct FilmPanel: View {
                                  range: -100...100, format: "%.0f", neutral: -8)
             }
 
+            if film.type != .blackAndWhiteNegative {
+                colourBalanceGroup
+            }
+
             PlateButton(title: isShowingTrims ? "Hide Per-Channel" : "Per-Channel…") {
                 isShowingTrims.toggle()
             }
             if isShowingTrims { channelTrims }
+        }
+    }
+
+    /// The ANALYSIS layer: the neutral picker, gray-world auto, and the three
+    /// cast sliders it writes — ±0.5 EV per channel, twice the filtration
+    /// clamp, independently resettable from the Warmth/Tint taste trim above.
+    private var colourBalanceGroup: some View {
+        VStack(alignment: .leading, spacing: Theme.controlSpacing) {
+            HStack(spacing: Theme.space2) {
+                Text("COLOUR BALANCE").sectionLabel()
+                Spacer()
+                PlateButton(title: model.canvasPicker == .neutralCast
+                            ? "Click…" : "Neutral…") {
+                    model.canvasPicker = model.canvasPicker == .neutralCast
+                        ? nil : .neutralCast
+                }
+                Menu {
+                    Button("Neutral") { model.autoColorBalance(bias: (0, 0, 0)) }
+                    Button("Warm") { model.autoColorBalance(bias: CastSolver.warmBias) }
+                    Button("Cool") {
+                        model.autoColorBalance(bias: (-CastSolver.warmBias.red,
+                                                      -CastSolver.warmBias.green,
+                                                      -CastSolver.warmBias.blue))
+                    }
+                } label: {
+                    Text("AUTO").plateLabel()
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
+            AdjustmentSlider(title: "Cast Red",
+                             value: $model.editStack.filmNegative.print.castRed,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Cast Green",
+                             value: $model.editStack.filmNegative.print.castGreen,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Cast Blue",
+                             value: $model.editStack.filmNegative.print.castBlue,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            // Honesty caption: what the last solve wanted you to know.
+            if let term = model.lastSolveDegradedTerms.first(where: {
+                $0.contains("colour balance")
+            }) {
+                Text(term)
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(Theme.filmEdge)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -287,6 +369,48 @@ struct FilmPanel: View {
             AdjustmentSlider(title: "Blue",
                              value: $model.editStack.filmNegative.print.gamma.blue,
                              range: 0.2...3, format: "%.2f", neutral: 1)
+
+            Text("TOE").sectionLabel()
+            AdjustmentSlider(title: "Toe Chroma",
+                             value: $model.editStack.filmNegative.print.toeChroma,
+                             range: 0...100, format: "%.0f",
+                             neutral: film.print.toneProfile.toeChroma)
+
+            // Zone trims rotate colour by design — the deliberate shadow/mid/
+            // highlight character controls, unlike the hue-preserving tone
+            // path. ±100 = ±0.25 EV, weighted by tone zone.
+            Text("SHADOW TRIM").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.print.shadowTrim.red,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.print.shadowTrim.green,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.print.shadowTrim.blue,
+                             range: -100...100, format: "%.0f", neutral: 0)
+
+            Text("MID TRIM").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.print.midTrim.red,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.print.midTrim.green,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.print.midTrim.blue,
+                             range: -100...100, format: "%.0f", neutral: 0)
+
+            Text("HIGH TRIM").sectionLabel()
+            AdjustmentSlider(title: "Red",
+                             value: $model.editStack.filmNegative.print.highTrim.red,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Green",
+                             value: $model.editStack.filmNegative.print.highTrim.green,
+                             range: -100...100, format: "%.0f", neutral: 0)
+            AdjustmentSlider(title: "Blue",
+                             value: $model.editStack.filmNegative.print.highTrim.blue,
+                             range: -100...100, format: "%.0f", neutral: 0)
         }
         .padding(8)
         .background(Theme.control.opacity(0.4), in: RoundedRectangle(cornerRadius: 3))
