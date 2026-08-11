@@ -2402,18 +2402,18 @@ git commit -m "test(film): minilab validation — A/B profile corpus renders, ne
 
 ### Task 13: Full verification + acceptance handoff
 
-- [ ] **Step 1: Full suite once**
+- [x] **Step 1: Full suite once**
 
 Run: `xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test`
 Expected: everything green (gated suites skip or pass per machine). Fix anything that isn't before proceeding — no green claim without this output in hand.
 
-- [ ] **Step 2: Regenerate acceptance artifacts** (the corpus suites just did). Open `artifacts/minilab/acceptance-sheet.html` and confirm it renders linear/lab/ref columns.
+- [x] **Step 2: Regenerate acceptance artifacts** (the corpus suites just did). Open `artifacts/minilab/acceptance-sheet.html` and confirm it renders linear/lab/ref columns.
 
 - [x] **Step 3: CHANGELOG**
 
 Add under `Unreleased` in `CHANGELOG.md`: the Minilab engine — tone profiles (Linear preserves the Phase 2 render; Lab Standard is the new-conversion default), cast correction (picker/auto/manual) and zone trims, renderVersion 2 fixes (pre-curve EV, balanced tint, mid-pivot grade, toe chroma), rolls with roll-level conversion. Note the freeze guarantees explicitly.
 
-- [ ] **Step 4: Commit, then hand to the user**
+- [x] **Step 4: Commit, then hand to the user**
 
 ```bash
 git add CHANGELOG.md
