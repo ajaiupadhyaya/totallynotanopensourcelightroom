@@ -2360,11 +2360,11 @@ Everything gated (`XCTSkip`) off this machine's corpora and tools; asserts sanit
 - Modify: `Tests/RealScanTests.swift`
 - Create: `Tests/NegadoctorReferenceTests.swift`, `Tests/RollConsistencyTests.swift`
 
-- [ ] **Step 1: A/B profile renders + acceptance sheet**
+- [x] **Step 1: A/B profile renders + acceptance sheet**
 
 In `RealScanTests`: give `convert` a `profile: FilmToneProfile` parameter (label suffix `-linear` / `-lab`), passing it to `AutoInvert.solve` and writing the solved cast/pivot/profile fields into the stack exactly as `autoConvertNegative` does. Corpus tests render each frame under BOTH profiles (medium format: cropped only, plus one blind linear per frame kept as the Fix-2 before/after evidence). Artifacts move to `artifacts/minilab/`. Add `testWriteAcceptanceSheet` (runs last alphabetically — name it `testZZAcceptanceSheet` so the JPEGs exist): builds `artifacts/minilab/acceptance-sheet.html`, a table of rows `<name> | linear | lab` with `<img>` tags referencing the JPEGs, plus each frame's printed solve numbers. Plain string-built HTML, no dependencies.
 
-- [ ] **Step 2: negadoctor references**
+- [x] **Step 2: negadoctor references**
 
 `Tests/NegadoctorReferenceTests.swift`: locate `darktable-cli` among `/opt/homebrew/bin/darktable-cli`, `/usr/local/bin/darktable-cli`, `/Applications/darktable.app/Contents/MacOS/darktable-cli` — `XCTSkip` if absent ("brew install --cask darktable"). For the first 5 CR2s that have an XMP sidecar (try `<name>.cr2.xmp` then `<name>.xmp` beside the file; skip the test if none): run
 
@@ -2379,7 +2379,7 @@ In `RealScanTests`: give `convert` a `profile: FilmToneProfile` parameter (label
 
 Assert exit 0 → non-empty `artifacts/minilab/ref-<name>.jpg`, and add a `ref` column to the acceptance sheet when present. (These runs take ~10–30 s per frame — keep the count at 5.)
 
-- [ ] **Step 3: Roll-consistency metric on the real corpus**
+- [x] **Step 3: Roll-consistency metric on the real corpus**
 
 `Tests/RollConsistencyTests.swift`: manifest at `~/Desktop/negatives/rolls.json` —
 
@@ -2389,9 +2389,9 @@ Assert exit 0 → non-empty `artifacts/minilab/ref-<name>.jpg`, and add a `ref` 
 
 `XCTSkip` when absent, PRINTING that template so the user can create it. For each manifest roll (≥ 2 files): decode each frame (1600 px, PV2), apply `RealScanTests.mediumFormatDemoCropRect` via Geometry before measuring (make that constant `internal` rather than duplicating it), `AutoInvert.measure` each; solve per-frame (`AutoInvert.solve(from:profile: .labStandard)`) AND as a roll (`RollAnalysis.solve`). Render both ways through `EditRenderer`; metric = variance across frames of the rendered median chromaticity `(max−min)/max` of the median linear pixel (the `CastSolverTests.medianChroma` computation — lift it into a shared test helper in `PrintEngineSupport.swift`). Assert `rollVariance ≤ perFrameVariance * 1.05` and print both plus the per-frame vs roll gamma values (`ROLLCONSISTENCY corpus: …`) for the acceptance log.
 
-- [ ] **Step 4: Run all three on this machine** (corpus present). Expected: PASS with artifacts written; on any other machine: SKIP cleanly.
+- [x] **Step 4: Run all three on this machine** (corpus present). Expected: PASS with artifacts written; on any other machine: SKIP cleanly.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Tests/RealScanTests.swift Tests/NegadoctorReferenceTests.swift Tests/RollConsistencyTests.swift Tests/PrintEngineSupport.swift project.yml PhotoEditor.xcodeproj
@@ -2409,7 +2409,7 @@ Expected: everything green (gated suites skip or pass per machine). Fix anything
 
 - [ ] **Step 2: Regenerate acceptance artifacts** (the corpus suites just did). Open `artifacts/minilab/acceptance-sheet.html` and confirm it renders linear/lab/ref columns.
 
-- [ ] **Step 3: CHANGELOG**
+- [x] **Step 3: CHANGELOG**
 
 Add under `Unreleased` in `CHANGELOG.md`: the Minilab engine — tone profiles (Linear preserves the Phase 2 render; Lab Standard is the new-conversion default), cast correction (picker/auto/manual) and zone trims, renderVersion 2 fixes (pre-curve EV, balanced tint, mid-pivot grade, toe chroma), rolls with roll-level conversion. Note the freeze guarantees explicitly.
 

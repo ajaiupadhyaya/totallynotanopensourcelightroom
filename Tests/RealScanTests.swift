@@ -23,9 +23,11 @@ final class RealScanTests: XCTestCase {
     // under `xcodebuild test` the test host's cwd is not the repo root (it
     // resolved to "/", which is read-only), so a bare relative path failed
     // every write. Same pattern as `ParitySupport.fixturesDir`.
-    private static let artifactDir = URL(fileURLWithPath: #filePath)
+    // Minilab artifacts land beside (not over) the accepted Phase 2 evidence
+    // in artifacts/print-engine — archive, don't clobber.
+    static let artifactDir = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("artifacts/print-engine", isDirectory: true)
+        .appendingPathComponent("artifacts/minilab", isDirectory: true)
 
     /// A rough demonstration crop confining Auto's measurement to the medium
     /// format corpus's film interior, excluding the negative-holder mask that
@@ -42,7 +44,7 @@ final class RealScanTests: XCTestCase {
     /// i.e. bottom-left-origin y: 0.10–0.85). Re-cropping the rendered
     /// artifacts to this exact rect (see the fix report) shows clean frame
     /// interior with no holder or white margin on either sample checked.
-    private static let mediumFormatDemoCropRect = CGRect(x: 0.30, y: 0.10, width: 0.42, height: 0.75)
+    static let mediumFormatDemoCropRect = CGRect(x: 0.30, y: 0.10, width: 0.42, height: 0.75)
 
     /// The same idea for the 2026-08-09 batch, which is framed much more
     /// tightly and consistently than the medium-format corpus (the negative
@@ -77,7 +79,8 @@ final class RealScanTests: XCTestCase {
     ///   conversion (see `DevelopedSourceCache`), the written artifact is
     ///   cropped too — an honest end-to-end demonstration, not just a solve
     ///   that quietly measures differently while the JPEG stays uncropped.
-    private func convert(url: URL, label: String, cropRect: CGRect? = nil) throws {
+    private func convert(url: URL, label: String, cropRect: CGRect? = nil,
+                         profile: FilmToneProfile = .linear) throws {
         guard let scan = ImageDecoder.loadPreviewImage(from: url, maxDimension: 1600,
                                                        processVersion: 2) else {
             XCTFail("could not decode \(url.lastPathComponent)"); return
@@ -88,16 +91,23 @@ final class RealScanTests: XCTestCase {
         }
         let measured = GeometryTransform.apply(scan, geometry: stack.geometry)
         let solution = try XCTUnwrap(AutoInvert.solve(scan: measured, sampledBase: nil,
-                                                      profile: .linear,
+                                                      profile: profile,
                                                       context: context),
                                      "\(label): solve returned nil")
+        // The full write-back, exactly as autoConvertNegative does it — the
+        // A/B artifacts show what the app would actually show.
         stack.filmNegative.isEnabled = true
         stack.filmNegative.conversionModel = .density
+        stack.filmNegative.print.applyToneProfile(profile)
         stack.filmNegative.baseColor = solution.baseColor
         stack.filmNegative.baseOrigin = solution.baseOrigin
         stack.filmNegative.print.dmax = solution.dmax
         stack.filmNegative.print.gamma = solution.gamma
         stack.filmNegative.print.exposure = solution.printExposure
+        stack.filmNegative.print.gradePivot = solution.medianDensity
+        stack.filmNegative.print.castRed = solution.cast.red
+        stack.filmNegative.print.castGreen = solution.cast.green
+        stack.filmNegative.print.castBlue = solution.cast.blue
 
         let out = renderer.render(source: scan, stack: stack)
         let histogram = renderer.histogram(of: out)
@@ -159,14 +169,23 @@ final class RealScanTests: XCTestCase {
         let files = try Self.firstFilesOrSkip(dir: Self.mediumFormatDir, suffix: ".cr2")
         try files.forEach {
             let name = $0.deletingPathExtension().lastPathComponent
-            try convert(url: $0, label: "mf-\(name)")
-            try convert(url: $0, label: "mf-\(name)-cropped", cropRect: Self.mediumFormatDemoCropRect)
+            // One blind linear per frame stays as the Fix-2 before/after
+            // evidence; the A/B pair renders cropped, both profiles.
+            try convert(url: $0, label: "mf-\(name)-blind")
+            try convert(url: $0, label: "mf-\(name)-linear",
+                        cropRect: Self.mediumFormatDemoCropRect, profile: .linear)
+            try convert(url: $0, label: "mf-\(name)-lab",
+                        cropRect: Self.mediumFormatDemoCropRect, profile: .labStandard)
         }
     }
 
     func test35mmPhoneScanCorpus() throws {
         let files = try Self.firstFilesOrSkip(dir: Self.thirtyFiveDir, suffix: ".jpeg")
-        try files.forEach { try convert(url: $0, label: "35-\($0.deletingPathExtension().lastPathComponent)") }
+        try files.forEach {
+            let name = $0.deletingPathExtension().lastPathComponent
+            try convert(url: $0, label: "35-\(name)-linear", profile: .linear)
+            try convert(url: $0, label: "35-\(name)-lab", profile: .labStandard)
+        }
     }
 
     /// The 2026-08-09 batch. HEIC exercises a decode path neither other
@@ -181,8 +200,58 @@ final class RealScanTests: XCTestCase {
         let files = try Self.firstFilesOrSkip(dir: Self.augustNinthDir, suffix: ".heic")
         try files.forEach {
             let name = $0.deletingPathExtension().lastPathComponent
-            try convert(url: $0, label: "aug9-\(name)")
-            try convert(url: $0, label: "aug9-\(name)-cropped", cropRect: Self.augustNinthDemoCropRect)
+            try convert(url: $0, label: "aug9-\(name)-linear",
+                        cropRect: Self.augustNinthDemoCropRect, profile: .linear)
+            try convert(url: $0, label: "aug9-\(name)-lab",
+                        cropRect: Self.augustNinthDemoCropRect, profile: .labStandard)
         }
+    }
+
+    /// Builds the acceptance sheet LAST (ZZ sorts after the corpus tests, so
+    /// their JPEGs exist). Rows pair -linear/-lab (plus -blind and ref-
+    /// columns when present); the final gate is the user's eye, and this is
+    /// the page they judge.
+    func testZZAcceptanceSheet() throws {
+        let fm = FileManager.default
+        guard let names = try? fm.contentsOfDirectory(atPath: Self.artifactDir.path),
+              names.contains(where: { $0.hasSuffix("-lab.jpg") }) else {
+            throw XCTSkip("no A/B artifacts on this machine — corpus tests did not run")
+        }
+        let bases = Set(names.filter { $0.hasSuffix("-lab.jpg") }
+            .map { String($0.dropLast(8)) }).sorted()
+        let hasRef = names.contains { $0.hasPrefix("ref-") }
+        var html = "<!doctype html><meta charset=\"utf-8\">"
+            + "<title>Minilab acceptance</title>"
+            + "<style>body{background:#161616;color:#e2e8f0;"
+            + "font:13px -apple-system,sans-serif}"
+            + "td{padding:4px;vertical-align:top}img{width:340px}"
+            + "h1{font-weight:600}.l{font:11px ui-monospace,monospace;"
+            + "color:#94a3b8}</style>"
+            + "<h1>Minilab acceptance — linear vs Lab Standard"
+            + (hasRef ? " vs negadoctor" : "") + "</h1><table>"
+        for base in bases {
+            func cell(_ suffix: String, _ title: String) -> String {
+                names.contains(base + suffix)
+                    ? "<td><div class=l>" + title + "</div>"
+                        + "<img src=\"" + base + suffix + "\"></td>"
+                    : ""
+            }
+            // ref-<originalname>.jpg: strip the corpus prefix off base.
+            let original = base.split(separator: "-").dropFirst().joined(separator: "-")
+            let refName = "ref-" + original + ".jpg"
+            let ref = names.contains(refName)
+                ? "<td><div class=l>negadoctor</div>"
+                    + "<img src=\"" + refName + "\"></td>"
+                : ""
+            html += "<tr><td class=l>" + base + "</td>"
+                + cell("-blind.jpg", "blind linear")
+                + cell("-linear.jpg", "linear")
+                + cell("-lab.jpg", "lab standard")
+                + cell("-roll.jpg", "roll (lab)")
+                + ref + "</tr>"
+        }
+        html += "</table>"
+        try html.write(to: Self.artifactDir.appendingPathComponent("acceptance-sheet.html"),
+                       atomically: true, encoding: .utf8)
     }
 }
