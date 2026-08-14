@@ -165,6 +165,19 @@ struct ToolOptionsBar: View {
             contextNote(model.isSensorDomainWB
                         ? "Not available on a RAW photo — see White Balance"
                         : "Click something that should be neutral gray")
+        case .targetedAdjustment:
+            HStack(spacing: 14) {
+                TabStrip(
+                    options: EditorModel.TATTarget.allCases.map { ($0, $0.label) },
+                    selection: Binding(get: { model.tatTarget },
+                                       set: { model.tatTarget = $0 }),
+                    spacing: Theme.space3
+                )
+                contextNote(model.editStack.color.treatment == .blackAndWhite
+                            && model.tatTarget != .curve
+                            ? "Drag the photograph up or down — edits the B&W mix"
+                            : "Drag the photograph up or down")
+            }
         case .compare:
             HStack(spacing: 10) {
                 contextNote(model.isShowingBefore ? "Showing the original interpretation"

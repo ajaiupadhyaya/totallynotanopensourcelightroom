@@ -166,6 +166,7 @@ private struct EditCanvas: View {
     @Bindable var workspace: WorkspaceModel
 
     @State private var isRetouchPainting = false
+    @State private var isTATDragging = false
     @State private var panAtDragStart: CGSize?
 
     var body: some View {
@@ -451,6 +452,8 @@ private struct EditCanvas: View {
                         .localAdjustments[maskIndex].components[componentIndex],
                     displaySize: rect.size
                 )
+            } else if workspace.activeTool == .targetedAdjustment {
+                tatDragOverlay(displaySize: rect.size)
             } else if workspace.activeTool == .heal || workspace.activeTool == .clone {
                 retouchPaintOverlay(displaySize: rect.size)
             }
@@ -551,6 +554,29 @@ private struct EditCanvas: View {
                         }
                     }
                     .onEnded { _ in isRetouchPainting = false }
+            )
+    }
+
+    /// The Targeted Adjustment drag: the start point picks the colour, the
+    /// vertical travel moves whatever the options bar has armed. Upward is
+    /// positive, hence the sign flip on a top-down translation.
+    private func tatDragOverlay(displaySize: CGSize) -> some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        if !isTATDragging {
+                            isTATDragging = true
+                            editor.beginTATDrag(atUnitPoint:
+                                unitPoint(value.startLocation, displaySize: displaySize))
+                        }
+                        editor.continueTATDrag(byPoints: -Double(value.translation.height))
+                    }
+                    .onEnded { _ in
+                        isTATDragging = false
+                        editor.endTATDrag()
+                    }
             )
     }
 

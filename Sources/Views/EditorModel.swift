@@ -272,6 +272,72 @@ final class EditorModel {
         return hoverSampler?.sampler.reading(atUnitPoint: point)
     }
 
+    // MARK: Targeted adjustment
+
+    /// What a TAT drag edits. View state; the options bar binds it.
+    enum TATTarget: String, CaseIterable, Identifiable {
+        case curve, hue, saturation, luminance
+        var id: String { rawValue }
+        var label: String { rawValue == "curve" ? "CURVE" : String(rawValue.prefix(3)).uppercased() }
+    }
+
+    var tatTarget: TATTarget = .curve
+
+    private struct TATDrag {
+        var reading: PixelReading
+        var hue: Double
+        var saturation: Double
+        var stackAtStart: EditStack
+        var curveIndex: Int?
+    }
+
+    private var tatDrag: TATDrag?
+
+    func beginTATDrag(atUnitPoint point: CGPoint) {
+        guard let reading = sample(atUnitPoint: point) else { return }
+        let (hue, saturation, _) = ColorScience.rgbToHSL(reading.red, reading.green, reading.blue)
+        tatDrag = TATDrag(reading: reading, hue: hue, saturation: saturation,
+                          stackAtStart: editStack, curveIndex: nil)
+    }
+
+    /// One drag tick, cumulative from the start (upward positive). Rebuilds
+    /// from the stack captured at the start and writes ONE field once —
+    /// `autoConvertNegative`'s single-assignment rule.
+    func continueTATDrag(byPoints delta: Double) {
+        guard var drag = tatDrag else { return }
+        switch tatTarget {
+        case .curve:
+            // Free points are a PV2 grammar (the curve editor's own gate); on
+            // PV1 the drag deliberately does nothing rather than corrupt a
+            // frozen look.
+            guard editStack.processVersion >= 2 else { return }
+            let edit = TATMath.curveEdit(points: drag.stackAtStart.toneCurvePoints,
+                                         luma: drag.reading.luma,
+                                         existingIndex: drag.curveIndex,
+                                         deltaPoints: delta)
+            drag.curveIndex = edit.index
+            tatDrag = drag
+            editStack.toneCurvePoints = edit.points
+        case .hue, .saturation, .luminance:
+            let field: WritableKeyPath<HSLAdjustment, Double> = switch tatTarget {
+            case .hue: \.hue
+            case .saturation: \.saturation
+            default: \.luminance
+            }
+            editStack.color.mixer = editStack.color.treatment == .blackAndWhite
+                ? TATMath.blackAndWhiteEdit(drag.stackAtStart.color.mixer,
+                                            hue: drag.hue, saturation: drag.saturation,
+                                            deltaPoints: delta)
+                : TATMath.mixerEdit(drag.stackAtStart.color.mixer,
+                                    hue: drag.hue, saturation: drag.saturation,
+                                    field: field, deltaPoints: delta)
+        }
+    }
+
+    func endTATDrag() {
+        tatDrag = nil
+    }
+
     /// Zoom factor over image pixels; nil fits the frame to the viewport.
     /// Owned here so the top bar and the canvas share one value.
     var zoomLevel: Double? {

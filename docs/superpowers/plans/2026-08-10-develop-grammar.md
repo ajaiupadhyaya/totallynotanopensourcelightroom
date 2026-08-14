@@ -1835,7 +1835,7 @@ A new `EditorTool.targetedAdjustment` (bare key `T` — resolved by `EditorTool(
 - Consumes: `PixelSampler`/`EditorModel.sample(atUnitPoint:)` (Task 3), `CurvePointModel` (Task 4), `ColorCubeBuilder.bandWeights(for:)`, `ColorScience.rgbToHSL`.
 - Produces: `EditorTool.targetedAdjustment`, `EditorModel.TATTarget`/`tatTarget`, `beginTATDrag(atUnitPoint:)`/`continueTATDrag(byPoints:)`/`endTATDrag()`, `TATMath.curveEdit/mixerEdit/blackAndWhiteEdit`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TATMathTests.swift`:
 
@@ -1954,9 +1954,9 @@ final class TATModelTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run** `-only-testing:PhotoEditorTests/TATMathTests -only-testing:PhotoEditorTests/TATModelTests` — expected COMPILE FAILURE.
+- [x] **Step 2: Run** `-only-testing:PhotoEditorTests/TATMathTests -only-testing:PhotoEditorTests/TATModelTests` — expected COMPILE FAILURE.
 
-- [ ] **Step 3: The tool**
+- [x] **Step 3: The tool**
 
 In `Sources/Models/WorkspaceState.swift`, extend `EditorTool` — one case, three switch rows (the compiler walks you to each):
 
@@ -1975,7 +1975,7 @@ In `Sources/Views/WorkspaceModel.swift`, `activate(_:in:)`:
 
 (The tidy-up guards above the switch already clear pickers and selections for any tool that is not heal/clone/brush/gradient — the test pins it.)
 
-- [ ] **Step 4: `TATMath` + the model entry points**
+- [x] **Step 4: `TATMath` + the model entry points**
 
 Create `Sources/Models/TATMath.swift`:
 
@@ -2117,9 +2117,9 @@ In `Sources/Views/EditorModel.swift` (view-state section, beside the canvas pick
     }
 ```
 
-- [ ] **Step 5: Run all of Step 1's classes** — expected PASS. Also `-only-testing:PhotoEditorTests/ToolActivationTests` — PASS (the new tool rides the existing table tests).
+- [x] **Step 5: Run all of Step 1's classes** — expected PASS. Also `-only-testing:PhotoEditorTests/ToolActivationTests` — PASS (the new tool rides the existing table tests).
 
-- [ ] **Step 6: Canvas + options bar**
+- [x] **Step 6: Canvas + options bar**
 
 In `Sources/Views/CanvasArea.swift`, add to `EditCanvas` a `@State private var isTATDragging = false`, a branch in `overlays(in:)` before the retouch-paint branch:
 
@@ -2172,12 +2172,12 @@ In `Sources/Views/ToolRail.swift`, `ToolOptionsBar.options` gains its case (the 
 
 Menu: nothing to add — the Develop ▸ Tool submenu iterates `EditorTool.allCases` and already prints `"Target  (T)"` with no key equivalent, per the house rule.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `-only-testing:PhotoEditorTests/TATMathTests -only-testing:PhotoEditorTests/TATModelTests -only-testing:PhotoEditorTests/ToolActivationTests -only-testing:PhotoEditorTests/CanvasToolTests`
 Expected: ALL PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Sources/Models/TATMath.swift Sources/Models/WorkspaceState.swift Sources/Views/WorkspaceModel.swift Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Sources/Views/ToolRail.swift Tests/TATMathTests.swift project.yml PhotoEditor.xcodeproj

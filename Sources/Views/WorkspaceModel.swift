@@ -84,6 +84,8 @@ final class WorkspaceModel {
             // Balance panel instead, where the disabled affordance says why.
             if !model.isSensorDomainWB { model.canvasPicker = .whiteBalance }
             inspectorMode = .adjust
+        case .targetedAdjustment:
+            inspectorMode = .adjust
         case .compare:
             break
         }

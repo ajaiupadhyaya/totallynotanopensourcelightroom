@@ -21,6 +21,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
     case brush
     case gradient
     case eyedropper
+    case targetedAdjustment
     case compare
 
     var id: Self { self }
@@ -34,6 +35,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .brush: "Brush"
         case .gradient: "Gradient"
         case .eyedropper: "Eyedropper"
+        case .targetedAdjustment: "Target"
         case .compare: "Compare"
         }
     }
@@ -56,6 +58,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .brush: "paintbrush.pointed"
         case .gradient: "circle.righthalf.filled"
         case .eyedropper: "eyedropper.halffull"
+        case .targetedAdjustment: "target"
         case .compare: "rectangle.split.2x1"
         }
     }
@@ -67,7 +70,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
     var isViewingAid: Bool {
         switch self {
         case .hand, .compare: true
-        case .crop, .heal, .clone, .brush, .gradient, .eyedropper: false
+        case .crop, .heal, .clone, .brush, .gradient, .eyedropper, .targetedAdjustment: false
         }
     }
 
@@ -80,6 +83,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .brush: "B"
         case .gradient: "G"
         case .eyedropper: "I"
+        case .targetedAdjustment: "T"
         case .compare: "\\"
         }
     }
