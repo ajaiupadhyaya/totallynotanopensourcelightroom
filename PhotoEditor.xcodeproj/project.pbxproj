@@ -14,6 +14,7 @@
 		03E1E831E98D8C6286A03E05 /* KernelInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */; };
 		04F21DBAAAC3AADDE5DD5C67 /* FilmBaseSamplerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */; };
 		05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */; };
+		08651A74EF3955351AF02DD6 /* August13CorpusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31E07862E83EF4F8C4C34400 /* August13CorpusTests.swift */; };
 		09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */; };
 		0E9C125BCDD2DD2C9B08B43A /* FilmPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC55460271E2A012E80DEEEC /* FilmPanel.swift */; };
 		0FE187815F46E6FBA7EA16D9 /* EffectsCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0613C6D1D19EC2716F5195 /* EffectsCalibrationTests.swift */; };
@@ -209,6 +210,7 @@
 		2FD938034F25DF5C6F7C770D /* LocalAdjustment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustment.swift; sourceTree = "<group>"; };
 		30B68D5C8D421896627EA502 /* CalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationTests.swift; sourceTree = "<group>"; };
 		318A7023BA2D062B24B030DF /* ThumbnailGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGenerator.swift; sourceTree = "<group>"; };
+		31E07862E83EF4F8C4C34400 /* August13CorpusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = August13CorpusTests.swift; sourceTree = "<group>"; };
 		33504B58655C1069B9AC1763 /* LocalAdjustmentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustmentPanel.swift; sourceTree = "<group>"; };
 		34FEC24C32C5F093C51EAA15 /* InspectorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorPanel.swift; sourceTree = "<group>"; };
 		350EA798A8E21108CE3C863B /* MaskOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskOverlayTests.swift; sourceTree = "<group>"; };
@@ -406,6 +408,7 @@
 			isa = PBXGroup;
 			children = (
 				5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */,
+				31E07862E83EF4F8C4C34400 /* August13CorpusTests.swift */,
 				15EA91B171D5F7331561914B /* AutoInvertTests.swift */,
 				955FF06504B66581F45A5A7B /* CalibrationSupport.swift */,
 				30B68D5C8D421896627EA502 /* CalibrationTests.swift */,
@@ -712,6 +715,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */,
+				08651A74EF3955351AF02DD6 /* August13CorpusTests.swift in Sources */,
 				493BD7BCDAF47B0BCE4AD20D /* AutoInvertTests.swift in Sources */,
 				96047658B9B680F93410FFA6 /* CalibrationSupport.swift in Sources */,
 				BA766B47DB98E7CEA6552A06 /* CalibrationTests.swift in Sources */,

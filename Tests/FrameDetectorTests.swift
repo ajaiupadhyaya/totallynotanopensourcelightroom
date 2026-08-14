@@ -188,5 +188,58 @@ final class FrameDetectorTests: XCTestCase {
                        "undo must revert the detected crop with the conversion")
         XCTAssertFalse(model.editStack.filmNegative.isEnabled)
     }
+
+    /// A negative held further from the phone: the lit rectangle is a SMALL
+    /// share of a mostly-dark tabletop. Measured on IMG_7191 (2026-08-13
+    /// corpus) — the lightbox spans 21.3% of the frame, the thin picture area
+    /// classifies as backlight frame-wide so the film-fraction run cannot
+    /// form, and the lightbox fallback is the designed answer.
+    ///
+    /// Built as pixels, not a composite, because the failure needs the film
+    /// to read THIN — the exact condition a well-behaved synthetic negative
+    /// does not reproduce.
+    ///
+    /// This is the case where cropping matters MOST: refusing it hands Auto a
+    /// frame that is four-fifths tabletop, and the solve reads that dark
+    /// surround as maximum density (measured: dmax 2.7, print EV 4.69, a
+    /// blown render carrying no degradation warning).
+    func testDetectsASmallLightboxOnADarkTable() {
+        let width = 128, height = 96
+        let rows = 13..<70, cols = 45..<91
+        var pixels = [(Double, Double, Double)](repeating: (0.02, 0.02, 0.025),
+                                                count: width * height)
+        for row in rows {
+            for col in cols {
+                // Thin base: bright and neutral, so the chroma cue reads it as
+                // backlight (nothing orange survives) while the absolute luma
+                // floor does not — every pixel-wise cue loses this film.
+                // Every fifth pixel is dense picture, which keeps a film
+                // signal present but far below the 0.5 run threshold.
+                pixels[row * width + col] = (row + col).isMultiple(of: 5)
+                    ? (0.06, 0.04, 0.02)
+                    : (0.5, 0.5, 0.52)
+            }
+        }
+        let lightboxArea = Double(rows.count * cols.count) / Double(width * height)
+        XCTAssertLessThan(lightboxArea, FrameDetector.minimumBoxAreaFraction,
+                          "precondition: this scan is the sub-25% case")
+
+        let frame = FrameDetector.detect(pixels: pixels, width: width, height: height)
+        let rect = try? XCTUnwrap(frame?.rect,
+                                  "a small lit rectangle on a dark table is a "
+                                  + "lightbox scan — refusing it is what blew "
+                                  + "IMG_7191")
+        XCTAssertEqual(rect?.minX ?? -1, Double(cols.lowerBound) / Double(width),
+                       accuracy: 0.02)
+        XCTAssertEqual(rect?.width ?? -1, Double(cols.count) / Double(width),
+                       accuracy: 0.02)
+        XCTAssertEqual(rect?.minY ?? -1,
+                       Double(height - rows.upperBound) / Double(height),
+                       accuracy: 0.02)
+        XCTAssertEqual(rect?.height ?? -1, Double(rows.count) / Double(height),
+                       accuracy: 0.02)
+        XCTAssertNil(frame?.rebateBase,
+                     "the fallback does not know where the rebate is")
+    }
 }
 

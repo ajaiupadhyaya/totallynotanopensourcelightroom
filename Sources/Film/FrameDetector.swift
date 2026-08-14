@@ -67,6 +67,25 @@ enum FrameDetector {
     /// of the frame — a box that is the whole frame crops nothing.
     static let lightboxFallbackMaxAreaFraction = 0.92
 
+    /// The fallback's own floor, against the FRAME. Distinct from
+    /// `minimumBoxAreaFraction` on purpose: that one asks "is this box a
+    /// plausible share of the lightbox", and the primary path deliberately
+    /// measures it that way because "a scan that includes lots of table
+    /// legitimately shrinks the film's share of the frame" (see the gate
+    /// below). Reusing it here re-imposed against the whole frame exactly the
+    /// assumption that reasoning rejects, and refused the scans that need
+    /// cropping MOST: measured on IMG_7191 (2026-08-13), a negative held
+    /// further from the phone lit 21.3% of the frame, was refused, and Auto
+    /// then measured four-fifths tabletop — dmax 2.7, print EV 4.69, blown,
+    /// with no degradation warning. The sibling frame at 28.3% converted
+    /// correctly through this same fallback.
+    ///
+    /// 0.10 keeps a floor against an absurd crop while staying consistent
+    /// with `minimumBacklightFraction`: the span contains essentially every
+    /// backlight pixel, so a box below the entry gate's own 0.08 is not a
+    /// scan this detector accepted in the first place.
+    static let lightboxFallbackMinAreaFraction = 0.10
+
     /// The rebate ring: the outer band of the detected box, as a fraction of
     /// the box's smaller side.
     static let ringFraction = 0.10
@@ -241,7 +260,7 @@ enum FrameDetector {
         func lightboxFallback() -> DetectedFrame? {
             let lightboxArea = Double(boxRows.count * boxCols.count)
             guard lightboxArea / Double(pixels.count) <= lightboxFallbackMaxAreaFraction,
-                  lightboxArea / Double(pixels.count) >= minimumBoxAreaFraction
+                  lightboxArea / Double(pixels.count) >= lightboxFallbackMinAreaFraction
             else { return nil }
             let rect = CGRect(
                 x: Double(boxCols.lowerBound) / Double(width),
