@@ -43,6 +43,17 @@ struct DevelopPreset: Codable, Identifiable, Equatable, FetchableRecord, Persist
     }
 }
 
+extension DevelopPreset {
+    /// The group column parsed as a folder path: "Portra/Warm" nests Warm
+    /// under Portra. Pure presentation — the catalog schema is untouched.
+    var folderPath: [String] {
+        let parts = group.split(separator: "/")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? ["User Presets"] : parts
+    }
+}
+
 /// Which parts of an edit stack to carry over when applying a preset or
 /// pasting settings.
 ///
@@ -81,6 +92,61 @@ struct EditTransferOptions: Equatable {
 }
 
 extension EditStack {
+    /// `self` moved `amount` of the way toward `target`: every `Double` in
+    /// the stack lerps; everything discrete (treatments, point lists, LUT
+    /// data, spot arrays) takes `target`'s value whole for any amount > 0 —
+    /// half a curve point list is not a meaningful object. Callers produce
+    /// `target` via `applying(_:options:)`, so the per-frame exclusions
+    /// (crop, film base) are already respected before interpolation.
+    func interpolated(toward target: EditStack, amount: Double) -> EditStack {
+        let t = min(max(amount, 0), 1)
+        if t <= 0 { return self }
+        if t >= 1 { return target }
+        var result = target
+        func lerp(_ path: WritableKeyPath<EditStack, Double>) {
+            result[keyPath: path] = self[keyPath: path]
+                + (target[keyPath: path] - self[keyPath: path]) * t
+        }
+        // Light, WB, presence, detail, effects, parametric curve — the same
+        // field inventory ControlConformanceTests walks; keep the two lists
+        // in sight of each other when adding a slider.
+        for path: WritableKeyPath<EditStack, Double> in [
+            \.exposure, \.contrast, \.highlights, \.shadows, \.whites, \.blacks,
+            \.whiteBalanceTemp, \.whiteBalanceTint,
+            \.texture, \.clarity, \.dehaze, \.vibrance, \.saturation,
+            \.sharpenAmount, \.sharpenRadius, \.luminanceNoiseReduction, \.colorNoiseReduction,
+            \.vignetteAmount, \.vignetteMidpoint, \.vignetteRoundness,
+            \.vignetteFeather, \.vignetteHighlights, \.grainAmount, \.grainSize,
+            \.toneCurveHighlights, \.toneCurveLights, \.toneCurveDarks, \.toneCurveShadows,
+        ] { lerp(path) }
+        // Colour scalars: mixer bands, B&W mix, grading zones lerp per field.
+        for (index, band) in target.color.mixer.bands.enumerated() {
+            let mine = color.mixer.bands[index]
+            result.color.mixer.bands[index].hue = mine.hue + (band.hue - mine.hue) * t
+            result.color.mixer.bands[index].saturation =
+                mine.saturation + (band.saturation - mine.saturation) * t
+            result.color.mixer.bands[index].luminance =
+                mine.luminance + (band.luminance - mine.luminance) * t
+        }
+        for index in target.color.mixer.blackAndWhiteMix.indices {
+            let mine = color.mixer.blackAndWhiteMix[index]
+            result.color.mixer.blackAndWhiteMix[index] =
+                mine + (target.color.mixer.blackAndWhiteMix[index] - mine) * t
+        }
+        for path: WritableKeyPath<EditStack, ColorGradeZone> in [
+            \.color.grading.shadows, \.color.grading.midtones,
+            \.color.grading.highlights, \.color.grading.global,
+        ] {
+            let mine = self[keyPath: path]
+            let theirs = target[keyPath: path]
+            result[keyPath: path].saturation = mine.saturation
+                + (theirs.saturation - mine.saturation) * t
+            result[keyPath: path].luminance = mine.luminance
+                + (theirs.luminance - mine.luminance) * t
+        }
+        return result
+    }
+
     /// Returns this stack with the selected parts of `other` applied over it.
     func applying(_ other: EditStack, options: EditTransferOptions = .init()) -> EditStack {
         var result = self

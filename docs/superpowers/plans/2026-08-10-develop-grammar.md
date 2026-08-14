@@ -2497,7 +2497,7 @@ Hovering a preset row renders the candidate stack to the canvas through the exis
 - Consumes: `DevelopPreset`, `EditStack.applying(_:options:)`, `AppModel.savePreset/deletePreset/reloadPresets`, `catalog.savePreset`, `RenderScheduler` (implicitly, via `renderPreview()`).
 - Produces: `EditStack.interpolated(toward:amount:)`, `DevelopPreset.folderPath`, `EditorModel.beginPresetPreview(_:amount:)/endPresetPreview(_:)/applyPreset(_:amount:)`, `AppModel.exportedPresetData()/importPresetData(_:)/importPresets(from:)/exportPresets()`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/PresetWorkflowTests.swift`:
 
@@ -2616,9 +2616,9 @@ final class PresetStorageTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run the three classes** — expected COMPILE FAILURE.
+- [x] **Step 2: Run the three classes** — expected COMPILE FAILURE.
 
-- [ ] **Step 3: The model pieces**
+- [x] **Step 3: The model pieces**
 
 In `Sources/Models/DevelopPreset.swift`:
 
@@ -2770,9 +2770,9 @@ In `Sources/App/AppModel.swift` — panels thin, logic testable:
 
 plus the two `NSOpenPanel`/`NSSavePanel` wrappers `importPresets()` / `exportPresets()` (the `ColorMixerPanel.importLUT` pattern: allowed type `json`, then call the data methods).
 
-- [ ] **Step 4: Run the three classes** — expected PASS.
+- [x] **Step 4: Run the three classes** — expected PASS.
 
-- [ ] **Step 5: The panel**
+- [x] **Step 5: The panel**
 
 In `Sources/Views/SliderPanel/PresetPanel.swift`:
 - Add `@State private var presetAmount = 100.0` and `@State private var presetGroup = ""`; an `AdjustmentSlider(title: "Amount", value: $presetAmount, range: 0...100, format: "%.0f", neutral: 100)` above the list.
@@ -2827,12 +2827,12 @@ In `Sources/App/EditorCommands.swift`, File group (after "Export…"):
 
 (No key equivalents — infrequent commands do not spend shortcuts.)
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run: `-only-testing:PhotoEditorTests/PresetAmountTests -only-testing:PhotoEditorTests/PresetPreviewTests -only-testing:PhotoEditorTests/PresetStorageTests -only-testing:PhotoEditorTests/WorkflowTests -only-testing:PhotoEditorTests/EditorUndoTests`
 Expected: ALL PASS (`WorkflowTests` proves `applying(_:options:)` semantics undisturbed).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/Models/DevelopPreset.swift Sources/Views/SliderPanel/PresetPanel.swift Sources/Views/EditorModel.swift Sources/App/AppModel.swift Sources/App/EditorCommands.swift Tests/PresetWorkflowTests.swift project.yml PhotoEditor.xcodeproj

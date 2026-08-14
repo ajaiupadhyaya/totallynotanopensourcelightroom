@@ -33,6 +33,11 @@ struct EditorCommands: Commands {
                 .keyboardShortcut("e", modifiers: [.command, .shift])
                 .disabled(editor == nil)
 
+            // No key equivalents: infrequent commands do not spend shortcuts.
+            Button("Import Presets…") { app.importPresets() }
+            Button("Export Presets…") { app.exportPresets() }
+                .disabled(app.presets.isEmpty)
+
             Divider()
 
             Button("Create Virtual Copy") {

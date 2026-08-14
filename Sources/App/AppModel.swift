@@ -1,3 +1,4 @@
+import AppKit
 import CoreImage
 import Foundation
 import Observation
@@ -399,6 +400,62 @@ final class AppModel {
     func deletePreset(_ preset: DevelopPreset) {
         try? catalog.deletePreset(id: preset.id)
         reloadPresets()
+    }
+
+    /// All presets as a JSON array — the same Codable the catalog stores.
+    func exportedPresetData() -> Data? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try? encoder.encode(presets)
+    }
+
+    /// Decodes a preset file (a single object or an array), minting fresh ids
+    /// so importing twice duplicates rather than silently clobbers. Returns
+    /// the count imported.
+    @discardableResult
+    func importPresetData(_ data: Data) -> Int {
+        let decoder = JSONDecoder()
+        let decoded: [DevelopPreset]
+        if let list = try? decoder.decode([DevelopPreset].self, from: data) {
+            decoded = list
+        } else if let one = try? decoder.decode(DevelopPreset.self, from: data) {
+            decoded = [one]
+        } else {
+            errorMessage = "That file is not a preset export."
+            return 0
+        }
+        var imported = 0
+        for preset in decoded {
+            var fresh = preset
+            fresh.id = UUID().uuidString
+            if (try? catalog.savePreset(fresh)) != nil { imported += 1 }
+        }
+        reloadPresets()
+        return imported
+    }
+
+    /// Reads a preset file the person picks. The panel work is here so the
+    /// panels stay declarative — the same shape as `ColorMixerPanel.importLUT`.
+    func importPresets() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? Data(contentsOf: url) else { return }
+        importPresetData(data)
+    }
+
+    func exportPresets() {
+        guard let data = exportedPresetData() else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "Presets.json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try data.write(to: url)
+        } catch {
+            errorMessage = "Could not write the preset file: \(error.localizedDescription)"
+        }
     }
 
     // MARK: Batch export

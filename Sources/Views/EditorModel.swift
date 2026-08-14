@@ -740,6 +740,33 @@ final class EditorModel {
         editStack = editStack.applying(preset.editStack, options: options)
     }
 
+    // MARK: Preset preview (view state, never persisted)
+
+    /// The candidate stack shown while a preset row is hovered, keyed by the
+    /// preset so a stale mouse-out cannot clear a newer hover.
+    private(set) var presetPreview: (presetID: String, stack: EditStack)?
+
+    func beginPresetPreview(_ preset: DevelopPreset, amount: Double) {
+        presetPreview = (preset.id, candidateStack(for: preset, amount: amount))
+        renderPreview()
+    }
+
+    func endPresetPreview(_ preset: DevelopPreset) {
+        guard presetPreview?.presetID == preset.id else { return }
+        presetPreview = nil
+        renderPreview()
+    }
+
+    /// Applies a preset at an amount — one stack assignment, one undo step.
+    func applyPreset(_ preset: DevelopPreset, amount: Double) {
+        presetPreview = nil
+        editStack = candidateStack(for: preset, amount: amount)
+    }
+
+    private func candidateStack(for preset: DevelopPreset, amount: Double) -> EditStack {
+        editStack.interpolated(toward: editStack.applying(preset.editStack), amount: amount)
+    }
+
     // MARK: Snapshots
 
     /// Saved states of this photo's edit stack, newest first.
@@ -1554,6 +1581,9 @@ final class EditorModel {
             return
         }
         var stack = isShowingBefore ? beforeStack : editStack
+        // A hovered preset takes the canvas without touching the stack — the
+        // whole point of the preview is that nothing is committed.
+        if let presetPreview { stack = presetPreview.stack }
         if isCropping {
             // Show the full frame while composing the crop.
             stack.geometry.cropRect = .unitFrame
