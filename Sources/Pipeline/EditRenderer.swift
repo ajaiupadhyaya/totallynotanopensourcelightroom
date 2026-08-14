@@ -321,17 +321,46 @@ struct EditRenderer {
         if hasParametricToneCurve(stack) {
             result = applyParametricToneCurve(result, stack: stack)
         }
-        guard stack.toneCurvePoints.count == 5 else { return result }
-        // CIToneCurve interpolates display-referred values internally (verified by
-        // CalibrationTests' peak-placement test), so no explicit space conversion is needed here.
-        let curve = CIFilter.toneCurve()
-        curve.inputImage = result
-        curve.point0 = stack.toneCurvePoints[0]
-        curve.point1 = stack.toneCurvePoints[1]
-        curve.point2 = stack.toneCurvePoints[2]
-        curve.point3 = stack.toneCurvePoints[3]
-        curve.point4 = stack.toneCurvePoints[4]
-        return curve.outputImage ?? result
+        switch stack.toneCurvePoints.count {
+        case 0, 1:
+            return result
+        case 5:
+            // The frozen path, verbatim: every photo persisted to date has
+            // exactly five points, and they must keep rendering bit-for-bit
+            // through the same filter. (CIToneCurve interpolates
+            // display-referred values internally — CalibrationTests.)
+            let curve = CIFilter.toneCurve()
+            curve.inputImage = result
+            curve.point0 = stack.toneCurvePoints[0]
+            curve.point1 = stack.toneCurvePoints[1]
+            curve.point2 = stack.toneCurvePoints[2]
+            curve.point3 = stack.toneCurvePoints[3]
+            curve.point4 = stack.toneCurvePoints[4]
+            return curve.outputImage ?? result
+        default:
+            return applyFreePointCurve(result, points: stack.toneCurvePoints)
+        }
+    }
+
+    /// Any point count CIToneCurve can't take: 256 samples of the same
+    /// Catmull-Rom the per-channel curves already render through
+    /// (`ColorScience.evaluateCurve`), applied by CIColorCurves in sRGB so
+    /// the free path is display-referred exactly like the 5-point path.
+    private func applyFreePointCurve(_ image: CIImage, points: [CGPoint]) -> CIImage {
+        let samples = 256
+        var data = [Float]()
+        data.reserveCapacity(samples * 3)
+        for i in 0..<samples {
+            let y = Float(ColorScience.evaluateCurve(points, at: Double(i) / Double(samples - 1)))
+            data.append(y); data.append(y); data.append(y)
+        }
+        guard let filter = CIFilter(name: "CIColorCurves") else { return image }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        filter.setValue(data.withUnsafeBufferPointer { Data(buffer: $0) },
+                        forKey: "inputCurvesData")
+        filter.setValue(CIVector(x: 0, y: 1), forKey: "inputCurvesDomain")
+        filter.setValue(CGColorSpace(name: CGColorSpace.sRGB)!, forKey: "inputColorSpace")
+        return filter.outputImage ?? image
     }
 
     private func hasParametricToneCurve(_ stack: EditStack) -> Bool {

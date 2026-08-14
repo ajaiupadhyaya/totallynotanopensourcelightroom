@@ -36,7 +36,8 @@ struct CurvePanel: View {
             selection: $channel
         )
 
-        ToneCurveEditor(points: pointsBinding, lineColor: channel.color)
+        ToneCurveEditor(points: pointsBinding, lineColor: channel.color,
+                        allowsFreePoints: model.editStack.processVersion >= 2)
             .frame(height: 190)
 
         if channel == .rgb {
@@ -54,8 +55,11 @@ struct CurvePanel: View {
                              range: -100...100, format: "%.0f", neutral: 0)
         }
 
-        Text("Drag a point vertically to reshape. Double-click to reset "
-             + "this channel.")
+        Text(model.editStack.processVersion >= 2
+             ? "Click the curve to add a point, drag to shape, right-click "
+               + "a point to remove it. Double-click resets this channel."
+             : "Drag a point vertically to reshape. Double-click to reset "
+               + "this channel.")
             .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(Theme.secondaryText)
     }

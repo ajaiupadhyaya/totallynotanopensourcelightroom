@@ -15,20 +15,15 @@ struct ToneCurveEditor: View {
     /// when editing an individual channel.
     var lineColor: Color = .white
 
-    @State private var activeIndex: Int?
+    /// Free-point editing: click to add, drag in both axes, right-click to
+    /// remove. Off for a PV1 photo, whose renderer only reads five points.
+    var allowsFreePoints: Bool = false
 
-    /// The five identity control points, evenly spaced along the diagonal.
-    private static let identity: [CGPoint] = [
-        CGPoint(x: 0, y: 0),
-        CGPoint(x: 0.25, y: 0.25),
-        CGPoint(x: 0.5, y: 0.5),
-        CGPoint(x: 0.75, y: 0.75),
-        CGPoint(x: 1, y: 1),
-    ]
+    @State private var activeIndex: Int?
 
     /// The points to display — identity when the binding is empty.
     private var currentPoints: [CGPoint] {
-        points.isEmpty ? Self.identity : points
+        CurvePointModel.seeded(points)
     }
 
     var body: some View {
@@ -57,10 +52,31 @@ struct ToneCurveEditor: View {
                         .frame(width: 9, height: 9)
                         .position(screenPoint(currentPoints[index], in: size))
                 }
+
+                // Right-click deletes the point under the pointer. The event
+                // view claims only right-clicks, so left drags fall through
+                // to the gesture below it.
+                if allowsFreePoints {
+                    MouseEventView(onRightClick: { location in
+                        if let index = hitIndex(at: location, in: size) {
+                            points = CurvePointModel.removing(index: index, from: currentPoints)
+                        }
+                    })
+                }
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(in: size))
             .onTapGesture(count: 2) { points = [] }
+            .overlay(alignment: .topTrailing) {
+                if let index = activeIndex, currentPoints.indices.contains(index) {
+                    Text(String(format: "IN %.2f  OUT %.2f",
+                                currentPoints[index].x, currentPoints[index].y))
+                        .font(Theme.valueFont)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(5)
+                }
+            }
         }
         .overlay(
             RoundedRectangle(cornerRadius: 6)
@@ -71,17 +87,58 @@ struct ToneCurveEditor: View {
     // MARK: Gestures
 
     private func dragGesture(in size: CGSize) -> some Gesture {
-        DragGesture(minimumDistance: 2)
+        DragGesture(minimumDistance: allowsFreePoints ? 0 : 2)
             .onChanged { value in
-                var working = currentPoints
-                let index = activeIndex ?? nearestIndex(to: value.startLocation, in: size)
-                activeIndex = index
-                let normalizedY = 1 - Double(value.location.y / size.height)
-                working[index] = CGPoint(x: working[index].x,
-                                         y: min(max(normalizedY, 0), 1))
-                points = working
+                if allowsFreePoints {
+                    if activeIndex == nil {
+                        // Grab a nearby point, or add one where the click landed
+                        // — click-to-add and drag-to-shape are one gesture.
+                        let unit = unitPoint(value.startLocation, in: size)
+                        if let hit = hitIndex(at: value.startLocation, in: size) {
+                            activeIndex = hit
+                        } else {
+                            let (added, index) = CurvePointModel.adding(unit, to: currentPoints)
+                            points = added
+                            activeIndex = index
+                        }
+                    }
+                    guard let index = activeIndex else { return }
+                    points = CurvePointModel.moving(index: index,
+                                                    to: unitPoint(value.location, in: size),
+                                                    in: currentPoints)
+                } else {
+                    // The five-column legacy editor, verbatim: nearest column,
+                    // vertical drag only.
+                    var working = currentPoints
+                    let index = activeIndex ?? nearestIndex(to: value.startLocation, in: size)
+                    activeIndex = index
+                    let normalizedY = 1 - Double(value.location.y / size.height)
+                    working[index] = CGPoint(x: working[index].x,
+                                             y: min(max(normalizedY, 0), 1))
+                    points = working
+                }
             }
             .onEnded { _ in activeIndex = nil }
+    }
+
+    /// The point under the pointer, within a comfortable grab radius — 2-D,
+    /// unlike the legacy column search.
+    private func hitIndex(at location: CGPoint, in size: CGSize) -> Int? {
+        let grabRadius: CGFloat = 14
+        return currentPoints.indices.min(by: {
+            distance(currentPoints[$0], location, in: size)
+                < distance(currentPoints[$1], location, in: size)
+        }).flatMap { distance(currentPoints[$0], location, in: size) < grabRadius ? $0 : nil }
+    }
+
+    private func distance(_ unit: CGPoint, _ screen: CGPoint, in size: CGSize) -> CGFloat {
+        let p = screenPoint(unit, in: size)
+        return hypot(p.x - screen.x, p.y - screen.y)
+    }
+
+    private func unitPoint(_ screen: CGPoint, in size: CGSize) -> CGPoint {
+        CGPoint(x: min(max(screen.x / size.width, 0), 1),
+                y: min(max(1 - screen.y / size.height, 0), 1))
     }
 
     /// The control point whose column is horizontally nearest the touch.

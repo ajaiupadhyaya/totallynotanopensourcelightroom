@@ -1431,7 +1431,7 @@ git commit -m "feat(histogram): draggable regions bound to the Light fields, per
 - Consumes: `ColorScience.evaluateCurve(_:at:)`, `MouseEventView.onRightClick`, `EditRenderer.applyToneCurve` as it stands.
 - Produces: `CurvePointModel.identity/seeded/adding/moving/removing` (**reused by Task 5's TAT**), `ToneCurveEditor.allowsFreePoints`.
 
-- [ ] **Step 1: Write the failing model tests**
+- [x] **Step 1: Write the failing model tests**
 
 Create `Tests/CurvePointModelTests.swift`:
 
@@ -1588,9 +1588,9 @@ final class FreeCurveRenderTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run both classes** — expected COMPILE FAILURE (`CurvePointModel` does not exist), and `FreeCurveRenderTests.testAThreePointCurveLiftsMidGreyWhereItSays` would fail red even once compiling (today `count != 5` returns the input untouched).
+- [x] **Step 2: Run both classes** — expected COMPILE FAILURE (`CurvePointModel` does not exist), and `FreeCurveRenderTests.testAThreePointCurveLiftsMidGreyWhereItSays` would fail red even once compiling (today `count != 5` returns the input untouched).
 
-- [ ] **Step 3: Implement `Sources/Models/CurvePointModel.swift`**
+- [x] **Step 3: Implement `Sources/Models/CurvePointModel.swift`**
 
 ```swift
 import CoreGraphics
@@ -1653,7 +1653,7 @@ enum CurvePointModel {
 }
 ```
 
-- [ ] **Step 4: The renderer's free path**
+- [x] **Step 4: The renderer's free path**
 
 In `Sources/Pipeline/EditRenderer.swift`, replace the tail of `applyToneCurve` (from `guard stack.toneCurvePoints.count == 5 else { return result }` down) with:
 
@@ -1702,9 +1702,9 @@ In `Sources/Pipeline/EditRenderer.swift`, replace the tail of `applyToneCurve` (
 
 (`LegacyToneRenderer.swift` is **not** touched — its `count == 5` guard is the PV1 freeze.)
 
-- [ ] **Step 5: Run CurvePointModelTests + FreeCurveRenderTests** — expected PASS. Also `-only-testing:PhotoEditorTests/CalibrationTests -only-testing:PhotoEditorTests/ProcessVersionTests` (frozen paths undisturbed) — PASS.
+- [x] **Step 5: Run CurvePointModelTests + FreeCurveRenderTests** — expected PASS. Also `-only-testing:PhotoEditorTests/CalibrationTests -only-testing:PhotoEditorTests/ProcessVersionTests` (frozen paths undisturbed) — PASS.
 
-- [ ] **Step 6: The editor**
+- [x] **Step 6: The editor**
 
 In `Sources/Views/SliderPanel/ToneCurveEditor.swift`:
 - Add `var allowsFreePoints: Bool = false` and delete the private `identity` array in favour of `CurvePointModel.identity` (same five points, one owner).
@@ -1809,12 +1809,12 @@ In `Sources/Views/SliderPanel/CurvePanel.swift`: pass the gate and split the hel
 
 (The per-channel R/G/B tabs get free points for free: `ChannelCurves` storage is already variable-length and already renders through `evaluateCurve` in the LUT.)
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `-only-testing:PhotoEditorTests/CurvePointModelTests -only-testing:PhotoEditorTests/FreeCurveRenderTests -only-testing:PhotoEditorTests/ColorMixerTests -only-testing:PhotoEditorTests/EditorUndoTests`
 Expected: ALL PASS. `ControlConformanceTests` needs no change: `toneCurvePoints` keeps its existing exclusion row ("CalibrationTests — point curve"), and this task adds no `EditStack` field.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Sources/Models/CurvePointModel.swift Sources/Views/SliderPanel/ToneCurveEditor.swift Sources/Views/SliderPanel/CurvePanel.swift Sources/Pipeline/EditRenderer.swift Tests/CurvePointModelTests.swift Tests/FreeCurveRenderTests.swift project.yml PhotoEditor.xcodeproj

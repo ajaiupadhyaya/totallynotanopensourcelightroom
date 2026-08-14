@@ -15,6 +15,7 @@
 		04F21DBAAAC3AADDE5DD5C67 /* FilmBaseSamplerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */; };
 		05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */; };
 		08651A74EF3955351AF02DD6 /* August13CorpusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31E07862E83EF4F8C4C34400 /* August13CorpusTests.swift */; };
+		09A8F2393B513D94E2497668 /* CurvePointModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC77CC3F8071A3DDC211E115 /* CurvePointModel.swift */; };
 		09B0D82C3C5745338BC8FD37 /* AdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C531F9374D1EF7EEE172C0B /* AdjustmentTests.swift */; };
 		0E9C125BCDD2DD2C9B08B43A /* FilmPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC55460271E2A012E80DEEEC /* FilmPanel.swift */; };
 		0FE187815F46E6FBA7EA16D9 /* EffectsCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0613C6D1D19EC2716F5195 /* EffectsCalibrationTests.swift */; };
@@ -37,6 +38,7 @@
 		3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */; };
 		36CAEE8082B31C61445393B3 /* MLMaskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7EEB7632D72A68035D921B /* MLMaskCache.swift */; };
 		38EA1CBDA9325C4D4C1D68D6 /* HistogramInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48BCC7ADFA35956819BC1509 /* HistogramInteractionTests.swift */; };
+		3A32789C761072122815E9BC /* CurvePointModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AD74D811B494DD426DC29E6 /* CurvePointModelTests.swift */; };
 		3C3E5C9418B42A813DE9B1AD /* CastSolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */; };
 		3D213130578B516FDDA852B1 /* AutoInvert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107B093C10CB7D47BD1EFF8C /* AutoInvert.swift */; };
 		3DE235260D6D0BEE9761CADA /* GeometryTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = C231ACFC3FB91F21E619E47D /* GeometryTransform.swift */; };
@@ -58,6 +60,7 @@
 		51D1BAE24D52D1D237EF1D7C /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43954DA441D273C7823E7F1 /* WorkspaceModel.swift */; };
 		527F26C97FA8BD75E7190F21 /* InstrumentControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2357C6C502EEF260D658192 /* InstrumentControls.swift */; };
 		53768A5D1DF988CB2B1EC9B4 /* RenderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = E42C1490F52AA8D6C49187F4 /* RenderScheduler.swift */; };
+		54F46F03A05BDD1259C3AC99 /* FreeCurveRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD101EE79D33F0EEA658A3A /* FreeCurveRenderTests.swift */; };
 		570C74449990BD1E6D784AD7 /* MouseEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50089E2B4EB58047E2354371 /* MouseEventView.swift */; };
 		57D619727DA47A58B29D4CF8 /* EditStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B0E50E4F655388B03702D4 /* EditStack.swift */; };
 		57DD920F5D4D11086F682CAF /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B5233289A7A627F06097F5 /* Geometry.swift */; };
@@ -239,6 +242,7 @@
 		48BCC7ADFA35956819BC1509 /* HistogramInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramInteractionTests.swift; sourceTree = "<group>"; };
 		4A7EEB7632D72A68035D921B /* MLMaskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLMaskCache.swift; sourceTree = "<group>"; };
 		4A9F7706BE51CB941DA66260 /* PaperResponseGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponseGoldenTests.swift; sourceTree = "<group>"; };
+		4AD74D811B494DD426DC29E6 /* CurvePointModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurvePointModelTests.swift; sourceTree = "<group>"; };
 		4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogEntry.swift; sourceTree = "<group>"; };
 		4B01AA2E30B8269B816A99FB /* PrintSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintSettings.swift; sourceTree = "<group>"; };
 		4C7275DDAFF22956BEA0FB6A /* RealScanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealScanTests.swift; sourceTree = "<group>"; };
@@ -274,6 +278,7 @@
 		7C38A94FD7721527DCC95870 /* LocalAdjustmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAdjustmentTests.swift; sourceTree = "<group>"; };
 		7C4B3091A6443432FE97A32E /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
 		7EA9C4F9163E86F2CB8A1F3D /* ControlConformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlConformanceTests.swift; sourceTree = "<group>"; };
+		7FD101EE79D33F0EEA658A3A /* FreeCurveRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeCurveRenderTests.swift; sourceTree = "<group>"; };
 		80F11E5D7410F510CEE64411 /* KernelLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelLibrary.swift; sourceTree = "<group>"; };
 		847132E15765506858DF3E70 /* PointColorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointColorPanel.swift; sourceTree = "<group>"; };
 		857F137C47EFC7DDB2B22302 /* DefringeRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefringeRenderer.swift; sourceTree = "<group>"; };
@@ -349,6 +354,7 @@
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
 		F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTImporter.swift; sourceTree = "<group>"; };
 		F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponseTests.swift; sourceTree = "<group>"; };
+		FC77CC3F8071A3DDC211E115 /* CurvePointModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurvePointModel.swift; sourceTree = "<group>"; };
 		FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopPreset.swift; sourceTree = "<group>"; };
 		FF238B5CC1C1EE726DDC565F /* EffectsStages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsStages.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -441,6 +447,7 @@
 				634AF0BE48892F8CFC09DC21 /* CompareModeTests.swift */,
 				25C0990746E37E255E346136 /* ConformanceSupport.swift */,
 				7EA9C4F9163E86F2CB8A1F3D /* ControlConformanceTests.swift */,
+				4AD74D811B494DD426DC29E6 /* CurvePointModelTests.swift */,
 				AA6C9B80F5A1EE2ABD8E9A86 /* DisplayToggleConformanceTests.swift */,
 				BD40FF611C66AC099F6A793E /* EditorModelTests.swift */,
 				7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */,
@@ -454,6 +461,7 @@
 				1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */,
 				753E17A3CC2C17EB5312E084 /* FilmStockStoreTests.swift */,
 				602A945D557793B1AF3A7AB3 /* FrameDetectorTests.swift */,
+				7FD101EE79D33F0EEA658A3A /* FreeCurveRenderTests.swift */,
 				091C43C1EDDF307D8B43C947 /* GeometryTests.swift */,
 				48BCC7ADFA35956819BC1509 /* HistogramInteractionTests.swift */,
 				6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */,
@@ -525,6 +533,7 @@
 			children = (
 				4AEC490941AE44AE87F8C99C /* CatalogEntry.swift */,
 				6B22E289B6818B14FC289C0C /* ColorSettings.swift */,
+				FC77CC3F8071A3DDC211E115 /* CurvePointModel.swift */,
 				5B1C63E06502A5AD187DA403 /* Defringe.swift */,
 				FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */,
 				A0B40283F9A733AFDDB76B88 /* EditSnapshot.swift */,
@@ -752,6 +761,7 @@
 				7D47DE9821F0272298076F43 /* CompareModeTests.swift in Sources */,
 				10E6675BB4186081D2CB3FA5 /* ConformanceSupport.swift in Sources */,
 				51786F263A90B4D96FB0FCCE /* ControlConformanceTests.swift in Sources */,
+				3A32789C761072122815E9BC /* CurvePointModelTests.swift in Sources */,
 				AA3751E17D1F5CEE73292DBF /* DisplayToggleConformanceTests.swift in Sources */,
 				00567F018E603279A80735A8 /* EditRendererTests.swift in Sources */,
 				B228E00387CE887C8402E17E /* EditorModelTests.swift in Sources */,
@@ -765,6 +775,7 @@
 				8029E0360C35F25FE1988C2A /* FilmNegativeTests.swift in Sources */,
 				0074D52169F7EA3291738D38 /* FilmStockStoreTests.swift in Sources */,
 				9CEE2F4CD217D10C1CF5A9C0 /* FrameDetectorTests.swift in Sources */,
+				54F46F03A05BDD1259C3AC99 /* FreeCurveRenderTests.swift in Sources */,
 				45466F838219CF7761A727B2 /* GeometryTests.swift in Sources */,
 				38EA1CBDA9325C4D4C1D68D6 /* HistogramInteractionTests.swift in Sources */,
 				03E1E831E98D8C6286A03E05 /* KernelInfrastructureTests.swift in Sources */,
@@ -825,6 +836,7 @@
 				DFAEC479180238E0CBC15823 /* ColorStages.swift in Sources */,
 				AD60EE40143A15C8FE0BC6BE /* CullingCommands.swift in Sources */,
 				1D5A1CA413710403E332411D /* CurvePanel.swift in Sources */,
+				09A8F2393B513D94E2497668 /* CurvePointModel.swift in Sources */,
 				923E24859305CF8D1E1577FC /* Defringe.swift in Sources */,
 				95EEE8788082E374AFA57BBE /* DefringeRenderer.swift in Sources */,
 				05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */,
