@@ -90,7 +90,7 @@ Continuous 25–400% zoom anchored at the pointer, with the four existing stops 
 - Consumes: `EditorModel.zoomLevel/panOffset/previewPixelSize/displayImage`, `EditCanvas.fitInset`, the `clampedPan` clamp formula.
 - Produces (later tasks and the views rely on these exact names): `ZoomMath.fitScale/clamped/snapped/pan(anchoring:…)`, `NavigatorMath.visibleUnitRect/pan(centeringUnitPoint:…)`, `EditorModel.applyGestureZoom(scale:pan:)`, `EditorModel.zoomStep(_:)`, `MouseEventView` (reused for right-click in Task 4).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/ZoomMathTests.swift`:
 
@@ -213,12 +213,12 @@ final class GestureZoomModelTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `xcodegen generate`, then the build/test command with `-only-testing:PhotoEditorTests/ZoomMathTests`.
 Expected: COMPILE FAILURE (`ZoomMath`, `applyGestureZoom` do not exist) — this cycle's red.
 
-- [ ] **Step 3: Implement `Sources/Views/CanvasZoom.swift`**
+- [x] **Step 3: Implement `Sources/Views/CanvasZoom.swift`**
 
 ```swift
 import CoreGraphics
@@ -334,7 +334,7 @@ enum NavigatorMath {
 }
 ```
 
-- [ ] **Step 4: `EditorModel` — the gesture entry point**
+- [x] **Step 4: `EditorModel` — the gesture entry point**
 
 In `Sources/Views/EditorModel.swift`, replace the `zoomLevel` property (currently at the `// MARK: View state (not persisted)` section) and add the two methods:
 
@@ -385,9 +385,9 @@ In `Sources/Views/EditorModel.swift`, replace the `zoomLevel` property (currentl
     }
 ```
 
-- [ ] **Step 5: Run ZoomMathTests + GestureZoomModelTests** — expected PASS. Also run `-only-testing:PhotoEditorTests/CanvasToolTests` (placement + histogram untouched) — PASS.
+- [x] **Step 5: Run ZoomMathTests + GestureZoomModelTests** — expected PASS. Also run `-only-testing:PhotoEditorTests/CanvasToolTests` (placement + histogram untouched) — PASS.
 
-- [ ] **Step 6: The event bridge — `Sources/Views/Controls/MouseEventView.swift`**
+- [x] **Step 6: The event bridge — `Sources/Views/Controls/MouseEventView.swift`**
 
 ```swift
 import AppKit
@@ -459,7 +459,7 @@ struct MouseEventView: NSViewRepresentable {
 }
 ```
 
-- [ ] **Step 7: Wire the canvas**
+- [x] **Step 7: Wire the canvas**
 
 In `Sources/Views/CanvasArea.swift`, inside `EditCanvas.viewport`'s `ZStack` (between `overlays(in: rect)` and the `Color.clear` gesture layer — the hitTest filter means order barely matters, but keeping it under the click layer is tidy):
 
@@ -493,7 +493,7 @@ And add the helper to `EditCanvas`:
     }
 ```
 
-- [ ] **Step 8: The navigator — `Sources/Views/NavigatorPanel.swift`**
+- [x] **Step 8: The navigator — `Sources/Views/NavigatorPanel.swift`**
 
 ```swift
 import SwiftUI
@@ -561,7 +561,7 @@ Attach it in `EditCanvas.viewport` (the pan clamp in `imageRect` keeps whatever 
 
 Note: this `.overlay` goes on the inner `ZStack` **inside** the `GeometryReader` (it needs `viewportSize`), above `.clipped()`.
 
-- [ ] **Step 9: Menu entries**
+- [x] **Step 9: Menu entries**
 
 In `Sources/App/EditorCommands.swift`, extend the View `CommandGroup(after: .toolbar)` — after the existing "Zoom to 200%":
 
@@ -582,12 +582,12 @@ In `Sources/App/EditorCommands.swift`, extend the View `CommandGroup(after: .too
 
 (⌘-modified keys are real menu shortcuts, not bare keys — the menu binding is correct here, matching ⌘0/⌘1/⌘2.)
 
-- [ ] **Step 10: Verify**
+- [x] **Step 10: Verify**
 
 Run: `-only-testing:PhotoEditorTests/ZoomMathTests -only-testing:PhotoEditorTests/GestureZoomModelTests -only-testing:PhotoEditorTests/CanvasToolTests -only-testing:PhotoEditorTests/EditorModelTests`
 Expected: ALL PASS. The status bar (`CanvasStatusBar`) already prints continuous values (`"\(Int($0 * 100))%"`), and the top-bar `TabStrip` simply shows no underline at a free value — both fine as-is.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add Sources/Views/CanvasZoom.swift Sources/Views/Controls/MouseEventView.swift Sources/Views/NavigatorPanel.swift Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Sources/App/EditorCommands.swift Tests/ZoomMathTests.swift project.yml PhotoEditor.xcodeproj
@@ -607,7 +607,7 @@ git commit -m "feat(canvas): free zoom anchored at the pointer, detent stops, an
 **Interfaces:**
 - Produces: `EditorModel.CompareMode { off, sideBySide, split }`, `EditorModel.compareMode`, `.splitPosition`, `.beforeCIImage`, `.toggleCompare(_:)`. Task 10 extends the same `Esc` branch in `ToolKeyMonitor`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/CompareModeTests.swift` (the `makeEditor` helper is the `EditorModelTests` pattern verbatim):
 
@@ -680,9 +680,9 @@ final class CompareModeTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run** `-only-testing:PhotoEditorTests/CompareModeTests` — expected COMPILE FAILURE.
+- [x] **Step 2: Run** `-only-testing:PhotoEditorTests/CompareModeTests` — expected COMPILE FAILURE.
 
-- [ ] **Step 3: Implement the model**
+- [x] **Step 3: Implement the model**
 
 In `Sources/Views/EditorModel.swift`, in the `// MARK: Before / after` section:
 
@@ -728,9 +728,9 @@ In `renderPreviewNow()`, after `previewCIImage = shown` (and using the same `ren
         }
 ```
 
-- [ ] **Step 4: Run CompareModeTests** — expected PASS.
+- [x] **Step 4: Run CompareModeTests** — expected PASS.
 
-- [ ] **Step 5: Key routing**
+- [x] **Step 5: Key routing**
 
 In `Sources/Views/ToolKeyMonitor.swift`, in `handle(_:)` after the `"\\"` branch (note `reserved` already lets ⇧ through, and `charactersIgnoringModifiers` gives `"y"` for both):
 
@@ -752,7 +752,7 @@ In `Sources/Views/ToolKeyMonitor.swift`, in `handle(_:)` after the `"\\"` branch
         }
 ```
 
-- [ ] **Step 6: The canvas layouts**
+- [x] **Step 6: The canvas layouts**
 
 In `Sources/Views/CanvasArea.swift`, `EditCanvas.viewport`: replace the single `MetalCanvasView` line with a mode switch, and gate `overlays(in:)` on `editor.compareMode == .off` (mask/crop handles over half a comparison would address the wrong pixels):
 
@@ -852,7 +852,7 @@ Add to `EditCanvas`:
     }
 ```
 
-- [ ] **Step 7: Menu entries** (bare keys → label hints only, no `keyboardShortcut`, per the house rule stated on `EditorCommands`)
+- [x] **Step 7: Menu entries** (bare keys → label hints only, no `keyboardShortcut`, per the house rule stated on `EditorCommands`)
 
 In the View `CommandGroup(after: .toolbar)`, after the "Show Original" button:
 
@@ -870,12 +870,12 @@ In the View `CommandGroup(after: .toolbar)`, after the "Show Original" button:
             .disabled(editor == nil)
 ```
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `-only-testing:PhotoEditorTests/CompareModeTests -only-testing:PhotoEditorTests/EditorModelTests -only-testing:PhotoEditorTests/CanvasToolTests`
 Expected: ALL PASS.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Sources/Views/ToolKeyMonitor.swift Sources/App/EditorCommands.swift Tests/CompareModeTests.swift project.yml PhotoEditor.xcodeproj

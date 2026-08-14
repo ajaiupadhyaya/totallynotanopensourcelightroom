@@ -193,22 +193,39 @@ private struct EditCanvas: View {
             let rect = imageRect(in: viewportSize)
 
             ZStack {
-                MetalCanvasView(image: editor.previewCIImage,
-                                context: editor.renderContext,
-                                imageRect: rect)
-                    .allowsHitTesting(false)
+                switch editor.compareMode {
+                case .off:
+                    MetalCanvasView(image: editor.previewCIImage,
+                                    context: editor.renderContext,
+                                    imageRect: rect)
+                        .allowsHitTesting(false)
+                case .sideBySide:
+                    sideBySide(in: viewportSize)
+                case .split:
+                    splitPanes(rect: rect, in: viewportSize)
+                }
 
                 // A dropped shadow under the frame, so the photograph sits on
-                // the canvas rather than being a hole cut in it.
-                Rectangle()
-                    .fill(.clear)
-                    .frame(width: rect.width, height: rect.height)
-                    .shadow(color: .black.opacity(0.6), radius: 18, y: 6)
-                    .background(Color.black.opacity(0.001))
-                    .position(x: rect.midX, y: rect.midY)
-                    .allowsHitTesting(false)
+                // the canvas rather than being a hole cut in it. Side by side
+                // draws its own two frames, so the single-frame shadow would
+                // land on neither of them.
+                if editor.compareMode != .sideBySide {
+                    Rectangle()
+                        .fill(.clear)
+                        .frame(width: rect.width, height: rect.height)
+                        .shadow(color: .black.opacity(0.6), radius: 18, y: 6)
+                        .background(Color.black.opacity(0.001))
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+                }
 
-                overlays(in: rect)
+                // Crop, mask and retouch handles address `rect`. While a
+                // comparison is on screen the photograph is somewhere else (or
+                // in two places), so the handles would point at the wrong
+                // pixels — they wait until the comparison is dismissed.
+                if editor.compareMode == .off {
+                    overlays(in: rect)
+                }
 
                 MouseEventView(
                     onScroll: { location, deltaY in
@@ -225,6 +242,11 @@ private struct EditCanvas: View {
                     .contentShape(Rectangle())
                     .gesture(clickGesture(rect: rect))
                     .gesture(panGesture)
+
+                // Above the click layer, or the divider would never see a drag.
+                if editor.compareMode == .split {
+                    splitDivider(in: viewportSize)
+                }
             }
             .frame(width: viewportSize.width, height: viewportSize.height)
             .overlay(alignment: .bottomLeading) {
@@ -311,6 +333,93 @@ private struct EditCanvas: View {
         )
     }
 
+    // MARK: Compare layouts
+
+    /// Two half-viewports, each fitting the same frame with the shared
+    /// zoom/pan — the halves compute their rects from the same state, so they
+    /// stay in step by construction.
+    private func sideBySide(in viewport: CGSize) -> some View {
+        let half = CGSize(width: viewport.width / 2, height: viewport.height)
+        let halfRect = imageRect(in: half)
+        return HStack(spacing: 0) {
+            ZStack {
+                MetalCanvasView(image: editor.beforeCIImage,
+                                context: editor.renderContext, imageRect: halfRect)
+                paneLabel("BEFORE")
+            }
+            .frame(width: half.width)
+            .clipped()
+            Rule(axis: .vertical, color: Theme.strongSeparator)
+            ZStack {
+                MetalCanvasView(image: editor.previewCIImage,
+                                context: editor.renderContext, imageRect: halfRect)
+                paneLabel("AFTER")
+            }
+            .frame(width: half.width)
+            .clipped()
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// One image, one divider: the before render underneath, the after render
+    /// masked to the divider's right. Pixel-aligned because both canvases get
+    /// the SAME rect.
+    private func splitPanes(rect: CGRect, in viewport: CGSize) -> some View {
+        let dividerX = viewport.width * CGFloat(editor.splitPosition)
+        return ZStack {
+            MetalCanvasView(image: editor.beforeCIImage,
+                            context: editor.renderContext, imageRect: rect)
+            MetalCanvasView(image: editor.previewCIImage,
+                            context: editor.renderContext, imageRect: rect)
+                .mask(alignment: .topLeading) {
+                    Rectangle()
+                        .frame(width: max(viewport.width - dividerX, 0),
+                               height: viewport.height)
+                        .offset(x: dividerX)
+                }
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// The split's handle: a hairline with a comfortable grab band, drawn last
+    /// so the drag reaches it.
+    private func splitDivider(in viewport: CGSize) -> some View {
+        let dividerX = viewport.width * CGFloat(editor.splitPosition)
+        return ZStack {
+            Rectangle()
+                .fill(Color.white.opacity(0.85))
+                .frame(width: Theme.hairline * 1.5, height: viewport.height)
+                .position(x: dividerX, y: viewport.height / 2)
+                .allowsHitTesting(false)
+            Color.clear
+                .frame(width: Theme.minimumHitTarget, height: viewport.height)
+                .contentShape(Rectangle())
+                .position(x: dividerX, y: viewport.height / 2)
+                .gesture(
+                    DragGesture(minimumDistance: 0).onChanged { value in
+                        editor.splitPosition = min(max(
+                            Double(value.location.x / viewport.width), 0.05), 0.95)
+                    }
+                )
+        }
+    }
+
+    private func paneLabel(_ text: String) -> some View {
+        VStack {
+            HStack {
+                Text(text)
+                    .plateLabel()
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, Theme.space2)
+                    .padding(.vertical, 4)
+                    .background(.black.opacity(0.68), in: Capsule())
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding(Theme.space3)
+    }
+
     @ViewBuilder
     private func overlays(in rect: CGRect) -> some View {
         Group {
@@ -395,7 +504,9 @@ private struct EditCanvas: View {
     private func clickGesture(rect: CGRect) -> some Gesture {
         let pick = SpatialTapGesture(count: 1)
             .onEnded { value in
-                guard editor.canvasPicker != nil else { return }
+                // While comparing, the photograph is not where `rect` says it
+                // is, so a pick would sample the wrong pixel.
+                guard editor.canvasPicker != nil, editor.compareMode == .off else { return }
                 let unit = CGPoint(
                     x: min(max((value.location.x - rect.minX) / rect.width, 0), 1),
                     y: min(max(1 - (value.location.y - rect.minY) / rect.height, 0), 1)

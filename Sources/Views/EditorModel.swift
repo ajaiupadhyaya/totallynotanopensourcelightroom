@@ -602,6 +602,34 @@ final class EditorModel {
         return stack
     }
 
+    /// The two-pane comparison grammar. View state, never persisted.
+    enum CompareMode: Equatable {
+        case off
+        /// Before left, after right, shared zoom/pan (Y).
+        case sideBySide
+        /// One image, draggable divider — before left of it, after right (⇧Y).
+        case split
+    }
+
+    var compareMode: CompareMode = .off {
+        didSet {
+            guard compareMode != oldValue else { return }
+            renderPreview()
+        }
+    }
+
+    /// The split divider, as a unit fraction of the viewport width.
+    var splitPosition: Double = 0.5
+
+    /// The "before" render while a compare mode is active; nil otherwise.
+    private(set) var beforeCIImage: CIImage?
+
+    /// One keystroke of the compare grammar: the key toggles its own mode,
+    /// switches from the other, and exits when already showing.
+    func toggleCompare(_ mode: CompareMode) {
+        compareMode = compareMode == mode ? .off : mode
+    }
+
     // MARK: Presets
 
     /// Applies a preset's look to this photo, leaving the frame's own crop and
@@ -1467,6 +1495,17 @@ final class EditorModel {
             ImageDecoder.downsampled(shown, maxDimension: 1600)
         )
         previewCIImage = shown
+
+        // The second render is paid for only while a comparison is on screen,
+        // and it goes through the same source and the same renderer — the only
+        // difference is the stack, so the two panes are honestly comparable.
+        if compareMode != .off {
+            var before = beforeStack
+            if isCropping { before.geometry.cropRect = .unitFrame }
+            beforeCIImage = renderEditedImage(from: renderSource, stack: before)
+        } else {
+            beforeCIImage = nil
+        }
     }
 
     private func persist() {

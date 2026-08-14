@@ -114,6 +114,18 @@ struct EditorCommands: Commands {
             }
             .disabled(editor == nil)
 
+            Button(editor?.compareMode == .sideBySide
+                   ? "Exit Side by Side  (Y)" : "Compare Side by Side  (Y)") {
+                editor?.toggleCompare(.sideBySide)
+            }
+            .disabled(editor == nil)
+
+            Button(editor?.compareMode == .split
+                   ? "Exit Split View  (⇧Y)" : "Compare Split View  (⇧Y)") {
+                editor?.toggleCompare(.split)
+            }
+            .disabled(editor == nil)
+
             Button(editor?.isFocusPeakingEnabled == true
                    ? "Hide Focus Peaking" : "Show Focus Peaking") {
                 editor?.isFocusPeakingEnabled.toggle()

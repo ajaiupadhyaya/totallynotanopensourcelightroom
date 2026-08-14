@@ -52,6 +52,25 @@ struct ToolKeyMonitor: ViewModifier {
             return true
         }
 
+        // Y is side-by-side, ⇧Y the split — the two-pane grammar, entered and
+        // left on the same key. Shift is not in `reserved`, and
+        // `charactersIgnoringModifiers` reports "y" either way.
+        if key == "y" {
+            editor.toggleCompare(event.modifierFlags.contains(.shift) ? .split : .sideBySide)
+            return true
+        }
+
+        // Escape backs out of the viewing states and is otherwise left alone:
+        // crop's cancel button and sheets own it elsewhere, so it is consumed
+        // ONLY when a viewing state is actually active.
+        if event.keyCode == 53 {
+            if editor.compareMode != .off {
+                editor.compareMode = .off
+                return true
+            }
+            return false
+        }
+
         guard let tool = EditorTool(shortcutKey: key) else { return false }
         workspace.activate(tool, in: editor)
         return true
