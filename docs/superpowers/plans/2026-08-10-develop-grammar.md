@@ -3286,7 +3286,7 @@ git commit -m "feat(workflow): scoped copy/paste over the numbered pipeline sect
 - Consumes: the `panel.v3.expanded.<title>` `@AppStorage` keys, Task 2's `Esc` branch, `RootView`'s pane layout.
 - Produces: `PanelExpansion.key/solo/isSolo`, `PanelSection.soloTitles`, `SliderPanel.soloTitles`, `WorkspaceModel.LightsOut` + `lightsOut/cycleLightsOut()`, `View.lightsOutVeil(_:)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/PanelExpansionTests.swift`:
 
@@ -3360,9 +3360,9 @@ final class LightsOutTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run both classes** — expected COMPILE FAILURE.
+- [x] **Step 2: Run both classes** — expected COMPILE FAILURE.
 
-- [ ] **Step 3: Solo**
+- [x] **Step 3: Solo**
 
 In `Sources/Views/SliderPanel/PanelSection.swift`, add the helper and the header behaviour:
 
@@ -3418,7 +3418,7 @@ In `Sources/Views/SliderPanel/SliderPanel.swift`:
 
 and pass `soloTitles: Self.soloTitles` to each of those seventeen `PanelSection`s.
 
-- [ ] **Step 4: Lights-out**
+- [x] **Step 4: Lights-out**
 
 In `Sources/Views/WorkspaceModel.swift`:
 
@@ -3497,12 +3497,12 @@ In `Sources/App/EditorCommands.swift`, View menu after the compare buttons (bare
                 .disabled(editor == nil)
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `-only-testing:PhotoEditorTests/PanelExpansionTests -only-testing:PhotoEditorTests/LightsOutTests -only-testing:PhotoEditorTests/CompareModeTests -only-testing:PhotoEditorTests/ToolActivationTests`
 Expected: ALL PASS (`CompareModeTests` proves the extended Esc branch didn't disturb compare's own exit).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/Views/SliderPanel/PanelSection.swift Sources/Views/SliderPanel/SliderPanel.swift Sources/Views/WorkspaceModel.swift Sources/Views/Theme.swift Sources/Views/ToolKeyMonitor.swift Sources/App/EditorCommands.swift Sources/App/PhotoEditorApp.swift Tests/PanelExpansionTests.swift project.yml PhotoEditor.xcodeproj

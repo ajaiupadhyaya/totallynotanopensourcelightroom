@@ -135,6 +135,9 @@ struct EditorCommands: Commands {
             }
             .disabled(editor == nil)
 
+            Button("Lights Out  (L)") { workspace.cycleLightsOut() }
+                .disabled(editor == nil)
+
             Button(editor?.isFocusPeakingEnabled == true
                    ? "Hide Focus Peaking" : "Show Focus Peaking") {
                 editor?.isFocusPeakingEnabled.toggle()

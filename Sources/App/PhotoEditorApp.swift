@@ -55,6 +55,7 @@ struct RootView: View {
             TopBar(app: app,
                    isShowingLibrary: $panels.isShowingLibrary,
                    isShowingDevelop: $panels.isShowingDevelop)
+                .lightsOutVeil(workspace.lightsOut)
 
             Rule()
 
@@ -62,6 +63,7 @@ struct RootView: View {
                 if panels.isShowingLibrary {
                     LibrarySidebar(app: app)
                         .frame(width: Theme.libraryWidth)
+                        .lightsOutVeil(workspace.lightsOut)
                         .transition(.move(edge: .leading))
                     Rule(axis: .vertical)
                 }
@@ -69,11 +71,13 @@ struct RootView: View {
                 VStack(spacing: 0) {
                     if let editor = app.editor {
                         ToolOptionsBar(model: editor, workspace: workspace)
+                            .lightsOutVeil(workspace.lightsOut)
                     }
 
                     HStack(spacing: 0) {
                         if let editor = app.editor {
                             ToolRail(model: editor, workspace: workspace)
+                                .lightsOutVeil(workspace.lightsOut)
                             Rule(axis: .vertical)
                         }
 
@@ -86,6 +90,7 @@ struct RootView: View {
                     Rule(axis: .vertical)
                     InspectorPanel(model: editor, app: app, mode: $workspace.inspectorMode)
                         .frame(width: Theme.inspectorWidth)
+                        .lightsOutVeil(workspace.lightsOut)
                         .transition(.move(edge: .trailing))
                 }
             }

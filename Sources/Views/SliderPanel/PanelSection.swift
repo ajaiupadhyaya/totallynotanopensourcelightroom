@@ -1,4 +1,26 @@
+import AppKit
 import SwiftUI
+
+/// Solo over the sections' own persistence: writes the same
+/// `panel.v3.expanded.<title>` keys every `PanelSection.@AppStorage` reads,
+/// so soloing IS expansion state and survives relaunch like any fold.
+enum PanelExpansion {
+    static func key(_ title: String) -> String { "panel.v3.expanded.\(title)" }
+
+    /// Opens `title`, folds every other listed section. Writes every key, so
+    /// the state is fully materialised afterwards.
+    static func solo(_ title: String, among titles: [String],
+                     defaults: UserDefaults = .standard) {
+        for t in titles { defaults.set(t == title, forKey: key(t)) }
+    }
+
+    /// True only for a materialised solo: this section open, all others shut.
+    static func isSolo(_ title: String, among titles: [String],
+                       defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: key(title))
+            && titles.allSatisfy { $0 == title || !defaults.bool(forKey: key($0)) }
+    }
+}
 
 /// A collapsible develop-panel section, numbered by its position in the render
 /// pipeline and threaded onto the signal chain's spine.
@@ -24,6 +46,10 @@ struct PanelSection<Content: View>: View {
     var index: String?
     var isModified: Bool = false
     var onReset: (() -> Void)?
+
+    /// The sections a ⌥-click solos among. Nil means this section has no solo
+    /// group and ⌥-click just folds, like an ordinary click.
+    var soloTitles: [String]?
     @ViewBuilder let content: () -> Content
 
     @AppStorage private var isExpanded: Bool
@@ -34,12 +60,14 @@ struct PanelSection<Content: View>: View {
         index: String? = nil,
         isModified: Bool = false,
         onReset: (() -> Void)? = nil,
+        soloTitles: [String]? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
         self.index = index
         self.isModified = isModified
         self.onReset = onReset
+        self.soloTitles = soloTitles
         self.content = content
         // A fresh inspector opens on Light, the most common operation, while
         // the rest of the chain stays legible as a compact index. Process
@@ -80,9 +108,23 @@ struct PanelSection<Content: View>: View {
             .animation(Theme.standard, value: isModified)
     }
 
+    /// True while this section is the only open one in its solo group — the
+    /// state ⌥-click produces, read back so the chevron can say so.
+    private var isSoloed: Bool {
+        guard let soloTitles else { return false }
+        return PanelExpansion.isSolo(title, among: soloTitles)
+    }
+
     private var header: some View {
         Button {
-            withAnimation(Theme.expand) { isExpanded.toggle() }
+            // ⌥-click solos: this section open, the rest of the column folded.
+            if let soloTitles, NSEvent.modifierFlags.contains(.option) {
+                withAnimation(Theme.expand) {
+                    PanelExpansion.solo(title, among: soloTitles)
+                }
+            } else {
+                withAnimation(Theme.expand) { isExpanded.toggle() }
+            }
         } label: {
             HStack(spacing: 0) {
                 // The gutter: stage index, on the spine. An unnumbered
@@ -116,7 +158,9 @@ struct PanelSection<Content: View>: View {
                 }
 
                 Icon(kind: isExpanded ? .chevronDown : .chevronRight, size: 10, weight: 1.3)
-                    .foregroundStyle(isHovering ? Theme.secondaryText : Theme.tertiaryText)
+                    .foregroundStyle(isSoloed ? Theme.accent
+                                              : (isHovering ? Theme.secondaryText
+                                                            : Theme.tertiaryText))
                     .padding(.trailing, Theme.panelInset)
                     .padding(.leading, Theme.space2)
             }
@@ -125,6 +169,7 @@ struct PanelSection<Content: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(soloTitles == nil ? "Click to fold" : "Click to fold · ⌥-click to solo")
         .onHover { isHovering = $0 }
         .animation(Theme.quick, value: isHovering)
         .accessibilityLabel("\(title) section")

@@ -247,6 +247,19 @@ extension View {
             .foregroundStyle(emphasis)
     }
 
+    /// The lights-out veil for a chrome region. Black only (the achromatic
+    /// law), instant (the motion law — no animation), and never hit-testable:
+    /// the controls underneath keep working, they just recede.
+    func lightsOutVeil(_ stage: WorkspaceModel.LightsOut) -> some View {
+        overlay {
+            if stage != .off {
+                Rectangle()
+                    .fill(.black.opacity(stage.veilOpacity))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
     /// Styles a string as a caps label on a button, tab, or lamp.
     func plateLabel() -> some View {
         font(Theme.plateFont).kerning(Theme.plateTracking)

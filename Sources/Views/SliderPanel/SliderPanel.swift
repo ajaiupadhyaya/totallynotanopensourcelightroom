@@ -16,6 +16,15 @@ struct SliderPanel: View {
     @Bindable var model: EditorModel
     @Bindable var app: AppModel
 
+    /// Every section the develop column shows, in order — the solo group.
+    /// ("Process" is an action prompt, not a browsable stage; it is not in
+    /// the group and cannot be folded away by a solo.)
+    static let soloTitles = [
+        "Film", "Frame", "Optics", "Retouch", "White Balance", "Light",
+        "Presence", "Color Mixer", "Color Grade", "Point Color", "Tone Curve",
+        "Local Masks", "Detail", "Effects", "Snapshots", "Presets", "Info",
+    ]
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -44,7 +53,8 @@ struct SliderPanel: View {
                     "Film",
                     index: "01",
                     isModified: PipelineSection.film.isModified(in: model.editStack),
-                    onReset: { model.editStack.filmNegative = FilmNegativeSettings() }
+                    onReset: { model.editStack.filmNegative = FilmNegativeSettings() },
+                    soloTitles: Self.soloTitles
                 ) {
                     FilmPanel(model: model)
                 }
@@ -53,7 +63,8 @@ struct SliderPanel: View {
                     "Frame",
                     index: "02",
                     isModified: PipelineSection.frame.isModified(in: model.editStack),
-                    onReset: resetFrame
+                    onReset: resetFrame,
+                    soloTitles: Self.soloTitles
                 ) {
                     GeometryPanel(model: model)
                 }
@@ -62,7 +73,8 @@ struct SliderPanel: View {
                     "Optics",
                     index: "03",
                     isModified: PipelineSection.optics.isModified(in: model.editStack),
-                    onReset: resetOptics
+                    onReset: resetOptics,
+                    soloTitles: Self.soloTitles
                 ) {
                     OpticsPanel(model: model)
                 }
@@ -74,7 +86,8 @@ struct SliderPanel: View {
                     onReset: {
                         model.editStack.retouch = []
                         model.selectedSpotID = nil
-                    }
+                    },
+                    soloTitles: Self.soloTitles
                 ) {
                     RetouchPanel(model: model)
                 }
@@ -88,14 +101,16 @@ struct SliderPanel: View {
                     onReset: {
                         model.editStack.whiteBalanceTemp = 6500
                         model.editStack.whiteBalanceTint = 0
-                    }
+                    },
+                    soloTitles: Self.soloTitles
                 ) {
                     WhiteBalancePanel(model: model)
                 }
 
                 PanelSection("Light", index: "06",
                              isModified: PipelineSection.light.isModified(in: model.editStack),
-                             onReset: resetLight) {
+                             onReset: resetLight,
+                             soloTitles: Self.soloTitles) {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
                                      range: -3...3, format: "%.2f EV", neutral: 0)
@@ -128,7 +143,8 @@ struct SliderPanel: View {
 
                 PanelSection("Presence", index: "07",
                              isModified: PipelineSection.presence.isModified(in: model.editStack),
-                             onReset: resetPresence) {
+                             onReset: resetPresence,
+                             soloTitles: Self.soloTitles) {
                     AdjustmentSlider(title: "Texture",
                                      value: $model.editStack.texture,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -155,7 +171,8 @@ struct SliderPanel: View {
                     onReset: {
                         model.editStack.color.treatment = .color
                         model.editStack.color.mixer = ColorMixer()
-                    }
+                    },
+                    soloTitles: Self.soloTitles
                 ) {
                     ColorMixerPanel(model: model)
                 }
@@ -164,7 +181,8 @@ struct SliderPanel: View {
                     "Color Grade",
                     index: "09",
                     isModified: PipelineSection.colorGrade.isModified(in: model.editStack),
-                    onReset: { model.editStack.color.grading = ColorGrading() }
+                    onReset: { model.editStack.color.grading = ColorGrading() },
+                    soloTitles: Self.soloTitles
                 ) {
                     ColorGradingPanel(model: model)
                 }
@@ -173,7 +191,8 @@ struct SliderPanel: View {
                     "Point Color",
                     index: "10",
                     isModified: PipelineSection.pointColor.isModified(in: model.editStack),
-                    onReset: { model.editStack.color.pointColors = [] }
+                    onReset: { model.editStack.color.pointColors = [] },
+                    soloTitles: Self.soloTitles
                 ) {
                     PointColorPanel(model: model)
                 }
@@ -189,7 +208,8 @@ struct SliderPanel: View {
                         model.editStack.toneCurveLights = 0
                         model.editStack.toneCurveDarks = 0
                         model.editStack.toneCurveShadows = 0
-                    }
+                    },
+                    soloTitles: Self.soloTitles
                 ) {
                     CurvePanel(model: model)
                 }
@@ -200,14 +220,16 @@ struct SliderPanel: View {
                     "Local Masks",
                     index: "12",
                     isModified: PipelineSection.masks.isModified(in: model.editStack),
-                    onReset: { model.editStack.localAdjustments = [] }
+                    onReset: { model.editStack.localAdjustments = [] },
+                    soloTitles: Self.soloTitles
                 ) {
                     LocalAdjustmentPanel(model: model)
                 }
 
                 PanelSection("Detail", index: "13",
                              isModified: PipelineSection.detail.isModified(in: model.editStack),
-                             onReset: resetDetail) {
+                             onReset: resetDetail,
+                             soloTitles: Self.soloTitles) {
                     AdjustmentSlider(title: "Sharpening",
                                      value: $model.editStack.sharpenAmount,
                                      range: 0...100, format: "%.0f", neutral: 0)
@@ -224,7 +246,8 @@ struct SliderPanel: View {
 
                 PanelSection("Effects", index: "14",
                              isModified: PipelineSection.effects.isModified(in: model.editStack),
-                             onReset: resetEffects) {
+                             onReset: resetEffects,
+                             soloTitles: Self.soloTitles) {
                     AdjustmentSlider(title: "Vignette",
                                      value: $model.editStack.vignetteAmount,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -252,15 +275,15 @@ struct SliderPanel: View {
                 // deliberately unnumbered because they are not pipeline stages.
                 PanelGroupHeading(title: "This frame")
 
-                PanelSection("Snapshots") {
+                PanelSection("Snapshots", soloTitles: Self.soloTitles) {
                     SnapshotPanel(model: model)
                 }
 
-                PanelSection("Presets") {
+                PanelSection("Presets", soloTitles: Self.soloTitles) {
                     PresetPanel(app: app, model: model)
                 }
 
-                PanelSection("Info") {
+                PanelSection("Info", soloTitles: Self.soloTitles) {
                     MetadataPanel(metadata: model.metadata, fileName: model.fileName)
                 }
 

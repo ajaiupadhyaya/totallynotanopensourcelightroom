@@ -98,6 +98,7 @@
 		7B3D44E9A59BDF069BC0DD92 /* MLMaskEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CBCC27BB747B5F27F8847EF /* MLMaskEnvironment.swift */; };
 		7C57EAFB33A8061A0B57350B /* LenientDecoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C025E535BEBABD61B0AD7CF /* LenientDecoding.swift */; };
 		7D47DE9821F0272298076F43 /* CompareModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634AF0BE48892F8CFC09DC21 /* CompareModeTests.swift */; };
+		7F6E529D8BA23DCD450DA345 /* PanelExpansionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E134C510373E554DB9C66C0B /* PanelExpansionTests.swift */; };
 		8029E0360C35F25FE1988C2A /* FilmNegativeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0F02221B23D2E71FA941B7 /* FilmNegativeTests.swift */; };
 		80A8CC2F6F74BECB531364DB /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2F971CBD017A251DD0D590 /* HistogramView.swift */; };
 		80CB28FBE8B551CF1AC6A07B /* EditorUndoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC57BAA7162E62A571F24A6 /* EditorUndoTests.swift */; };
@@ -351,6 +352,7 @@
 		DAA4A8702F7807BAA87F5D7C /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		DAB9285D050DD0D4ABC24B59 /* RetouchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetouchTests.swift; sourceTree = "<group>"; };
 		DC2E09E38F810E14226E2086 /* RangeMaskBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeMaskBuilder.swift; sourceTree = "<group>"; };
+		E134C510373E554DB9C66C0B /* PanelExpansionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelExpansionTests.swift; sourceTree = "<group>"; };
 		E1B80BB6DE75F993D679057C /* ToolKeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolKeyMonitor.swift; sourceTree = "<group>"; };
 		E3A05E6894C8F88C3E2D98A6 /* SliderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderPanel.swift; sourceTree = "<group>"; };
 		E42C1490F52AA8D6C49187F4 /* RenderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderScheduler.swift; sourceTree = "<group>"; };
@@ -492,6 +494,7 @@
 				B41EC8A0826BF47AA06B55F5 /* MLMaskTests.swift */,
 				8809C1B4C886DDD1D85C4800 /* NegadoctorReferenceTests.swift */,
 				C1CB69F7D2A1BA0A6646C7C1 /* OpticsTests.swift */,
+				E134C510373E554DB9C66C0B /* PanelExpansionTests.swift */,
 				4A9F7706BE51CB941DA66260 /* PaperResponseGoldenTests.swift */,
 				F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */,
 				3E01E5EE55A503A9D7E901B2 /* ParitySupport.swift */,
@@ -813,6 +816,7 @@
 				E067EC5BFBF5E3270C124B86 /* MaskOverlayTests.swift in Sources */,
 				E65163A55C52D68BB754DDFA /* NegadoctorReferenceTests.swift in Sources */,
 				3669441D98711D5EC7890700 /* OpticsTests.swift in Sources */,
+				7F6E529D8BA23DCD450DA345 /* PanelExpansionTests.swift in Sources */,
 				596F35E968806281B0C82A4E /* PaperResponseGoldenTests.swift in Sources */,
 				9229703A758891B7304277C1 /* PaperResponseTests.swift in Sources */,
 				D741F8510976B87C69632E4C /* ParitySupport.swift in Sources */,

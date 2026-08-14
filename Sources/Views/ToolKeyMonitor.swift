@@ -60,10 +60,20 @@ struct ToolKeyMonitor: ViewModifier {
             return true
         }
 
+        if key == "l" {
+            workspace.cycleLightsOut()
+            return true
+        }
+
         // Escape backs out of the viewing states and is otherwise left alone:
         // crop's cancel button and sheets own it elsewhere, so it is consumed
-        // ONLY when a viewing state is actually active.
+        // ONLY when a viewing state is actually active. Outermost layer first
+        // — the veil you added last is the one Esc takes off.
         if event.keyCode == 53 {
+            if workspace.lightsOut != .off {
+                workspace.lightsOut = .off
+                return true
+            }
             if editor.compareMode != .off {
                 editor.compareMode = .off
                 return true

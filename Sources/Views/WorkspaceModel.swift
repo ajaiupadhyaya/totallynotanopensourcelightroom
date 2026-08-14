@@ -10,6 +10,28 @@ final class WorkspaceModel {
     var activeTool: EditorTool = .hand
     var inspectorMode: InspectorMode = .adjust
 
+    /// The lights-out ladder: two dim stages over all chrome, canvas
+    /// untouched. Window state, never persisted.
+    enum LightsOut: Int, CaseIterable {
+        case off, dim, dark
+
+        /// Achromatic veil strengths — taste constants, verified in-app.
+        /// Dark stops short of 1: the chrome recedes, it does not vanish.
+        var veilOpacity: Double {
+            switch self {
+            case .off: 0
+            case .dim: 0.55
+            case .dark: 0.88
+            }
+        }
+    }
+
+    var lightsOut: LightsOut = .off
+
+    func cycleLightsOut() {
+        lightsOut = LightsOut(rawValue: lightsOut.rawValue + 1) ?? .off
+    }
+
     /// Opening a different frame starts in the neutral tool. Otherwise the
     /// rail would keep claiming "Crop" while the new photograph is not
     /// actually in crop mode.
