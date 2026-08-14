@@ -44,11 +44,37 @@ enum FrameDetector {
     /// 0.80 splits the gap with margin on both sides.
     static let backlightLumaFloor = 0.80
 
-    /// Below this backlight fraction the scan is already film-filling and
-    /// there is nothing to detect; above `maximumBacklightFraction` there is
+    /// Above this backlight fraction a box needs no further proof: there is
+    /// plainly bare panel in shot. Above `maximumBacklightFraction` there is
     /// not enough film to trust a box.
+    ///
+    /// This was once a hard floor, on the reasoning that less backlight meant
+    /// the scan was already film-filling with nothing to detect. That reads
+    /// one cause into a measurement with two: a negative framed TIGHTLY on a
+    /// dark table shows barely any bare panel either, and it is the scan that
+    /// most needs cropping. Measured on the 2026-08-13 corpus — IMG_7178
+    /// (7.4%) and IMG_7179 (8.1%) are the same scan on either side of this
+    /// line, and IMG_7201 (5.3%) rendered blown for want of a crop. Below the
+    /// line the box now has to prove itself instead (`backlitBoxContrast`).
     static let minimumBacklightFraction = 0.08
     static let maximumBacklightFraction = 0.90
+
+    /// The hard floor. Under this there is no backlight signal to reason
+    /// from at all — the row and column profiles have nothing to bound.
+    /// Measured: the corpus's genuine tight-framed scans run 1.8–7.9%.
+    static let absoluteMinimumBacklightFraction = 0.01
+
+    /// How much brighter a candidate box must be than everything outside it,
+    /// for boxes admitted below `minimumBacklightFraction`. Film on a lit
+    /// panel is a bright island in a dark room; a bright PATCH of an ordinary
+    /// photograph is not, and neither is a sliver of stray highlight.
+    ///
+    /// Measured across all three corpora: the genuine tight-framed scans run
+    /// 6.1–35.2× (IMG_7201 at 12.0, IMG_7204 at 19.9), while every degenerate
+    /// candidate — the one-column slivers the profiles find in an ordinary
+    /// frame — runs 1.4–5.2×. Whole-frame boxes from ordinary photographs sit
+    /// at 0.8–1.9× and are refused here as well as by the area gates.
+    static let backlitBoxContrast = 6.0
 
     /// A detected box smaller than this fraction of the frame is refused —
     /// more likely a bright scene's dark pocket than a negative.
@@ -189,8 +215,34 @@ enum FrameDetector {
             }
         }
         let fraction = Double(backlightCount) / Double(pixels.count)
-        guard fraction >= minimumBacklightFraction,
+        guard fraction >= absoluteMinimumBacklightFraction,
               fraction <= maximumBacklightFraction else { return nil }
+
+        // Scans carrying little bare panel are admitted, but have to show
+        // that whatever box the profiles find is genuinely a lit island in a
+        // dark room rather than a bright patch of an ordinary photograph.
+        // Both exits below go through this.
+        let needsBacklitProof = fraction < minimumBacklightFraction
+        func provesBacklit(rows: Range<Int>, cols: Range<Int>) -> Bool {
+            guard needsBacklitProof else { return true }
+            var inside = 0.0, insideCount = 0.0
+            var outside = 0.0, outsideCount = 0.0
+            for row in 0..<height {
+                for col in 0..<width {
+                    let p = pixels[row * width + col]
+                    let luma = 0.2126 * p.0 + 0.7152 * p.1 + 0.0722 * p.2
+                    if rows.contains(row), cols.contains(col) {
+                        inside += luma; insideCount += 1
+                    } else {
+                        outside += luma; outsideCount += 1
+                    }
+                }
+            }
+            // A box with no outside crops nothing; the area gates say so too.
+            guard insideCount > 0, outsideCount > 0 else { return false }
+            return inside / insideCount
+                >= backlitBoxContrast * max(outside / outsideCount, 1e-4)
+        }
 
         // 2a. The LIGHTBOX extent first. A real scan is not "film on bright
         // ground" — it is film on a bright lightbox on a DARK table (measured
@@ -260,7 +312,8 @@ enum FrameDetector {
         func lightboxFallback() -> DetectedFrame? {
             let lightboxArea = Double(boxRows.count * boxCols.count)
             guard lightboxArea / Double(pixels.count) <= lightboxFallbackMaxAreaFraction,
-                  lightboxArea / Double(pixels.count) >= lightboxFallbackMinAreaFraction
+                  lightboxArea / Double(pixels.count) >= lightboxFallbackMinAreaFraction,
+                  provesBacklit(rows: boxRows, cols: boxCols)
             else { return nil }
             let rect = CGRect(
                 x: Double(boxCols.lowerBound) / Double(width),
@@ -288,6 +341,13 @@ enum FrameDetector {
         guard boxArea / lightboxArea >= minimumBoxAreaFraction else {
             return lightboxFallback()
         }
+        // The film box carries the same burden — but failing it is an
+        // argument for the LOOSER box, not for nil. The film box excludes the
+        // rebate and the bare rim, which is exactly the bright part: measured
+        // on IMG_7178, the lit region stands 32× over the room while the film
+        // box inside it does not clear 6×, because the rim it just gave up
+        // moved from the inside of the ratio to the outside.
+        guard provesBacklit(rows: rows, cols: cols) else { return lightboxFallback() }
 
         // 3. The rebate ring: brightest-percentile colour of the box's outer
         // band — actual unexposed film, the most reliable Dmin there is.

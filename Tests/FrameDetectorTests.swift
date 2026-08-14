@@ -241,5 +241,73 @@ final class FrameDetectorTests: XCTestCase {
         XCTAssertNil(frame?.rebateBase,
                      "the fallback does not know where the rebate is")
     }
+
+    /// Builds a lightbox scan as pixels: a dark room, a lit rectangle, and
+    /// film covering all but a `margin`-cell rim of bare panel. The bare rim
+    /// is the ONLY backlight, so shrinking it drives the backlight fraction
+    /// down without changing what the scan is — which is exactly how a
+    /// tightly-framed negative defeats an entry gate written in those terms.
+    private func darkRoomScan(rows: Range<Int>, cols: Range<Int>,
+                              width: Int = 128, height: Int = 96,
+                              margin: Int = 2,
+                              film: (Double, Double, Double)? = (0.55, 0.32, 0.15))
+        -> [(Double, Double, Double)] {
+        var pixels = [(Double, Double, Double)](repeating: (0.004, 0.004, 0.005),
+                                                count: width * height)
+        for row in rows {
+            for col in cols {
+                let onRim = row < rows.lowerBound + margin || row >= rows.upperBound - margin
+                    || col < cols.lowerBound + margin || col >= cols.upperBound - margin
+                pixels[row * width + col] = (onRim || film == nil) ? (1.0, 1.0, 1.0) : film!
+            }
+        }
+        return pixels
+    }
+
+    /// The entry gate reads a low backlight fraction as "the scan is already
+    /// film-filling, nothing to detect". A negative framed tightly on a dark
+    /// table gives the same low fraction for the opposite reason — there is
+    /// barely any BARE panel in shot — and that is the scan that most needs
+    /// cropping.
+    ///
+    /// Measured on the 2026-08-13 corpus: IMG_7201 (5.3%) rendered blown
+    /// because Auto measured its dark surround, while IMG_7178 (7.4%) and
+    /// IMG_7179 (8.1%) are the same scan on either side of the 8% line.
+    func testDetectsATightlyFramedNegativeBelowTheBacklightEntryGate() {
+        let width = 128, height = 96
+        let rows = 30..<70, cols = 40..<90
+        let pixels = darkRoomScan(rows: rows, cols: cols)
+
+        let frame = FrameDetector.detect(pixels: pixels, width: width, height: height)
+        let rect = try? XCTUnwrap(frame?.rect,
+                                  "a lit rectangle of film on a dark table is a "
+                                  + "lightbox scan whatever its bare-panel share")
+        // The film box, inside the lit rectangle by the rim.
+        XCTAssertEqual(rect?.minX ?? -1, Double(cols.lowerBound) / Double(width),
+                       accuracy: 0.05)
+        XCTAssertEqual(rect?.maxX ?? -1, Double(cols.upperBound) / Double(width),
+                       accuracy: 0.05)
+        XCTAssertEqual(rect?.minY ?? -1,
+                       Double(height - rows.upperBound) / Double(height), accuracy: 0.05)
+        XCTAssertEqual(rect?.maxY ?? -1,
+                       Double(height - rows.lowerBound) / Double(height), accuracy: 0.05)
+    }
+
+    /// The other side of lowering that gate. A bright pocket in a dark room —
+    /// a lamp, a window — is backlight with no film on it, and must stay nil.
+    /// Its box can never outgrow its own backlight, so the area gates refuse
+    /// it; this pins that they still do once the entry gate lets it through.
+    func testABareLightInADarkRoomIsStillRefused() {
+        let pixels = darkRoomScan(rows: 40..<62, cols: 52..<80, film: nil)
+        XCTAssertNil(FrameDetector.detect(pixels: pixels, width: 128, height: 96),
+                     "bare light is not film on a lightbox")
+    }
+
+    /// And the floor: a scan with essentially no backlight at all has no
+    /// lightbox to find, and must not be talked into one.
+    func testAScanWithAlmostNoBacklightIsRefused() {
+        let pixels = darkRoomScan(rows: 46..<52, cols: 60..<68, margin: 1)
+        XCTAssertNil(FrameDetector.detect(pixels: pixels, width: 128, height: 96))
+    }
 }
 
