@@ -896,7 +896,7 @@ The Inspector histogram becomes a control surface: five hover-highlighted region
 - Consumes: `Histogram.red/green/blue`, `EditorModel.histogram/displayImage/showsShadowClipping/showsHighlightClipping`, `EditCanvas.imageRect(in:)`, `ColorScience.luminance(_:_:_:)`.
 - Produces: `HistogramRegion` (`.blacks/.shadows/.exposure/.highlights/.whites`, `keyPath`, `range`, `region(atUnitX:)`, `value(startingFrom:draggedByUnitDelta:)`), `Histogram.ChannelClipFlags` + `.shadowClipFlags/.highlightClipFlags`, `PixelSampler`/`PixelReading` (**reused by Task 5's TAT**), `EditorModel.setLightValue(_:to:)`, `EditorModel.hoverReadout` + `updateHoverReadout(atUnitPoint:)`, `InteractiveHistogram`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/HistogramInteractionTests.swift`:
 
@@ -1020,9 +1020,9 @@ final class PixelSamplerTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run** `xcodegen generate`, then `-only-testing:PhotoEditorTests/HistogramRegionTests -only-testing:PhotoEditorTests/HistogramDragModelTests -only-testing:PhotoEditorTests/ChannelClipFlagTests -only-testing:PhotoEditorTests/PixelSamplerTests` — expected COMPILE FAILURE.
+- [x] **Step 2: Run** `xcodegen generate`, then `-only-testing:PhotoEditorTests/HistogramRegionTests -only-testing:PhotoEditorTests/HistogramDragModelTests -only-testing:PhotoEditorTests/ChannelClipFlagTests -only-testing:PhotoEditorTests/PixelSamplerTests` — expected COMPILE FAILURE.
 
-- [ ] **Step 3: The model pieces**
+- [x] **Step 3: The model pieces**
 
 In `Sources/Pipeline/Histogram.swift`, after the existing clipping block:
 
@@ -1209,9 +1209,9 @@ struct PixelSampler {
 }
 ```
 
-- [ ] **Step 4: Run the four test classes** — expected PASS (`HistogramRegionTests`, `HistogramDragModelTests`, `ChannelClipFlagTests`, `PixelSamplerTests`). Also `-only-testing:PhotoEditorTests/CanvasToolTests` (Histogram semantics untouched) — PASS.
+- [x] **Step 4: Run the four test classes** — expected PASS (`HistogramRegionTests`, `HistogramDragModelTests`, `ChannelClipFlagTests`, `PixelSamplerTests`). Also `-only-testing:PhotoEditorTests/CanvasToolTests` (Histogram semantics untouched) — PASS.
 
-- [ ] **Step 5: The view**
+- [x] **Step 5: The view**
 
 In `Sources/Views/HistogramView.swift`, add one parameter — drawing unchanged:
 
@@ -1382,7 +1382,7 @@ In `Sources/Views/InspectorPanel.swift`, swap the histogram line:
 
 (replacing `HistogramView(histogram: model.histogram)`; padding modifiers stay).
 
-- [ ] **Step 6: Canvas hover sampling**
+- [x] **Step 6: Canvas hover sampling**
 
 In `Sources/Views/CanvasArea.swift`, on `EditCanvas.viewport`'s inner `ZStack` (where `rect` is in scope, after the gesture layer):
 
@@ -1405,12 +1405,12 @@ In `Sources/Views/CanvasArea.swift`, on `EditCanvas.viewport`'s inner `ZStack` (
             }
 ```
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run: `-only-testing:PhotoEditorTests/HistogramRegionTests -only-testing:PhotoEditorTests/HistogramDragModelTests -only-testing:PhotoEditorTests/ChannelClipFlagTests -only-testing:PhotoEditorTests/PixelSamplerTests -only-testing:PhotoEditorTests/HistogramScaleTests -only-testing:PhotoEditorTests/HistogramSpaceTests -only-testing:PhotoEditorTests/EditorModelTests`
 Expected: ALL PASS. No new menu entries: the clipping toggles already live in the View menu, and a readout is not a command.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Sources/Pipeline/Histogram.swift Sources/Views/HistogramView.swift Sources/Views/HistogramInteraction.swift Sources/Views/PixelSampler.swift Sources/Views/InspectorPanel.swift Sources/Views/EditorModel.swift Sources/Views/CanvasArea.swift Tests/HistogramInteractionTests.swift project.yml PhotoEditor.xcodeproj

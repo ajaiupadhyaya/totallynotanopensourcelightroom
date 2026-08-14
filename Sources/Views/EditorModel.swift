@@ -236,6 +236,42 @@ final class EditorModel {
 
     // MARK: View state (not persisted)
 
+    /// One tick of a histogram-region drag. Writes exactly one `editStack`
+    /// field once (the single-assignment gesture rule); the Light slider
+    /// co-moves because it binds the same field.
+    func setLightValue(_ region: HistogramRegion, to value: Double) {
+        let clamped = min(max(value, region.range.lowerBound), region.range.upperBound)
+        guard editStack[keyPath: region.keyPath] != clamped else { return }
+        editStack[keyPath: region.keyPath] = clamped
+    }
+
+    /// The colour under the canvas cursor, for the histogram readout. Nil when
+    /// the cursor is off the photograph.
+    private(set) var hoverReadout: PixelReading?
+
+    /// Sampler cached per `displayImage` identity — rebuilt only when a new
+    /// preview lands, not per mouse move.
+    private var hoverSampler: (image: CGImage, sampler: PixelSampler)?
+
+    func updateHoverReadout(atUnitPoint point: CGPoint?) {
+        guard let point else {
+            hoverReadout = nil
+            return
+        }
+        hoverReadout = sample(atUnitPoint: point)
+    }
+
+    /// Shared with the TAT: the developed preview's colour at a bottom-left
+    /// unit point.
+    func sample(atUnitPoint point: CGPoint) -> PixelReading? {
+        guard let image = displayImage else { return nil }
+        if hoverSampler?.image !== image {
+            guard let sampler = PixelSampler(image: image) else { return nil }
+            hoverSampler = (image, sampler)
+        }
+        return hoverSampler?.sampler.reading(atUnitPoint: point)
+    }
+
     /// Zoom factor over image pixels; nil fits the frame to the viewport.
     /// Owned here so the top bar and the canvas share one value.
     var zoomLevel: Double? {

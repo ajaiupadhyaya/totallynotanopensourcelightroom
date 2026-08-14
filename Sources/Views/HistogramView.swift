@@ -18,6 +18,10 @@ import SwiftUI
 struct HistogramView: View {
     let histogram: Histogram
 
+    /// Off when a wrapper (``InteractiveHistogram``) draws richer per-channel
+    /// flags of its own over this plot.
+    var showsClipFlags: Bool = true
+
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
@@ -40,10 +44,10 @@ struct HistogramView: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 6)
                     .overlay(alignment: .topLeading) {
-                        if histogram.isClippingShadows { clipFlag(.leading) }
+                        if showsClipFlags && histogram.isClippingShadows { clipFlag(.leading) }
                     }
                     .overlay(alignment: .topTrailing) {
-                        if histogram.isClippingHighlights { clipFlag(.trailing) }
+                        if showsClipFlags && histogram.isClippingHighlights { clipFlag(.trailing) }
                     }
                 }
             }

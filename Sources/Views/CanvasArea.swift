@@ -249,6 +249,22 @@ private struct EditCanvas: View {
                 }
             }
             .frame(width: viewportSize.width, height: viewportSize.height)
+            .onContinuousHover { phase in
+                switch phase {
+                case .active(let location):
+                    // Only in normal viewing: in a compare mode the cursor sits
+                    // over one of two renders and the sample would be ambiguous.
+                    guard editor.compareMode == .off, rect.contains(location) else {
+                        editor.updateHoverReadout(atUnitPoint: nil)
+                        return
+                    }
+                    editor.updateHoverReadout(atUnitPoint: CGPoint(
+                        x: (location.x - rect.minX) / rect.width,
+                        y: 1 - (location.y - rect.minY) / rect.height))
+                case .ended:
+                    editor.updateHoverReadout(atUnitPoint: nil)
+                }
+            }
             .overlay(alignment: .bottomLeading) {
                 NavigatorPanel(editor: editor, viewportSize: viewportSize, fitInset: fitInset)
             }

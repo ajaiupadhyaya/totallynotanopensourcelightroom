@@ -12,7 +12,7 @@ struct InspectorPanel: View {
         VStack(spacing: 0) {
             modeBar
 
-            HistogramView(histogram: model.histogram)
+            InteractiveHistogram(model: model)
                 .padding(.horizontal, Theme.panelInset)
                 .padding(.top, 12)
                 .padding(.bottom, 8)

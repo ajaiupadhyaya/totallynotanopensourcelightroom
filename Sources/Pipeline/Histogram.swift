@@ -52,6 +52,29 @@ struct Histogram: Equatable {
     /// True when enough pixels are blown to matter.
     var isClippingHighlights: Bool { highlightClippedFraction > 0.005 }
 
+    /// Which channels are clipping at one end. The pooled diagnostics above
+    /// keep their exact semantics; these answer the finer question the corner
+    /// triangles ask ("blown *where*?"), with the same 0.5% threshold applied
+    /// per channel.
+    struct ChannelClipFlags: Equatable {
+        var red = false
+        var green = false
+        var blue = false
+        var any: Bool { red || green || blue }
+    }
+
+    var shadowClipFlags: ChannelClipFlags { clipFlags(atTop: false) }
+    var highlightClipFlags: ChannelClipFlags { clipFlags(atTop: true) }
+
+    private func clipFlags(atTop: Bool) -> ChannelClipFlags {
+        func clipped(_ channel: [Float]) -> Bool {
+            guard let edge = atTop ? channel.last : channel.first else { return false }
+            let total = channel.reduce(0.0) { $0 + Double($1) }
+            return total > 0 && Double(edge) / total > 0.005
+        }
+        return ChannelClipFlags(red: clipped(red), green: clipped(green), blue: clipped(blue))
+    }
+
     private func edgeFraction(atTop: Bool) -> Double {
         guard !isEmpty else { return 0 }
         var edgeMass = 0.0
