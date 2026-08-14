@@ -244,6 +244,9 @@ enum ColorCubeBuilder {
 
         var result = color
         let zones = [
+            // Global rides at weight 1 everywhere: it is the "and also the
+            // whole frame" tint the three weighted zones cannot express.
+            (grading.global, 1.0),
             (grading.shadows, weights.shadows),
             (grading.midtones, weights.midtones),
             (grading.highlights, weights.highlights),

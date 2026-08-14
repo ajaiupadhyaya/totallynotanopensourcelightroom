@@ -148,7 +148,7 @@ struct ColorGradingPanel: View {
     @State private var selectedZone: Zone = .midtones
 
     enum Zone: String, CaseIterable, Identifiable {
-        case shadows, midtones, highlights
+        case shadows, midtones, highlights, global
         var id: String { rawValue }
         var displayName: String { rawValue.capitalized }
     }
@@ -157,13 +157,18 @@ struct ColorGradingPanel: View {
         VStack(alignment: .leading, spacing: 12) {
             TabStrip(
                 options: Zone.allCases.map { ($0, $0.displayName) },
-                selection: $selectedZone
+                selection: $selectedZone,
+                spacing: Theme.space3
             )
 
-            AdjustmentSlider(title: "Hue", value: zoneBinding(\.hue),
-                             range: 0...360, format: "%.0f°", neutral: 0)
-            AdjustmentSlider(title: "Saturation", value: zoneBinding(\.saturation),
-                             range: 0...100, format: "%.0f", neutral: 0)
+            // Hue and saturation are one act — an angle and a distance — so
+            // they are one control, not two faders you have to read together.
+            HStack {
+                Spacer()
+                ColorWheel(zone: selectedZoneBinding)
+                Spacer()
+            }
+
             AdjustmentSlider(title: "Luminance", value: zoneBinding(\.luminance),
                              range: -100...100, format: "%.0f", neutral: 0)
 
@@ -178,17 +183,32 @@ struct ColorGradingPanel: View {
         }
     }
 
-    private func zoneBinding(
-        _ keyPath: WritableKeyPath<ColorGradeZone, Double>
-    ) -> Binding<Double> {
-        let zonePath: WritableKeyPath<ColorGrading, ColorGradeZone> = switch selectedZone {
+    private var zonePath: WritableKeyPath<ColorGrading, ColorGradeZone> {
+        switch selectedZone {
         case .shadows: \.shadows
         case .midtones: \.midtones
         case .highlights: \.highlights
+        case .global: \.global
         }
+    }
+
+    /// The selected zone entire — what the wheel writes hue and saturation to
+    /// in one gesture.
+    private var selectedZoneBinding: Binding<ColorGradeZone> {
+        let path = zonePath
         return Binding(
-            get: { model.editStack.color.grading[keyPath: zonePath][keyPath: keyPath] },
-            set: { model.editStack.color.grading[keyPath: zonePath][keyPath: keyPath] = $0 }
+            get: { model.editStack.color.grading[keyPath: path] },
+            set: { model.editStack.color.grading[keyPath: path] = $0 }
+        )
+    }
+
+    private func zoneBinding(
+        _ keyPath: WritableKeyPath<ColorGradeZone, Double>
+    ) -> Binding<Double> {
+        let path = zonePath
+        return Binding(
+            get: { model.editStack.color.grading[keyPath: path][keyPath: keyPath] },
+            set: { model.editStack.color.grading[keyPath: path][keyPath: keyPath] = $0 }
         )
     }
 }

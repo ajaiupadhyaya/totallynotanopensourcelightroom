@@ -4,6 +4,32 @@ import XCTest
 final class ColorSuiteTests: XCTestCase {
     private let renderer = EditRenderer()
 
+    /// ColorGrading.global's conformance home (ControlConformanceTests
+    /// excludes `color` in favour of this suite): the Global zone tints the
+    /// whole frame — including tones the three-zone weights would split.
+    func testGlobalGradeTintsAMidGreyFrame() {
+        var stack = EditStack()
+        stack.color.grading.global.hue = 120
+        stack.color.grading.global.saturation = 100
+
+        let source = TestSupport.solidImage(red: 0.5, green: 0.5, blue: 0.5, size: 32)
+        let result = TestSupport.readColor(renderer.render(source: source, stack: stack))
+        XCTAssertGreaterThan(result.green, result.red + 0.03,
+                             "a green Global grade must reach a midtone")
+    }
+
+    func testGlobalGradeLuminanceLiftsShadowsAndHighlightsAlike() {
+        var stack = EditStack()
+        stack.color.grading.global.luminance = 80
+
+        let dark = TestSupport.solidImage(red: 0.15, green: 0.15, blue: 0.15, size: 32)
+        let bright = TestSupport.solidImage(red: 0.8, green: 0.8, blue: 0.8, size: 32)
+        let liftedDark = TestSupport.readColor(renderer.render(source: dark, stack: stack))
+        let liftedBright = TestSupport.readColor(renderer.render(source: bright, stack: stack))
+        XCTAssertGreaterThan(liftedDark.red, 0.17, "weight 1 in the shadows")
+        XCTAssertGreaterThan(liftedBright.red, 0.82, "and weight 1 in the highlights")
+    }
+
     func testPointColorShiftsSampledHue() {
         var stack = EditStack()
         var target = PointColorTarget()

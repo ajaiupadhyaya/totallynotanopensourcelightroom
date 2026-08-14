@@ -11,6 +11,7 @@
 		0056804FE1C330F481EF42F4 /* EditorCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1216224591BBDB023A79E868 /* EditorCommands.swift */; };
 		0074D52169F7EA3291738D38 /* FilmStockStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 753E17A3CC2C17EB5312E084 /* FilmStockStoreTests.swift */; };
 		02B776C57296163D7BEF6CB4 /* FilmColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8701AFF80F12C07B2E720244 /* FilmColor.swift */; };
+		02FBAE60117546BA5E865829 /* ColorWheelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 676FF1DF1C2934B390A086F2 /* ColorWheelTests.swift */; };
 		03E1E831E98D8C6286A03E05 /* KernelInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */; };
 		04F21DBAAAC3AADDE5DD5C67 /* FilmBaseSamplerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F149A7BCF6E4C46589B0CE81 /* FilmBaseSamplerTests.swift */; };
 		05D4E96C8C2611271B7F538D /* DevelopPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */; };
@@ -31,6 +32,7 @@
 		2801D1F88AD81E588E5C21BC /* Histogram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F149C1AC756E023AB4F09DE /* Histogram.swift */; };
 		28669969646D3A4810A0E9FB /* LocalAdjustmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C38A94FD7721527DCC95870 /* LocalAdjustmentTests.swift */; };
 		287721B0AD1C871DAA88629E /* Tone.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = A8C6195D005B7B3428A2DC0A /* Tone.ci.metal */; };
+		28DFB84A42C3E543BA1BEAD5 /* ColorWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7694CA330E80F02BD365956 /* ColorWheel.swift */; };
 		2EB9DEDED3DB0096E6E6E4B4 /* KernelLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80F11E5D7410F510CEE64411 /* KernelLibrary.swift */; };
 		2ECD2F931C4CFFEDCCBC248D /* FrameDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07388216602747CD9FB4CFD /* FrameDetector.swift */; };
 		2EDFF08ECFDF4934C0EFAB81 /* PresetPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ECAC9F574B3BA9437A1C07D /* PresetPanel.swift */; };
@@ -265,6 +267,7 @@
 		620D3A048D0DE7DE24FEA31B /* CastSolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CastSolverTests.swift; sourceTree = "<group>"; };
 		634AF0BE48892F8CFC09DC21 /* CompareModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareModeTests.swift; sourceTree = "<group>"; };
 		6615D9C8124568C9BE11239A /* KernelInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KernelInfrastructureTests.swift; sourceTree = "<group>"; };
+		676FF1DF1C2934B390A086F2 /* ColorWheelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorWheelTests.swift; sourceTree = "<group>"; };
 		6B22E289B6818B14FC289C0C /* ColorSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSettings.swift; sourceTree = "<group>"; };
 		6CBCC27BB747B5F27F8847EF /* MLMaskEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLMaskEnvironment.swift; sourceTree = "<group>"; };
 		6D44ED9A48B2084F41BA8BFF /* FilmNegativeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmNegativeSettings.swift; sourceTree = "<group>"; };
@@ -357,6 +360,7 @@
 		F55EA47704A103F6E8AA96B8 /* MaskCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskCompositorTests.swift; sourceTree = "<group>"; };
 		F604BD3B1BAF4790C94BE9F3 /* GeometryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPanel.swift; sourceTree = "<group>"; };
 		F6BD2CA1EC1323241EB24358 /* LUTImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTImporter.swift; sourceTree = "<group>"; };
+		F7694CA330E80F02BD365956 /* ColorWheel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorWheel.swift; sourceTree = "<group>"; };
 		F8DBB380661CEC3B90DD795A /* PaperResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperResponseTests.swift; sourceTree = "<group>"; };
 		FC77CC3F8071A3DDC211E115 /* CurvePointModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurvePointModel.swift; sourceTree = "<group>"; };
 		FD7727FC10C7B8D01950ECED /* DevelopPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopPreset.swift; sourceTree = "<group>"; };
@@ -448,6 +452,7 @@
 				BC9DB728B8B785B3660E525E /* CatalogStoreTests.swift */,
 				267388D14FEE2777E922AC35 /* ColorMixerTests.swift */,
 				AD75B25E8FB81FDBA7B6ACA1 /* ColorSuiteTests.swift */,
+				676FF1DF1C2934B390A086F2 /* ColorWheelTests.swift */,
 				634AF0BE48892F8CFC09DC21 /* CompareModeTests.swift */,
 				25C0990746E37E255E346136 /* ConformanceSupport.swift */,
 				7EA9C4F9163E86F2CB8A1F3D /* ControlConformanceTests.swift */,
@@ -595,6 +600,7 @@
 		D3CA76467E58A8DDB86E59D8 /* Controls */ = {
 			isa = PBXGroup;
 			children = (
+				F7694CA330E80F02BD365956 /* ColorWheel.swift */,
 				D2357C6C502EEF260D658192 /* InstrumentControls.swift */,
 				50089E2B4EB58047E2354371 /* MouseEventView.swift */,
 			);
@@ -764,6 +770,7 @@
 				DE8C9B6A3C18780EA70F2482 /* CatalogStoreTests.swift in Sources */,
 				504B9D366CDBAA335D03B968 /* ColorMixerTests.swift in Sources */,
 				9EC7032CD5145CA66D621C51 /* ColorSuiteTests.swift in Sources */,
+				02FBAE60117546BA5E865829 /* ColorWheelTests.swift in Sources */,
 				7D47DE9821F0272298076F43 /* CompareModeTests.swift in Sources */,
 				10E6675BB4186081D2CB3FA5 /* ConformanceSupport.swift in Sources */,
 				51786F263A90B4D96FB0FCCE /* ControlConformanceTests.swift in Sources */,
@@ -841,6 +848,7 @@
 				EAE3C8107C52689454F0ECE7 /* ColorScience.swift in Sources */,
 				D3058BEA6B891477F0E22411 /* ColorSettings.swift in Sources */,
 				DFAEC479180238E0CBC15823 /* ColorStages.swift in Sources */,
+				28DFB84A42C3E543BA1BEAD5 /* ColorWheel.swift in Sources */,
 				AD60EE40143A15C8FE0BC6BE /* CullingCommands.swift in Sources */,
 				1D5A1CA413710403E332411D /* CurvePanel.swift in Sources */,
 				09A8F2393B513D94E2497668 /* CurvePointModel.swift in Sources */,

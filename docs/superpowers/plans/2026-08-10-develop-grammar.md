@@ -2198,7 +2198,7 @@ The Color Grade panel's slider triplets become drawn hue/saturation wheels — p
 - Consumes: `ColorGradeZone`, `ColorScience.hslToRGB/wrapHue`, `ColorCubeBuilder.applyGrading/zoneWeights`, `Theme.hairline/strongSeparator`.
 - Produces: `ColorGrading.global`, `ColorWheelMath.puckOffset/value`, `ColorWheel`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/ColorWheelTests.swift`:
 
@@ -2290,9 +2290,9 @@ In `Tests/ColorSuiteTests.swift`, add the render conformance (this is the Global
     }
 ```
 
-- [ ] **Step 2: Run** `-only-testing:PhotoEditorTests/ColorWheelTests -only-testing:PhotoEditorTests/ColorSuiteTests` — expected COMPILE FAILURE.
+- [x] **Step 2: Run** `-only-testing:PhotoEditorTests/ColorWheelTests -only-testing:PhotoEditorTests/ColorSuiteTests` — expected COMPILE FAILURE.
 
-- [ ] **Step 3: Model + LUT**
+- [x] **Step 3: Model + LUT**
 
 In `Sources/Models/ColorSettings.swift`, `ColorGrading` gains the zone — decoded leniently, folded into `isNeutral` so the LUT skip stays honest:
 
@@ -2326,7 +2326,7 @@ In `Sources/Pipeline/ColorCubeBuilder.swift`, `applyGrading`'s zone list grows o
 
 (`zoneWeights` is untouched; Blending/Balance keep governing only the three-zone split.)
 
-- [ ] **Step 4: The wheel**
+- [x] **Step 4: The wheel**
 
 Create `Sources/Views/Controls/ColorWheel.swift`:
 
@@ -2423,7 +2423,7 @@ struct ColorWheel: View {
 }
 ```
 
-- [ ] **Step 5: The panel**
+- [x] **Step 5: The panel**
 
 In `Sources/Views/SliderPanel/ColorMixerPanel.swift`, `ColorGradingPanel`: extend the zone enum and swap the Hue/Saturation sliders for the wheel (Luminance stays as the micro-slider; Blending/Balance unchanged):
 
@@ -2471,12 +2471,12 @@ with the zone path switch gaining `case .global: \.global`, and a whole-zone bin
 
 `SliderPanel`'s Color Grade section needs no change: `isModified: !grading.isNeutral` now covers Global through the extended `isNeutral`, and its reset (`grading = ColorGrading()`) already clears the new zone.
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run: `-only-testing:PhotoEditorTests/ColorWheelTests -only-testing:PhotoEditorTests/ColorSuiteTests -only-testing:PhotoEditorTests/ColorMixerTests -only-testing:PhotoEditorTests/ControlConformanceTests`
 Expected: ALL PASS — `ControlConformanceTests` in particular: `color` keeps its exclusion, and no `EditStack` top-level field was added, so the completeness walk is untouched.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/Models/ColorSettings.swift Sources/Pipeline/ColorCubeBuilder.swift Sources/Views/Controls/ColorWheel.swift Sources/Views/SliderPanel/ColorMixerPanel.swift Tests/ColorWheelTests.swift Tests/ColorSuiteTests.swift project.yml PhotoEditor.xcodeproj

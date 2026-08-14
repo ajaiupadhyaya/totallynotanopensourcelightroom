@@ -146,6 +146,11 @@ struct ColorGrading: Codable, Equatable {
     var midtones = ColorGradeZone()
     var highlights = ColorGradeZone()
 
+    /// A tint over the whole tonal range, summed with the three zones at
+    /// weight 1 — split toning's "and also everything". Decodes neutral, so
+    /// every stack written before it existed renders identically.
+    var global = ColorGradeZone()
+
     /// How far the zones bleed into each other, `0...100`. Higher blending
     /// means a softer handoff between shadow and highlight tints.
     var blending: Double = 50
@@ -155,7 +160,7 @@ struct ColorGrading: Codable, Equatable {
     var balance: Double = 0
 
     var isNeutral: Bool {
-        shadows.isNeutral && midtones.isNeutral && highlights.isNeutral
+        shadows.isNeutral && midtones.isNeutral && highlights.isNeutral && global.isNeutral
     }
 
     init() {}
@@ -166,6 +171,7 @@ struct ColorGrading: Codable, Equatable {
         shadows = c.lenient(.shadows, ColorGradeZone())
         midtones = c.lenient(.midtones, ColorGradeZone())
         highlights = c.lenient(.highlights, ColorGradeZone())
+        global = c.lenient(.global, ColorGradeZone())
         blending = c.lenient(.blending, 50)
         balance = c.lenient(.balance, 0)
     }

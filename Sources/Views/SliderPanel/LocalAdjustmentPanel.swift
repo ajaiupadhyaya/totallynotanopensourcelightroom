@@ -305,6 +305,7 @@ private struct LocalMaskColorControls: View {
         case .shadows: \.shadows
         case .midtones: \.midtones
         case .highlights: \.highlights
+        case .global: \.global
         }
         return Binding(
             get: {
