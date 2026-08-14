@@ -43,6 +43,14 @@ struct AdjustmentSlider: View {
     let format: String
     var neutral: Double = 0
 
+    /// Where the fader lives. `.panel` is the develop column's aligned form,
+    /// with its fixed label and readout columns; `.compact` is the options
+    /// bar's tighter form — same behaviour set (delta bar, scrub,
+    /// ⌥-precision, keyboard, double-click reset), only the layout differs.
+    /// One fader grammar everywhere.
+    enum Style { case panel, compact }
+    var style: Style = .panel
+
     /// Points of readout-scrub travel to traverse the whole range.
     private let dragDistanceForFullRange = 260.0
 
@@ -68,34 +76,11 @@ struct AdjustmentSlider: View {
     private static let readoutColumn: CGFloat = 58
 
     var body: some View {
-        HStack(alignment: .center, spacing: Theme.space2) {
-            Text(title)
-                .font(Theme.controlLabel)
-                .foregroundStyle(isNeutral ? Theme.text.opacity(0.82) : Theme.text)
-                .lineLimit(1)
-                .frame(width: Self.labelColumn, alignment: .leading)
-
-            track
-
-            // A reserved slot, not a conditional insert: the reset appearing
-            // must never resize the groove.
-            ZStack {
-                if !isNeutral, isHovering || isFocused {
-                    Button(action: reset) {
-                        Icon(kind: .reset, size: 10)
-                            .foregroundStyle(Theme.tertiaryText)
-                            .frame(width: 14, height: 14)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Reset \(title)")
-                    .transition(.opacity)
-                }
+        Group {
+            switch style {
+            case .panel: panelRow
+            case .compact: compactRow
             }
-            .frame(width: 14)
-
-            readout
-                .frame(minWidth: Self.readoutColumn, alignment: .trailing)
         }
         .frame(height: 20)
         .animation(Theme.quick, value: isHovering)
@@ -128,6 +113,51 @@ struct AdjustmentSlider: View {
             case .decrement: nudge(-1)
             @unknown default: break
             }
+        }
+    }
+
+    /// The develop column's form: fixed label and readout columns, so every
+    /// groove in a panel starts and ends on the same x.
+    private var panelRow: some View {
+        HStack(alignment: .center, spacing: Theme.space2) {
+            Text(title)
+                .font(Theme.controlLabel)
+                .foregroundStyle(isNeutral ? Theme.text.opacity(0.82) : Theme.text)
+                .lineLimit(1)
+                .frame(width: Self.labelColumn, alignment: .leading)
+
+            track
+
+            // A reserved slot, not a conditional insert: the reset appearing
+            // must never resize the groove.
+            ZStack {
+                if !isNeutral, isHovering || isFocused {
+                    Button(action: reset) {
+                        Icon(kind: .reset, size: 10)
+                            .foregroundStyle(Theme.tertiaryText)
+                            .frame(width: 14, height: 14)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reset \(title)")
+                    .transition(.opacity)
+                }
+            }
+            .frame(width: 14)
+
+            readout
+                .frame(minWidth: Self.readoutColumn, alignment: .trailing)
+        }
+    }
+
+    /// The options bar's form: a plate label, a short groove, the readout —
+    /// several of these sit side by side on one bar, so nothing is padded out
+    /// to a column width it does not need.
+    private var compactRow: some View {
+        HStack(spacing: Theme.space2) {
+            Text(title.uppercased()).sectionLabel()
+            track.frame(width: 92)
+            readout
         }
     }
 

@@ -2851,7 +2851,7 @@ git commit -m "feat(presets): hover preview on the real image, amount blending, 
 **Interfaces:**
 - Produces: `AdjustmentSlider.Style` (`.panel` default — every existing call site compiles unchanged; `.compact`).
 
-- [ ] **Step 1: The style**
+- [x] **Step 1: The style**
 
 In `Sources/Views/SliderPanel/AdjustmentSlider.swift`:
 
@@ -2876,7 +2876,7 @@ In `Sources/Views/SliderPanel/AdjustmentSlider.swift`:
 
 with every existing row modifier (`onTapGesture(count: 2)`, `onHover`, `focusable`, key presses, the focus edge, accessibility) applied to the common container so both styles share them verbatim. The compact readout keeps its scrub gesture — that is the point.
 
-- [ ] **Step 2: Swap the call sites and delete the old fader**
+- [x] **Step 2: Swap the call sites and delete the old fader**
 
 In `Sources/Views/ToolRail.swift`, replace each `MiniContextFader` with the compact fader — retouch:
 
@@ -2905,12 +2905,12 @@ brush:
 
 Delete the `MiniContextFader` struct at the bottom of the file. Nothing else references it (it was `private`).
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `-only-testing:PhotoEditorTests/CanvasToolTests -only-testing:PhotoEditorTests/ToolActivationTests -only-testing:PhotoEditorTests/RetouchTests -only-testing:PhotoEditorTests/MaskComponentTests` (plus the build itself — the deleted type is the regression trap).
 Expected: ALL PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/Views/SliderPanel/AdjustmentSlider.swift Sources/Views/ToolRail.swift

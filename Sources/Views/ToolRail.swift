@@ -117,12 +117,12 @@ struct ToolOptionsBar: View {
                             : "Select a repair or add another spot")
                 PlateButton(title: "Add Spot") { model.canvasPicker = .retouchPlace }
                 if let index = model.selectedSpotIndex {
-                    MiniContextFader(label: "SIZE",
-                                     value: spotBinding(index, \.radius),
-                                     range: 0.004...0.15, format: "%.3f")
-                    MiniContextFader(label: "FEATHER",
-                                     value: spotBinding(index, \.feather),
-                                     range: 0...1, format: "%.2f")
+                    AdjustmentSlider(title: "Size", value: spotBinding(index, \.radius),
+                                     range: 0.004...0.15, format: "%.3f",
+                                     neutral: 0.025, style: .compact)
+                    AdjustmentSlider(title: "Feather", value: spotBinding(index, \.feather),
+                                     range: 0...1, format: "%.2f",
+                                     neutral: 0.5, style: .compact)
                 }
             }
         case .brush:
@@ -131,15 +131,15 @@ struct ToolOptionsBar: View {
                model.editStack.localAdjustments[index]
                    .components[componentIndex].shape == .brush {
                 HStack(spacing: 18) {
-                    MiniContextFader(label: "SIZE",
-                                     value: maskBinding(index, \.brushSize),
-                                     range: 0.005...0.2, format: "%.3f")
-                    MiniContextFader(label: "FEATHER",
-                                     value: maskBinding(index, \.brushFeather),
-                                     range: 0...1, format: "%.2f")
-                    MiniContextFader(label: "FLOW",
-                                     value: maskBinding(index, \.brushFlow),
-                                     range: 0.05...1, format: "%.2f")
+                    AdjustmentSlider(title: "Size", value: maskBinding(index, \.brushSize),
+                                     range: 0.005...0.2, format: "%.3f",
+                                     neutral: 0.04, style: .compact)
+                    AdjustmentSlider(title: "Feather", value: maskBinding(index, \.brushFeather),
+                                     range: 0...1, format: "%.2f",
+                                     neutral: 0.65, style: .compact)
+                    AdjustmentSlider(title: "Flow", value: maskBinding(index, \.brushFlow),
+                                     range: 0.05...1, format: "%.2f",
+                                     neutral: 0.8, style: .compact)
                     PlateButton(title: "Undo Stroke",
                                 isEnabled: !model.editStack.localAdjustments[index]
                                     .components[componentIndex].brushStrokes.isEmpty) {
@@ -240,66 +240,5 @@ struct ToolOptionsBar: View {
                     .components[componentIndex][keyPath: keyPath] = $0
             }
         )
-    }
-}
-
-private struct MiniContextFader: View {
-    let label: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let format: String
-
-    @State private var isHovering = false
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(label).sectionLabel()
-
-            GeometryReader { proxy in
-                let fraction = CGFloat(
-                    (value - range.lowerBound) / (range.upperBound - range.lowerBound)
-                )
-                let x = proxy.size.width * min(max(fraction, 0), 1)
-                let midY = proxy.size.height / 2
-
-                ZStack(alignment: .topLeading) {
-                    // Same groove-and-thumb language as the panel faders, at
-                    // the size the bar allows. A control that behaves the same
-                    // should look the same.
-                    Capsule()
-                        .fill(Theme.canvas.opacity(0.75))
-                        .frame(width: proxy.size.width, height: 3)
-                        .offset(y: midY - 1.5)
-                    Capsule()
-                        .fill(Theme.secondaryText.opacity(0.85))
-                        .frame(width: x, height: 3)
-                        .offset(y: midY - 1.5)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(Theme.text)
-                        .frame(width: 5, height: 12)
-                        .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
-                        .scaleEffect(x: isHovering ? 1.2 : 1)
-                        .offset(x: x - 2.5, y: midY - 6)
-                }
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 0).onChanged { event in
-                    let t = min(max(event.location.x / proxy.size.width, 0), 1)
-                    value = range.lowerBound + Double(t) * (range.upperBound - range.lowerBound)
-                })
-            }
-            .frame(width: 92, height: 18)
-            .onHover { isHovering = $0 }
-            .animation(Theme.quick, value: isHovering)
-
-            Text(String(format: format, value))
-                .font(Theme.valueFont)
-                .monospacedDigit()
-                .foregroundStyle(Theme.text)
-                .frame(width: 46, alignment: .trailing)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(String(format: format, value))
     }
 }
