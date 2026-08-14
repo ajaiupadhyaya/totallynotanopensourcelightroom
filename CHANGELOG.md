@@ -4,6 +4,66 @@ All notable changes to PhotoEditor are documented here.
 
 ## Unreleased
 
+### Added — the Develop Grammar
+
+The interaction grammar of a develop module: how you look at the photograph,
+how you reach into it, and how a look travels across a roll.
+
+- **Free zoom, anchored at the pointer.** Scroll or pinch anywhere between 25%
+  and 400% and the point under the cursor stays under the cursor. The four
+  classic stops (Fit / 50 / 100 / 200) survive as magnetic detents, ⌘+ / ⌘−
+  walk the ladder, and a drawn navigator appears in the corner whenever the
+  frame overflows the viewport — click or drag it to move.
+- **Before and after, two ways.** `Y` puts before and after side by side on a
+  shared zoom and pan; `⇧Y` splits one image under a draggable divider. `\`
+  is still the momentary full-canvas Before, `Esc` backs out. "Before" keeps
+  the crop and the negative conversion and resets the adjustments — comparing
+  a look, not a different photograph.
+- **The histogram is a control.** Drag its five regions (Blacks, Shadows,
+  Exposure, Highlights, Whites) and the Light sliders move with you — it is
+  literally the same field, not a parallel copy. The corner triangles light
+  per channel (a blown red says *red*) and click to toggle the clipping
+  overlays, and hovering the canvas prints R/G/B/luma under the plot.
+- **Free-point tone curve.** Click the curve to add a point, drag it in both
+  axes, right-click to remove; the in/out readout says exactly where you are.
+  **Photos with the existing five-point curve render bit-for-bit unchanged**
+  — the five-point case still goes through `CIToneCurve`, and a PV1 photo
+  ignores free lists entirely, so the freeze holds.
+- **Targeted Adjustment Tool (`T`).** Drag the photograph itself: upward on a
+  tone lifts the curve at that luminance, and in Hue/Sat/Lum mode the drag
+  moves exactly the colour bands that touch the pixel you grabbed, weighted
+  by the mixer's own band weights. On a black-and-white treatment it drives
+  the channel mix — dragging the sky darker really is "more red filter".
+- **Colour-grading wheels.** The grading zones swap their hue and saturation
+  sliders for a drawn wheel (⌥ for fine, double-click to reset), and a new
+  **Global** zone tints the whole tonal range at full weight. Global decodes
+  neutral, so **every grade written before it existed renders identically** —
+  pinned at byte equality of the LUT.
+- **Presets that show their work.** Hover a preset and the canvas shows it
+  without touching your edit; an Amount slider blends it in; `/` in the
+  folder name nests it; presets import and export as JSON. Saving one now
+  uses a drawn sheet instead of a system alert.
+- **Scoped copy/paste.** ⇧⌘C opens a dialog of the numbered pipeline sections
+  with the modified ones flagged, and the chosen scope is remembered for
+  ⇧⌘V, sidebar pastes and **Paste from Previous** (⌥⌘V), which applies the
+  last frame you edited. Frame and Retouch are off by default, and Film
+  carries the stock's character and print look but never this scan's sampled
+  base or its own solve.
+- **Solo mode and lights-out.** ⌥-click a section header to open it and fold
+  the rest (written through the same keys the sections already persist);
+  `L` cycles two dim stages over all the chrome — the canvas and the status
+  readout stay lit — and `Esc` restores.
+
+### Fixed
+
+- Copying settings and applying presets carried Vignette Roundness, Feather
+  and Highlights, and the four parametric tone-curve values, which the
+  transfer path had been silently dropping.
+- Navigating to another photo now flushes the outgoing frame's pending edit
+  instead of dropping it.
+- The options bar's small faders are the panel fader now: delta bar,
+  scrubbable readout, ⌥-precision, keyboard, double-click reset.
+
 ### Added — the Minilab engine
 
 Negative conversion grows the three layers that separate an honest inversion

@@ -3513,16 +3513,16 @@ git commit -m "feat(panel): option-click solo over the sections' own expansion k
 
 ### Task 11: Full verification + CHANGELOG + the feel pass
 
-- [ ] **Step 1: Full suite once**
+- [x] **Step 1: Full suite once**
 
 Run: `xcodebuild -project PhotoEditor.xcodeproj -scheme PhotoEditor -destination 'platform=macOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test`
 Expected: everything green (corpus-gated suites skip or pass per machine). Fix anything that isn't before proceeding — no green claim without this output in hand.
 
-- [ ] **Step 2: CHANGELOG**
+- [x] **Step 2: CHANGELOG**
 
 Add under `Unreleased` in `CHANGELOG.md`: the Develop Grammar — free zoom anchored at the pointer with detent stops and a drawn navigator; Y / ⇧Y before-after (side-by-side, split); the interactive histogram (draggable regions bound to the Light sliders, per-channel clip flags, RGB/luma readout); free-point tone curve (5-point storage frozen bit-for-bit, PV1 untouched) with the Targeted Adjustment Tool (T); colour-grading wheels plus a lenient Global zone; preset hover-preview / amount / folders / JSON import-export and the drawn naming sheet; scoped copy/paste over the numbered pipeline sections with Paste from Previous; solo mode and lights-out. Note the freeze guarantees explicitly: PV1 and `.matrix` untouched, 5-point curves and pre-Global grades render bit-identically.
 
-- [ ] **Step 3: Commit, then hand to the user**
+- [x] **Step 3: Commit, then hand to the user**
 
 ```bash
 git add CHANGELOG.md
