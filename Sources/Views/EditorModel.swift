@@ -37,6 +37,21 @@ final class EditorModel {
     var editStack: EditStack {
         didSet {
             syncDecodedSource(for: editStack.processVersion)
+            // White balance changes UNITS across the film-negative boundary
+            // (see `isSensorDomainWB`), and every path that can cross it —
+            // Auto, a film stock, a preset, a whole roll's conversion, the
+            // panel's own toggle — ends in an assignment here. Correcting at
+            // the crossing keeps the two directions symmetric: leaving the
+            // sensor domain returns the field to rendered-domain neutral,
+            // re-entering it makes the as-shot decision applicable again.
+            //
+            // Assigned directly in the observer body, which Swift does not
+            // re-enter; both corrections are idempotent besides.
+            if let corrected = Self.whiteBalanceDomainCorrected(editStack) {
+                editStack = corrected
+            } else if let adopted = adoptingAsShot(editStack) {
+                editStack = adopted
+            }
             renderPreview()
             scheduleCommit()
         }
@@ -1289,6 +1304,41 @@ final class EditorModel {
         adopted.whiteBalanceTint = asShotTint
         adopted.rawWBInitialized = true
         return adopted
+    }
+
+    /// The other direction across the same boundary: a stack whose adopted
+    /// sensor-domain white balance has to go back to rendered-domain units
+    /// because the film conversion just turned on. nil when there is nothing
+    /// to correct.
+    ///
+    /// ``adoptedStack`` refuses to *put* Kelvin into a film-negative stack.
+    /// That guard only covers the order "conversion already on, then adopt";
+    /// the order photographers actually work in is the opposite — open a RAW
+    /// (which adopts as-shot at load), then press Auto. The stack is then
+    /// flagged sensor-domain while ``EditRenderer/render(source:stack:)``
+    /// routes it through `WhiteBalanceStage`, which reads the same field on
+    /// `ColorScience`'s uv-offset scale. `rawWBInitialized` is the domain
+    /// marker, so the inconsistent state is exactly "flagged AND converting".
+    ///
+    /// Measured on the 2026-08-13 ProRAW corpus: as-shot neutrals of
+    /// 3082–3235K landed in a field whose rendered-domain neutral is 6500,
+    /// and all 20 frames rendered heavily blue — median RGB (0.079, 0.236,
+    /// 0.615) on IMG_7192 against a neutral (0.214, 0.214, 0.214) once the
+    /// units agree. HEICs never adopt, so they were never affected: the
+    /// corpus's rendered frames all solved to a perfectly neutral median.
+    ///
+    /// Pure, and a pure function of the stack alone — the correction needs no
+    /// as-shot values, which is what lets every path that can enable a
+    /// conversion (Auto, a stock, a preset, a whole roll) share it.
+    static func whiteBalanceDomainCorrected(_ stack: EditStack) -> EditStack? {
+        guard stack.rawWBInitialized, stack.filmNegative.isEnabled else { return nil }
+        var corrected = stack
+        corrected.whiteBalanceTemp = EditStack().whiteBalanceTemp
+        corrected.whiteBalanceTint = EditStack().whiteBalanceTint
+        // Cleared, not merely overwritten: it is what makes the as-shot
+        // decision applicable again if the conversion is switched back off.
+        corrected.rawWBInitialized = false
+        return corrected
     }
 
     private func activeRenderSource() -> SourceImage? {

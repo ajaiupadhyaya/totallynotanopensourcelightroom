@@ -83,6 +83,24 @@ final class August13CorpusTests: XCTestCase {
         XCTAssertGreaterThan(median, 0.01, "\(label): renders black (\(median))")
         XCTAssertLessThan(median, 0.7, "\(label): renders blown (\(median))")
 
+        // Channel balance, not just luma. A luma band alone passed every one
+        // of these frames while the whole ProRAW batch rendered heavily blue
+        // — the as-shot Kelvin adopted at open being read on the rendered
+        // domain's uv-offset scale (median RGB 0.079/0.236/0.615 here, a
+        // ratio near 8×). Auto ends on a gray-world median by construction,
+        // so a genuinely coloured frame still lands well inside 3×; only a
+        // whole-image cast does not.
+        let reds = pixels.map { $0.0 }.sorted()
+        let greens = pixels.map { $0.1 }.sorted()
+        let blues = pixels.map { $0.2 }.sorted()
+        let medRGB = (reds[reds.count / 2], greens[greens.count / 2],
+                      blues[blues.count / 2])
+        let hottest = max(medRGB.0, max(medRGB.1, medRGB.2))
+        let coldest = min(medRGB.0, min(medRGB.1, medRGB.2))
+        XCTAssertLessThan(hottest, 3 * max(coldest, 1e-4),
+                          "\(label): the median is cast, not neutral — "
+                          + "RGB \(medRGB)")
+
         try FileManager.default.createDirectory(at: Self.artifactDir,
                                                 withIntermediateDirectories: true)
         try context.writeJPEGRepresentation(

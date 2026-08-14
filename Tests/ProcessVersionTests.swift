@@ -198,6 +198,62 @@ final class ProcessVersionTests: XCTestCase {
                      "a film-negative RAW renders through WhiteBalanceStage — different units")
     }
 
+    /// The other half of the same boundary. `adoptedStack` refuses to PUT
+    /// sensor-domain Kelvin into a film-negative stack; this refuses to LEAVE
+    /// it there when the conversion turns on afterwards — which is the order
+    /// that actually happens (open a RAW, adopt as-shot, then press Auto).
+    ///
+    /// Measured on the 2026-08-13 ProRAW corpus: every frame adopted its
+    /// as-shot neutral (IMG_7192 at 3235K, IMG_7196 at 3082K) and then
+    /// rendered through `WhiteBalanceStage`, which reads that field on
+    /// `ColorScience`'s uv-offset scale. All 20 frames came out heavily blue —
+    /// median RGB (0.079, 0.236, 0.615) on IMG_7192, against the perfectly
+    /// neutral (0.214, 0.214, 0.214) the same frame gives once the field is
+    /// back in rendered-domain units.
+    func testFilmNegativeReturnsAdoptedWhiteBalanceToTheRenderedDomain() throws {
+        let adopted = try XCTUnwrap(EditorModel.adoptedStack(
+            EditStack(), asShotTemperature: asShot.temperature, asShotTint: asShot.tint))
+        var converted = adopted
+        converted.filmNegative.isEnabled = true
+
+        let corrected = try XCTUnwrap(
+            EditorModel.whiteBalanceDomainCorrected(converted),
+            "a film-negative stack still flagged sensor-domain is the "
+            + "inconsistent state — Kelvin read on the uv-offset scale")
+        XCTAssertEqual(corrected.whiteBalanceTemp, EditStack().whiteBalanceTemp,
+                       "must return to the rendered-domain neutral")
+        XCTAssertEqual(corrected.whiteBalanceTint, EditStack().whiteBalanceTint)
+        XCTAssertFalse(corrected.rawWBInitialized,
+                       "clearing the flag is what lets turning the conversion "
+                       + "back off re-adopt as-shot")
+        // Nothing else moves.
+        var expected = converted
+        expected.whiteBalanceTemp = EditStack().whiteBalanceTemp
+        expected.whiteBalanceTint = EditStack().whiteBalanceTint
+        expected.rawWBInitialized = false
+        XCTAssertEqual(corrected, expected)
+    }
+
+    func testWhiteBalanceDomainCorrectionDeclinesStacksItDoesNotOwn() throws {
+        XCTAssertNil(EditorModel.whiteBalanceDomainCorrected(EditStack()),
+                     "no conversion, no adoption — nothing to correct")
+
+        let adopted = try XCTUnwrap(EditorModel.adoptedStack(
+            EditStack(), asShotTemperature: asShot.temperature, asShotTint: asShot.tint))
+        XCTAssertNil(EditorModel.whiteBalanceDomainCorrected(adopted),
+                     "a RAW with no film conversion reads sensor-domain "
+                     + "Kelvin correctly — leave it alone")
+
+        // A rendered source (HEIC/JPEG) never adopts, so its film conversions
+        // are already in the right units and must not be reset.
+        var renderedFilm = EditStack()
+        renderedFilm.filmNegative.isEnabled = true
+        renderedFilm.whiteBalanceTemp = 7200
+        renderedFilm.whiteBalanceTint = -14
+        XCTAssertNil(EditorModel.whiteBalanceDomainCorrected(renderedFilm),
+                     "these are the photographer's own rendered-domain values")
+    }
+
     func testAdoptedStackChangesNothingElse() throws {
         var stack = EditStack()
         stack.exposure = 0.8
