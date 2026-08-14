@@ -45,6 +45,16 @@ final class August13CorpusTests: XCTestCase {
         }
     }
 
+    /// Every frame in the batch, both encodings, in filename order.
+    private static func allFramesOrSkip() throws -> [URL] {
+        let heic = (try? filesOrSkip(suffix: ".heic", count: .max)) ?? []
+        let dng = (try? filesOrSkip(suffix: ".dng", count: .max)) ?? []
+        guard !heic.isEmpty || !dng.isEmpty else {
+            throw XCTSkip("corpus not present on this machine: \(dir)")
+        }
+        return (heic + dng).sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
     /// One frame, through the real gesture, with the render written out for
     /// the user's eye. Asserts sanity only — the picture is judged by a human.
     @discardableResult
@@ -136,14 +146,54 @@ final class August13CorpusTests: XCTestCase {
         }
     }
 
-    /// A contact sheet of everything above, so the pass is one page.
-    func testZZContactSheet() throws {
-        let fm = FileManager.default
-        guard let names = try? fm.contentsOfDirectory(atPath: Self.artifactDir.path),
-              !names.filter({ $0.hasSuffix(".jpg") && !$0.hasSuffix("-before.jpg") }).isEmpty
-        else {
-            throw XCTSkip("no artifacts — the corpus tests did not run")
+    /// The WHOLE batch, not the sampled frames: every scan through the real
+    /// gesture, asserting the one property that has to hold for all of them —
+    /// nothing renders blown — and writing the pair out for the taste pass.
+    ///
+    /// The sample above catches per-frame detail; this catches the shape of
+    /// the batch. Both bugs this corpus found were invisible in a sample of
+    /// three: the blown ProRAW frame was the 14th file, and the blue cast was
+    /// only obviously systematic once all 20 RAWs were laid out together.
+    func testZZWholeBatchConvertsWithoutBlowingAFrame() throws {
+        let files = try Self.allFramesOrSkip()
+        var blown: [String] = []
+        var detected = 0
+        for url in files {
+            let label = "aug13-\(url.deletingPathExtension().lastPathComponent)"
+            guard let scan = ImageDecoder.loadPreviewImage(from: url, maxDimension: 1600,
+                                                           processVersion: 2) else {
+                XCTFail("\(label): could not decode"); continue
+            }
+            let catalog = try TestSupport.inMemoryCatalog()
+            let entry = TestSupport.makeEntry(fileURL: url)
+            try catalog.save(entry)
+            let model = EditorModel(entry: entry, catalog: catalog,
+                                    thumbnails: TestSupport.tempThumbnails(),
+                                    commitDelay: 60)
+            model.enableFilmNegative()
+            if model.editStack.geometry.cropRect != .unitFrame { detected += 1 }
+
+            let out = EditRenderer().render(source: scan, stack: model.editStack)
+            guard let pixels = AutoInvert.linearPixels(of: out, side: 64, context: context)
+            else { XCTFail("\(label): no pixels"); continue }
+            let lumas = pixels.map { 0.2126 * $0.0 + 0.7152 * $0.1 + 0.0722 * $0.2 }.sorted()
+            let median = lumas[lumas.count / 2]
+            if median >= 0.7 { blown.append("\(label) (\(median))") }
+
+            try FileManager.default.createDirectory(at: Self.artifactDir,
+                                                    withIntermediateDirectories: true)
+            try context.writeJPEGRepresentation(
+                of: out, to: Self.artifactDir.appendingPathComponent("\(label).jpg"),
+                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+            try context.writeJPEGRepresentation(
+                of: scan, to: Self.artifactDir.appendingPathComponent("\(label)-before.jpg"),
+                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
         }
+        print("AUG13 batch: detected \(detected)/\(files.count)")
+        XCTAssertEqual(blown, [], "frames rendered blown")
+
+        let names = try FileManager.default
+            .contentsOfDirectory(atPath: Self.artifactDir.path)
         let converted = names.filter { $0.hasSuffix(".jpg") && !$0.hasSuffix("-before.jpg") }
             .sorted()
         var html = "<!doctype html><meta charset=\"utf-8\">"
