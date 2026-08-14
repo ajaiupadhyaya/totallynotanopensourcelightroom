@@ -241,11 +241,44 @@ final class EditorModel {
     var zoomLevel: Double? {
         didSet {
             guard zoomLevel != oldValue else { return }
-            // Changing magnification re-centres. Keeping an old pan across a
-            // zoom change routinely lands you looking at empty canvas, and
-            // "where did my photograph go" is not a puzzle worth posing.
-            panOffset = .zero
+            // Stop-jumps (menu, TabStrip, double-click) re-centre, as ever —
+            // keeping an old pan across a jump routinely lands you looking at
+            // empty canvas, and "where did my photograph go" is not a puzzle
+            // worth posing. Gesture zoom carries its own anchor-preserving pan
+            // and must NOT be re-centred, or the point under the pointer walks.
+            if !isGestureZoom { panOffset = .zero }
             renderPreview()
+        }
+    }
+
+    /// True while `applyGestureZoom` is writing, so the observer above keeps
+    /// the anchored pan the gesture just computed.
+    private var isGestureZoom = false
+
+    /// One tick of wheel/pinch zoom: the snapped scale and the pan that keeps
+    /// the anchor stationary, written together. `nil` scale means the gesture
+    /// landed on the Fit detent.
+    func applyGestureZoom(scale: Double?, pan: CGSize) {
+        isGestureZoom = true
+        defer { isGestureZoom = false }
+        panOffset = scale == nil ? .zero : pan
+        zoomLevel = scale
+    }
+
+    /// ⌘+ / ⌘−: steps through the stop ladder, entering at 100% from Fit —
+    /// the double-click convention. A stop-jump, so the centre-reset applies.
+    func zoomStep(_ direction: Int) {
+        let ladder = [ZoomMath.minimumZoom, 0.5, 1.0, 2.0, ZoomMath.maximumZoom]
+        guard let current = zoomLevel else {
+            zoomLevel = direction > 0 ? 1.0 : nil
+            return
+        }
+        if let index = ladder.firstIndex(where: { abs($0 - current) / $0 < 0.001 }) {
+            zoomLevel = ladder[min(max(index + direction, 0), ladder.count - 1)]
+        } else {
+            zoomLevel = direction > 0
+                ? ladder.first { $0 > current } ?? ladder.last
+                : ladder.last { $0 < current } ?? ladder.first
         }
     }
 

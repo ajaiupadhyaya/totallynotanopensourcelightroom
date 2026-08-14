@@ -210,12 +210,26 @@ private struct EditCanvas: View {
 
                 overlays(in: rect)
 
+                MouseEventView(
+                    onScroll: { location, deltaY in
+                        gestureZoom(factor: pow(2, Double(deltaY) * ZoomMath.wheelOctavesPerPoint),
+                                    anchor: location, viewport: viewportSize)
+                    },
+                    onMagnify: { location, delta in
+                        gestureZoom(factor: 1 + Double(delta),
+                                    anchor: location, viewport: viewportSize)
+                    }
+                )
+
                 Color.clear
                     .contentShape(Rectangle())
                     .gesture(clickGesture(rect: rect))
                     .gesture(panGesture)
             }
             .frame(width: viewportSize.width, height: viewportSize.height)
+            .overlay(alignment: .bottomLeading) {
+                NavigatorPanel(editor: editor, viewportSize: viewportSize, fitInset: fitInset)
+            }
             .clipped()
         }
         .overlay(alignment: .top) {
@@ -237,6 +251,24 @@ private struct EditCanvas: View {
     /// Margin kept between the photograph and the edge of the canvas at Fit, so
     /// the frame is never flush against the chrome.
     private let fitInset: CGFloat = 28
+
+    /// Shared by wheel and pinch: scale about the pointer, snap to the
+    /// detents, keep the anchored point still. One editor call per tick.
+    ///
+    /// The proposed scale goes to `snapped` unclamped on purpose — `snapped`
+    /// floors the range itself, and it has to, because Fit routinely sits
+    /// below the 25% floor on a large frame. Clamping here first would put
+    /// Fit out of the gesture's reach.
+    private func gestureZoom(factor: Double, anchor: CGPoint, viewport: CGSize) {
+        guard let size = editor.previewPixelSize else { return }
+        let fit = ZoomMath.fitScale(imageSize: size, viewport: viewport, inset: fitInset)
+        let oldScale = editor.zoomLevel ?? fit
+        let snapped = ZoomMath.snapped(oldScale * factor, fitScale: fit)
+        let pan = ZoomMath.pan(anchoring: anchor, viewport: viewport, imageSize: size,
+                               oldScale: oldScale, oldPan: editor.panOffset,
+                               newScale: snapped ?? fit)
+        editor.applyGestureZoom(scale: snapped, pan: pan)
+    }
 
     /// Where the photograph sits in the viewport, at the current zoom and pan.
     private func imageRect(in viewport: CGSize) -> CGRect {

@@ -87,6 +87,18 @@ struct EditorCommands: Commands {
             Button("Zoom to 200%") { editor?.zoomLevel = 2.0 }
                 .keyboardShortcut("2", modifiers: .command)
                 .disabled(editor == nil)
+            Button("Zoom to 50%") { editor?.zoomLevel = 0.5 }
+                .keyboardShortcut("5", modifiers: .command)
+                .disabled(editor == nil)
+
+            Divider()
+
+            Button("Zoom In") { editor?.zoomStep(1) }
+                .keyboardShortcut("=", modifiers: .command)
+                .disabled(editor == nil)
+            Button("Zoom Out") { editor?.zoomStep(-1) }
+                .keyboardShortcut("-", modifiers: .command)
+                .disabled(editor == nil)
 
             Divider()
 
