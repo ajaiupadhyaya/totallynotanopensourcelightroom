@@ -102,6 +102,9 @@ struct RootView: View {
                 BatchExportSheet(app: app, entries: [editor.entry])
             }
         }
+        .sheet(isPresented: $app.isShowingCopySettingsSheet) {
+            CopySettingsSheet(app: app)
+        }
     }
 }
 

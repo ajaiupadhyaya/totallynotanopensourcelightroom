@@ -2931,7 +2931,7 @@ git commit -m "refactor(controls): MiniContextFader becomes AdjustmentSlider.com
 - Consumes: `EditStack`, `EditTransferOptions`, `AppModel.copiedStack/copiedFromName/apply`, `LampToggle`, `PlateButton`.
 - Produces: `PipelineSection` (`.film … .effects`, `index/title/isModified(in:)/copied(from:onto:)`), `TransferScope` (`sections`, `.all/.none/.default/modified(in:)`), `EditStack.applying(_:scope:)`, `AppModel.copiedScope/isShowingCopySettingsSheet/copySettings(from:scope:)/applyPreviousSettings()`, `CopySettingsSheet`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TransferScopeTests.swift`:
 
@@ -3066,9 +3066,9 @@ final class PreviousCommandTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run both classes** — expected COMPILE FAILURE.
+- [x] **Step 2: Run both classes** — expected COMPILE FAILURE.
 
-- [ ] **Step 3: Implement `Sources/Models/TransferScope.swift`**
+- [x] **Step 3: Implement `Sources/Models/TransferScope.swift`**
 
 `PipelineSection` — 14 cases in panel order, `index` = the two-digit string the panel prints, `title` = the panel's own title. `isModified(in:)` is `SliderPanel`'s private predicates moved verbatim (Film: `filmNegative != FilmNegativeSettings()`; Frame/Optics split exactly as `isFrameModified`/`isOpticsModified` split `geometry`; White Balance: `temp != 6500 || tint != 0`; Light includes `rawBoost != 100`; Tone Curve includes points, channel curves and the four parametric values; Color Mixer includes `treatment`; etc.). `copied(from:onto:)` copies **every** field its panel section binds:
 
@@ -3111,7 +3111,7 @@ extension EditStack {
 
 Also in `Sources/Models/DevelopPreset.swift`, the two options-path gap fixes: `options.effects` additionally copies `vignetteRoundness/vignetteFeather/vignetteHighlights`; `options.toneCurve` additionally copies the four `toneCurve*` parametric fields.
 
-- [ ] **Step 4: `AppModel` + run the model tests**
+- [x] **Step 4: `AppModel` + run the model tests**
 
 In `Sources/App/AppModel.swift`:
 
@@ -3155,7 +3155,7 @@ and at the top of `open(_:)` — the capture, which also flushes the pending deb
 
 Run: `-only-testing:PhotoEditorTests/PipelineSectionTests -only-testing:PhotoEditorTests/PreviousCommandTests -only-testing:PhotoEditorTests/WorkflowTests` — expected PASS.
 
-- [ ] **Step 5: The sheet, the menu, the panel delegation**
+- [x] **Step 5: The sheet, the menu, the panel delegation**
 
 Create `Sources/Views/CopySettingsSheet.swift` — a drawn card, no stock controls:
 
@@ -3260,12 +3260,12 @@ In `Sources/App/EditorCommands.swift`, the pasteboard group: ⇧⌘C now opens t
 
 In `Sources/Views/SliderPanel/SliderPanel.swift`, delete the private `is*Modified` computed properties and pass `PipelineSection.<section>.isModified(in: model.editStack)` to each numbered `PanelSection` — the spine and the sheet now read one predicate. (Reset closures stay as they are.)
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run: `-only-testing:PhotoEditorTests/PipelineSectionTests -only-testing:PhotoEditorTests/PreviousCommandTests -only-testing:PhotoEditorTests/TransferScopeTests -only-testing:PhotoEditorTests/WorkflowTests -only-testing:PhotoEditorTests/PresetAmountTests`
 Expected: ALL PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Sources/Models/TransferScope.swift Sources/Views/CopySettingsSheet.swift Sources/Models/DevelopPreset.swift Sources/App/AppModel.swift Sources/App/EditorCommands.swift Sources/App/PhotoEditorApp.swift Sources/Views/SliderPanel/SliderPanel.swift Tests/TransferScopeTests.swift project.yml PhotoEditor.xcodeproj

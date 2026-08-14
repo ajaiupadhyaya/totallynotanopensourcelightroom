@@ -43,7 +43,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Film",
                     index: "01",
-                    isModified: model.editStack.filmNegative != FilmNegativeSettings(),
+                    isModified: PipelineSection.film.isModified(in: model.editStack),
                     onReset: { model.editStack.filmNegative = FilmNegativeSettings() }
                 ) {
                     FilmPanel(model: model)
@@ -52,7 +52,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Frame",
                     index: "02",
-                    isModified: isFrameModified,
+                    isModified: PipelineSection.frame.isModified(in: model.editStack),
                     onReset: resetFrame
                 ) {
                     GeometryPanel(model: model)
@@ -61,7 +61,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Optics",
                     index: "03",
-                    isModified: isOpticsModified,
+                    isModified: PipelineSection.optics.isModified(in: model.editStack),
                     onReset: resetOptics
                 ) {
                     OpticsPanel(model: model)
@@ -70,7 +70,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Retouch",
                     index: "04",
-                    isModified: !model.editStack.retouch.isEmpty,
+                    isModified: PipelineSection.retouch.isModified(in: model.editStack),
                     onReset: {
                         model.editStack.retouch = []
                         model.selectedSpotID = nil
@@ -84,8 +84,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "White Balance",
                     index: "05",
-                    isModified: model.editStack.whiteBalanceTemp != 6500
-                        || model.editStack.whiteBalanceTint != 0,
+                    isModified: PipelineSection.whiteBalance.isModified(in: model.editStack),
                     onReset: {
                         model.editStack.whiteBalanceTemp = 6500
                         model.editStack.whiteBalanceTint = 0
@@ -95,7 +94,8 @@ struct SliderPanel: View {
                 }
 
                 PanelSection("Light", index: "06",
-                             isModified: isLightModified, onReset: resetLight) {
+                             isModified: PipelineSection.light.isModified(in: model.editStack),
+                             onReset: resetLight) {
                     AdjustmentSlider(title: "Exposure",
                                      value: $model.editStack.exposure,
                                      range: -3...3, format: "%.2f EV", neutral: 0)
@@ -127,7 +127,8 @@ struct SliderPanel: View {
                 }
 
                 PanelSection("Presence", index: "07",
-                             isModified: isPresenceModified, onReset: resetPresence) {
+                             isModified: PipelineSection.presence.isModified(in: model.editStack),
+                             onReset: resetPresence) {
                     AdjustmentSlider(title: "Texture",
                                      value: $model.editStack.texture,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -150,8 +151,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Color Mixer",
                     index: "08",
-                    isModified: model.editStack.color.treatment != .color
-                        || !model.editStack.color.mixer.isNeutral,
+                    isModified: PipelineSection.colorMixer.isModified(in: model.editStack),
                     onReset: {
                         model.editStack.color.treatment = .color
                         model.editStack.color.mixer = ColorMixer()
@@ -163,7 +163,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Color Grade",
                     index: "09",
-                    isModified: !model.editStack.color.grading.isNeutral,
+                    isModified: PipelineSection.colorGrade.isModified(in: model.editStack),
                     onReset: { model.editStack.color.grading = ColorGrading() }
                 ) {
                     ColorGradingPanel(model: model)
@@ -172,7 +172,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Point Color",
                     index: "10",
-                    isModified: !model.editStack.color.pointColors.allSatisfy(\.isNeutral),
+                    isModified: PipelineSection.pointColor.isModified(in: model.editStack),
                     onReset: { model.editStack.color.pointColors = [] }
                 ) {
                     PointColorPanel(model: model)
@@ -181,12 +181,7 @@ struct SliderPanel: View {
                 PanelSection(
                     "Tone Curve",
                     index: "11",
-                    isModified: !model.editStack.toneCurvePoints.isEmpty
-                        || !model.editStack.color.channelCurves.isNeutral
-                        || model.editStack.toneCurveHighlights != 0
-                        || model.editStack.toneCurveLights != 0
-                        || model.editStack.toneCurveDarks != 0
-                        || model.editStack.toneCurveShadows != 0,
+                    isModified: PipelineSection.toneCurve.isModified(in: model.editStack),
                     onReset: {
                         model.editStack.toneCurvePoints = []
                         model.editStack.color.channelCurves = ChannelCurves()
@@ -204,14 +199,15 @@ struct SliderPanel: View {
                 PanelSection(
                     "Local Masks",
                     index: "12",
-                    isModified: !model.editStack.localAdjustments.isEmpty,
+                    isModified: PipelineSection.masks.isModified(in: model.editStack),
                     onReset: { model.editStack.localAdjustments = [] }
                 ) {
                     LocalAdjustmentPanel(model: model)
                 }
 
                 PanelSection("Detail", index: "13",
-                             isModified: isDetailModified, onReset: resetDetail) {
+                             isModified: PipelineSection.detail.isModified(in: model.editStack),
+                             onReset: resetDetail) {
                     AdjustmentSlider(title: "Sharpening",
                                      value: $model.editStack.sharpenAmount,
                                      range: 0...100, format: "%.0f", neutral: 0)
@@ -227,7 +223,8 @@ struct SliderPanel: View {
                 }
 
                 PanelSection("Effects", index: "14",
-                             isModified: isEffectsModified, onReset: resetEffects) {
+                             isModified: PipelineSection.effects.isModified(in: model.editStack),
+                             onReset: resetEffects) {
                     AdjustmentSlider(title: "Vignette",
                                      value: $model.editStack.vignetteAmount,
                                      range: -100...100, format: "%.0f", neutral: 0)
@@ -283,11 +280,6 @@ struct SliderPanel: View {
 
     // MARK: Section state
 
-    private var isFrameModified: Bool {
-        let g = model.editStack.geometry
-        return g.cropRect != .unitFrame || g.rotation != .none
-            || g.straightenAngle != 0 || g.flipHorizontal || g.flipVertical
-    }
 
     private func resetFrame() {
         model.editStack.geometry.cropRect = .unitFrame
@@ -297,11 +289,6 @@ struct SliderPanel: View {
         model.editStack.geometry.flipVertical = false
     }
 
-    private var isOpticsModified: Bool {
-        let g = model.editStack.geometry
-        return g.distortion != 0 || g.perspectiveVertical != 0
-            || g.perspectiveHorizontal != 0 || !model.editStack.defringe.isNeutral
-    }
 
     private func resetOptics() {
         model.editStack.geometry.distortion = 0
@@ -310,11 +297,6 @@ struct SliderPanel: View {
         model.editStack.defringe = Defringe()
     }
 
-    private var isLightModified: Bool {
-        let s = model.editStack
-        return s.exposure != 0 || s.contrast != 0 || s.highlights != 0
-            || s.shadows != 0 || s.whites != 0 || s.blacks != 0 || s.rawBoost != 100
-    }
 
     private func resetLight() {
         model.editStack.exposure = 0
@@ -326,11 +308,6 @@ struct SliderPanel: View {
         model.editStack.rawBoost = 100
     }
 
-    private var isPresenceModified: Bool {
-        let s = model.editStack
-        return s.texture != 0 || s.clarity != 0 || s.dehaze != 0
-            || s.vibrance != 0 || s.saturation != 0
-    }
 
     private func resetPresence() {
         model.editStack.texture = 0
@@ -340,11 +317,6 @@ struct SliderPanel: View {
         model.editStack.saturation = 0
     }
 
-    private var isDetailModified: Bool {
-        let s = model.editStack
-        return s.sharpenAmount != 0 || s.sharpenRadius != 1.5
-            || s.luminanceNoiseReduction != 0 || s.colorNoiseReduction != 0
-    }
 
     private func resetDetail() {
         model.editStack.sharpenAmount = 0
@@ -353,12 +325,6 @@ struct SliderPanel: View {
         model.editStack.colorNoiseReduction = 0
     }
 
-    private var isEffectsModified: Bool {
-        let s = model.editStack
-        return s.vignetteAmount != 0 || s.vignetteMidpoint != 50
-            || s.vignetteRoundness != 0 || s.vignetteFeather != 50 || s.vignetteHighlights != 0
-            || s.grainAmount != 0 || s.grainSize != 25
-    }
 
     private func resetEffects() {
         model.editStack.vignetteAmount = 0

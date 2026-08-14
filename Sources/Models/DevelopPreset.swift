@@ -180,6 +180,13 @@ extension EditStack {
         if options.toneCurve {
             result.toneCurvePoints = other.toneCurvePoints
             result.color.channelCurves = other.color.channelCurves
+            // The parametric four ride with the curve — they are the Tone
+            // Curve panel, and dropping them made presets land differently
+            // from the look they were saved from.
+            result.toneCurveHighlights = other.toneCurveHighlights
+            result.toneCurveLights = other.toneCurveLights
+            result.toneCurveDarks = other.toneCurveDarks
+            result.toneCurveShadows = other.toneCurveShadows
         }
         if options.detail {
             result.sharpenAmount = other.sharpenAmount
@@ -190,6 +197,11 @@ extension EditStack {
         if options.effects {
             result.vignetteAmount = other.vignetteAmount
             result.vignetteMidpoint = other.vignetteMidpoint
+            // The vignette's shape, not just its amount — three fields the
+            // Effects panel binds that this path used to drop.
+            result.vignetteRoundness = other.vignetteRoundness
+            result.vignetteFeather = other.vignetteFeather
+            result.vignetteHighlights = other.vignetteHighlights
             result.grainAmount = other.grainAmount
             result.grainSize = other.grainSize
         }

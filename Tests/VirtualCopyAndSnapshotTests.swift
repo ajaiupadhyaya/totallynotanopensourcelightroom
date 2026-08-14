@@ -21,7 +21,7 @@ final class VirtualCopyAndSnapshotTests: XCTestCase {
         // Editing the copy must not touch the master.
         var stack = EditStack()
         stack.exposure = 1.5
-        _ = app.apply(stack, to: [copy], options: .everything)
+        _ = app.apply(stack, to: [copy], scope: .all)
         let reloadedMaster = app.entries.first { $0.id == master.id }
         let reloadedCopy = app.entries.first { $0.id == copy.id }
         XCTAssertEqual(reloadedMaster?.editStack.exposure, 0)
@@ -51,7 +51,7 @@ final class VirtualCopyAndSnapshotTests: XCTestCase {
 
         var stack = EditStack()
         stack.contrast = 42
-        _ = app.apply(stack, to: [master], options: .everything)
+        _ = app.apply(stack, to: [master], scope: .all)
         master = try XCTUnwrap(app.entries.first { $0.id == master.id })
         app.setRating(4, for: master)
         master = try XCTUnwrap(app.entries.first { $0.id == master.id })

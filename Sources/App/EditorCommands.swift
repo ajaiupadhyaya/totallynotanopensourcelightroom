@@ -62,17 +62,21 @@ struct EditorCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
 
-            Button("Copy Develop Settings") {
-                if let entry = editor?.entry { app.copySettings(from: entry) }
-            }
-            .keyboardShortcut("c", modifiers: [.command, .shift])
-            .disabled(editor == nil)
+            Button("Copy Settings…") { app.isShowingCopySettingsSheet = true }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(editor == nil)
 
             Button(app.copiedFromName.map { "Paste Settings from \($0)" } ?? "Paste Settings") {
                 if let entry = editor?.entry { app.pasteSettings(to: [entry]) }
             }
             .keyboardShortcut("v", modifiers: [.command, .shift])
             .disabled(!app.canPasteSettings || editor == nil)
+
+            Button(app.previousName.map { "Paste from Previous (\($0))" } ?? "Paste from Previous") {
+                app.applyPreviousSettings()
+            }
+            .keyboardShortcut("v", modifiers: [.command, .option])
+            .disabled(app.previousStack == nil || editor == nil)
 
             Divider()
 

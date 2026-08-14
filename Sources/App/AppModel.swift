@@ -292,9 +292,28 @@ final class AppModel {
 
     var canPasteSettings: Bool { copiedStack != nil }
 
-    func copySettings(from entry: CatalogEntry) {
+    var isShowingCopySettingsSheet = false
+
+    /// The last scope chosen in the copy dialog — remembered so paste,
+    /// sidebar copies and Previous all mean the same thing until changed.
+    private(set) var copiedScope: TransferScope = .default
+
+    /// The stack of the photo edited before this one, captured on navigation.
+    private(set) var previousStack: EditStack?
+    private(set) var previousName: String?
+
+    func copySettings(from entry: CatalogEntry, scope: TransferScope? = nil) {
+        if let scope { copiedScope = scope }
         copiedStack = entry.editStack
         copiedFromName = entry.fileName
+    }
+
+    /// Applies the previously-edited photo's settings to the open one, through
+    /// the remembered scope — the "same again" gesture for working a roll.
+    @discardableResult
+    func applyPreviousSettings() -> Int {
+        guard let previousStack, let entry = editor?.entry else { return 0 }
+        return apply(previousStack, to: [entry], scope: copiedScope)
     }
 
     /// Pastes the copied settings onto the given entries.
@@ -304,12 +323,9 @@ final class AppModel {
     /// leaves each frame's crop and its own sampled film base alone — see
     /// ``EditTransferOptions``.
     @discardableResult
-    func pasteSettings(
-        to targets: [CatalogEntry],
-        options: EditTransferOptions = .init()
-    ) -> Int {
+    func pasteSettings(to targets: [CatalogEntry]) -> Int {
         guard let copiedStack else { return 0 }
-        return apply(copiedStack, to: targets, options: options)
+        return apply(copiedStack, to: targets, scope: copiedScope)
     }
 
     /// Applies a stack to entries, regenerating their thumbnails so the library
@@ -318,17 +334,17 @@ final class AppModel {
     func apply(
         _ stack: EditStack,
         to targets: [CatalogEntry],
-        options: EditTransferOptions = .init()
+        scope: TransferScope = .default
     ) -> Int {
         updateStacks(targets.map {
-            ($0, $0.editStack.applying(stack, options: options))
+            ($0, $0.editStack.applying(stack, scope: scope))
         })
     }
 
     /// Saves prepared (entry, stack) pairs: persists, updates ``entries``,
     /// refreshes thumbnails, reopens the editor if it shows one of them.
     /// The roll-wide / sync-across-selection shared mechanism (spec §Roll
-    /// model; Phase 4's sync reuses this) — `apply(_:to:options:)` is now a
+    /// model; Phase 4's sync reuses this) — `apply(_:to:scope:)` is now a
     /// caller of this one implementation.
     @discardableResult
     func updateStacks(_ updates: [(CatalogEntry, EditStack)]) -> Int {
@@ -531,6 +547,13 @@ final class AppModel {
     // MARK: Editor navigation
 
     func open(_ entry: CatalogEntry) {
+        // Leaving a photo captures it as "previous" — and flushes its pending
+        // debounce, which navigation used to drop on the floor.
+        if let editor {
+            editor.commitEdit()
+            previousStack = editor.editStack
+            previousName = editor.fileName
+        }
         editor = EditorModel(
             entry: entry,
             catalog: catalog,
